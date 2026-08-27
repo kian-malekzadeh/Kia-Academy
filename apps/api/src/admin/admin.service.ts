@@ -10,7 +10,12 @@ import type {
   AuthUser,
   SiteAdminAccessSettings,
 } from '@kia-academy/shared';
-import { normalizeAdminAccess, normalizeIranianPhone } from '@kia-academy/shared';
+import {
+  defaultExamBanks,
+  genericExamQuestions,
+  normalizeAdminAccess,
+  normalizeIranianPhone,
+} from '@kia-academy/shared';
 import * as bcrypt from 'bcrypt';
 import { MediaStorageService } from '../media/media-storage.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -112,6 +117,46 @@ export class AdminService {
       },
       include: { lessons: { orderBy: { sortOrder: 'asc' } } },
     });
+
+    // Default midterm + final exam for every new course.
+    const anchorLesson = course.lessons[1] ?? course.lessons[0] ?? null;
+    const bank = defaultExamBanks[dto.slug];
+    const defaultExams = [
+      {
+        kind: 'MIDTERM' as const,
+        title: `آزمون میان‌دوره ${course.title}`,
+        description: 'سنجش نیمهٔ اول دوره — به‌صورت پیش‌فرض ساخته شد.',
+        passScore: 50,
+        sortOrder: 0,
+        afterLessonId: anchorLesson?.id ?? null,
+        questions: bank?.midterm ?? genericExamQuestions(course.title),
+      },
+      {
+        kind: 'FINAL' as const,
+        title: `آزمون نهایی ${course.title}`,
+        description: 'پوشش کل دوره — به‌صورت پیش‌فرض ساخته شد.',
+        passScore: 60,
+        sortOrder: 1,
+        afterLessonId: null,
+        questions: bank?.final ?? genericExamQuestions(course.title),
+      },
+    ];
+    for (const exam of defaultExams) {
+      await this.prisma.courseExam.create({
+        data: {
+          courseId: course.id,
+          title: exam.title,
+          description: exam.description,
+          passScore: exam.passScore,
+          durationMin: 10,
+          published: true,
+          sortOrder: exam.sortOrder,
+          kind: exam.kind,
+          afterLessonId: exam.afterLessonId,
+          questions: JSON.stringify(exam.questions),
+        },
+      });
+    }
 
     return this.toAdminCourse(course);
   }

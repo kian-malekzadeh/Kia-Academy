@@ -141,7 +141,16 @@ export default function CoursePage() {
                     href={`/courses/${localizedCourse.slug}/exams/${exam.id}`}
                     className="lesson-nav-item"
                   >
-                    <span className="lesson-nav-title">{exam.title}</span>
+                    <span className="lesson-nav-title">
+                      {exam.title}
+                      <span className="lesson-nav-meta" style={{ marginInlineStart: '0.5rem' }}>
+                        [
+                        {exam.kind === 'MIDTERM'
+                          ? t('courses.examKindMidterm')
+                          : t('courses.examKindFinal')}
+                        ]
+                      </span>
+                    </span>
                     <span className="lesson-nav-meta">
                       {t('courses.examQuestions', { count: exam.questionCount })} ·{' '}
                       {t('courses.examDuration', { min: exam.durationMin })}

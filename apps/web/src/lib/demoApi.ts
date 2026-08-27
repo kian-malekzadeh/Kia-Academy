@@ -15,6 +15,7 @@ import type {
   CourseExamResponse,
   CourseExamSubmitResult,
   CourseExamSummary,
+  CourseExamKind,
   CourseSummary,
   CreateChallengeDto,
   CreateCourseDto,
@@ -48,6 +49,7 @@ import type {
   UserRole,
   AdminStats,
   AdminCourse,
+  AdminCourseExam,
   AdminLesson,
   AdminChallenge,
   AdminContactMessage,
@@ -82,6 +84,8 @@ import {
   computeReadinessResult,
   buildChallengeResult,
   createDefaultSiteSettings,
+  defaultExamBanks,
+  genericExamQuestions,
   mergeSiteSettings,
   toPublicSiteSettings,
   DEFAULT_ASSESSMENT_BANK,
@@ -501,6 +505,12 @@ interface DemoStoredExam {
   passScore: number;
   durationMin: number;
   sortOrder: number;
+  published: boolean;
+  kind: CourseExamKind;
+  afterLessonId: string | null;
+  afterLessonSlug: string | null;
+  createdAt: string;
+  updatedAt: string;
   questions: CourseExamQuestion[];
 }
 
@@ -515,78 +525,62 @@ interface DemoStoredAttempt {
   answers: Record<string, CourseExamResponse>;
 }
 
-const EXAM_STORE_KEY = 'kia-demo-course-exams-v1';
+const EXAM_STORE_KEY = 'kia-demo-course-exams-v2';
 
-const DEMO_EXAMS: DemoStoredExam[] = [
-  {
-    id: 'demo-exam-js-01',
-    courseId: 'course-js-basics',
-    courseSlug: 'js-basics',
-    courseTitle: 'جاوااسکریپت پایه',
-    title: 'آزمون جامع جاوااسکریپت',
-    description: 'پوشش همهٔ ماژول‌های دوره: متغیرها، توابع، آرایه‌ها، رویدادها و DOM.',
-    passScore: 60,
+/** Default midterm + final exam for every demo course. */
+const DEMO_EXAMS: DemoStoredExam[] = courseCatalog.flatMap((course, courseIdx) => {
+  const bank = defaultExamBanks[course.slug];
+  const anchor = course.lessons[1] ?? course.lessons[0] ?? null;
+  const baseExam = (
+    kind: CourseExamKind,
+    suffix: string,
+    passScore: number,
+    afterLessonId: string | null,
+    afterLessonSlug: string | null,
+    questions: CourseExamQuestion[],
+  ): DemoStoredExam => ({
+    id: `demo-exam-${course.slug}-${suffix}`,
+    courseId: `course-${course.slug}`,
+    courseSlug: course.slug,
+    courseTitle: course.title,
+    title:
+      kind === 'MIDTERM'
+        ? `آزمون میان‌دوره ${course.title}`
+        : `آزمون نهایی ${course.title}`,
+    description:
+      kind === 'MIDTERM'
+        ? 'سنجش نیمهٔ اول دوره — به‌صورت پیش‌فرض ساخته شد.'
+        : 'پوشش کل دوره — به‌صورت پیش‌فرض ساخته شد.',
+    passScore,
     durationMin: 10,
-    sortOrder: 0,
-    questions: [
-      {
-        id: 'q1', type: 'single_choice',
-        prompt: 'خروجی کد زیر چیست؟\n\nlet x = 5; { let x = 10; } console.log(x);',
-        options: [
-          { id: 'a', label: '۵' },
-          { id: 'b', label: '۱۰' },
-          { id: 'c', label: 'undefined' },
-          { id: 'd', label: 'خطای ReferenceError' },
-        ],
-        answer: 'a',
-      },
-      {
-        id: 'q2', type: 'single_choice',
-        prompt: 'کدام روش آرایه، یک آرایهٔ جدید برمی‌گرداند و آرایهٔ اصلی را تغییر نمی‌دهد؟',
-        options: [
-          { id: 'a', label: 'push' },
-          { id: 'b', label: 'map' },
-          { id: 'c', label: 'splice' },
-          { id: 'd', label: 'sort' },
-        ],
-        answer: 'b',
-      },
-      {
-        id: 'q3', type: 'multi_choice',
-        prompt: 'کدام گزینه‌ها مقادیر falsy در جاوااسکریپت هستند؟',
-        options: [
-          { id: 'a', label: '۰ (صفر)' },
-          { id: 'b', label: "'' (رشتهٔ خالی)" },
-          { id: 'c', label: '[] (آرایهٔ خالی)' },
-          { id: 'd', label: 'NaN' },
-        ],
-        answer: ['a', 'b', 'd'],
-      },
-      {
-        id: 'q4', type: 'single_choice',
-        prompt: 'تفاوت == و === در چیست؟',
-        options: [
-          { id: 'a', label: 'هیچ تفاوتی ندارند' },
-          { id: 'b', label: '== نوع‌ها را مقایسه می‌کند، === مقدار را' },
-          { id: 'c', label: '=== پیش از مقایسه تبدیل نوع انجام نمی‌دهد' },
-          { id: 'd', label: '== فقط برای اعداد است' },
-        ],
-        answer: 'c',
-      },
-      {
-        id: 'q5', type: 'multi_choice',
-        prompt: 'کدام‌ها روش‌های انتخاب عنصر در DOM هستند؟',
-        options: [
-          { id: 'a', label: 'document.querySelector' },
-          { id: 'b', label: 'document.createElement' },
-          { id: 'c', label: 'element.addEventListener' },
-          { id: 'd', label: 'document.getElementById' },
-        ],
-        answer: ['a', 'd'],
-      },
-    ],
-  },
-];
+    sortOrder: courseIdx * 10 + (kind === 'MIDTERM' ? 0 : 1),
+    published: true,
+    kind,
+    afterLessonId,
+    afterLessonSlug,
+    createdAt: '2026-08-01T09:00:00.000Z',
+    updatedAt: '2026-08-01T09:00:00.000Z',
+    questions,
+  });
+  return [
+    baseExam(
+      'MIDTERM',
+      'midterm',
+      50,
+      anchor ? `lesson-${course.slug}-${anchor.slug}` : null,
+      anchor?.slug ?? null,
+      bank?.midterm ?? genericExamQuestions(course.title),
+    ),
+    baseExam(
+      'FINAL',
+      'final',
+      60,
+      null,
+      null,
+      bank?.final ?? genericExamQuestions(course.title),
+    ),
+  ];
+});
 
 /** Static route params for the export build (only demo exams exist there). */
 export function demoCourseExamStaticParams(): { slug: string; examId: string }[] {
@@ -599,7 +593,17 @@ function readExamStore(): { exams: DemoStoredExam[]; attempts: DemoStoredAttempt
     if (raw) {
       const parsed = JSON.parse(raw) as { exams?: DemoStoredExam[]; attempts?: DemoStoredAttempt[] };
       if (Array.isArray(parsed.exams) && Array.isArray(parsed.attempts)) {
-        return { exams: parsed.exams, attempts: parsed.attempts };
+        // Normalize exams persisted before midterm/final kinds existed.
+        const exams = parsed.exams.map((e) => ({
+          ...e,
+          published: e.published ?? true,
+          kind: e.kind ?? 'FINAL',
+          afterLessonId: e.afterLessonId ?? null,
+          afterLessonSlug: e.afterLessonSlug ?? null,
+          createdAt: e.createdAt ?? new Date(0).toISOString(),
+          updatedAt: e.updatedAt ?? new Date(0).toISOString(),
+        }));
+        return { exams, attempts: parsed.attempts };
       }
     }
   } catch {
@@ -643,8 +647,11 @@ function demoExamSummaries(): CourseExamSummary[] {
       description: e.description,
       passScore: e.passScore,
       durationMin: e.durationMin,
-      published: true,
+      published: e.published,
       sortOrder: e.sortOrder,
+      kind: e.kind,
+      afterLessonId: e.afterLessonId,
+      afterLessonSlug: e.afterLessonSlug,
       questionCount: e.questions.length,
     }));
 }
@@ -652,6 +659,35 @@ function demoExamSummaries(): CourseExamSummary[] {
 function toPublicDemoQuestion(q: CourseExamQuestion): Omit<CourseExamQuestion, 'answer'> {
   const { answer: _answer, ...rest } = q;
   return rest;
+}
+
+/** Resolve a lesson slug from the catalog for a demo exam placement anchor. */
+function demoLessonSlugById(courseSlug: string, lessonId: string | null): string | null {
+  if (!lessonId) return null;
+  const course = courseCatalog.find((c) => c.slug === courseSlug);
+  const lesson = course?.lessons.find((l) => `lesson-${courseSlug}-${l.slug}` === lessonId);
+  return lesson?.slug ?? null;
+}
+
+function demoAdminExam(e: DemoStoredExam): AdminCourseExam {
+  return {
+    id: e.id,
+    courseId: e.courseId,
+    courseSlug: e.courseSlug,
+    courseTitle: e.courseTitle,
+    title: e.title,
+    description: e.description,
+    passScore: e.passScore,
+    durationMin: e.durationMin,
+    published: e.published,
+    sortOrder: e.sortOrder,
+    kind: e.kind,
+    afterLessonId: e.afterLessonId,
+    afterLessonSlug: e.afterLessonSlug,
+    questions: structuredClone(e.questions),
+    createdAt: e.createdAt,
+    updatedAt: e.updatedAt,
+  };
 }
 
 function demoExamSession(
@@ -665,6 +701,7 @@ function demoExamSession(
     examId: exam.id,
     examTitle: exam.title,
     courseSlug: exam.courseSlug,
+    kind: exam.kind,
     durationMin: exam.durationMin,
     passScore: exam.passScore,
     startedAt: attempt.startedAt,
@@ -1148,6 +1185,104 @@ export const demoApi = {
   async listCourseExamsForLearner(courseSlug: string): Promise<CourseExamSummary[]> {
     requireUser();
     return demoExamSummaries().filter((e) => e.courseSlug === courseSlug);
+  },
+
+  // ---- Course exams (admin, demo parity with the real service) ----
+  async adminListCourseExams(courseSlug: string): Promise<AdminCourseExam[]> {
+    requireUser();
+    return readExamStore()
+      .exams.filter((e) => e.courseSlug === courseSlug)
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map(demoAdminExam);
+  },
+
+  async adminCreateCourseExam(
+    courseSlug: string,
+    dto: {
+      title: string;
+      kind?: CourseExamKind;
+      afterLessonId?: string | null;
+      description?: string;
+      passScore?: number;
+      durationMin?: number;
+      published?: boolean;
+      questions: CourseExamQuestion[];
+    },
+  ): Promise<AdminCourseExam> {
+    requireUser();
+    const course = courseCatalog.find((c) => c.slug === courseSlug);
+    if (!course) throw new ApiError(`Course ${courseSlug} not found`, 404);
+    const store = readExamStore();
+    const maxOrder = store.exams
+      .filter((e) => e.courseSlug === courseSlug)
+      .reduce((max, e) => Math.max(max, e.sortOrder), 0);
+    const now = new Date().toISOString();
+    const exam: DemoStoredExam = {
+      id: `demo-exam-${Date.now()}`,
+      courseId: `course-${course.slug}`,
+      courseSlug: course.slug,
+      courseTitle: course.title,
+      title: dto.title,
+      description: dto.description ?? '',
+      passScore: dto.passScore ?? 60,
+      durationMin: dto.durationMin ?? 15,
+      sortOrder: maxOrder + 1,
+      published: dto.published ?? false,
+      kind: dto.kind === 'MIDTERM' ? 'MIDTERM' : 'FINAL',
+      afterLessonId: dto.afterLessonId ?? null,
+      afterLessonSlug: demoLessonSlugById(course.slug, dto.afterLessonId ?? null),
+      createdAt: now,
+      updatedAt: now,
+      questions: structuredClone(dto.questions ?? []),
+    };
+    store.exams.push(exam);
+    writeExamStore(store);
+    return demoAdminExam(exam);
+  },
+
+  async adminUpdateCourseExam(
+    courseSlug: string,
+    examId: string,
+    dto: {
+      title?: string;
+      kind?: CourseExamKind;
+      afterLessonId?: string | null;
+      description?: string;
+      passScore?: number;
+      durationMin?: number;
+      published?: boolean;
+      questions?: CourseExamQuestion[];
+    },
+  ): Promise<AdminCourseExam> {
+    requireUser();
+    const store = readExamStore();
+    const exam = store.exams.find((e) => e.id === examId && e.courseSlug === courseSlug);
+    if (!exam) throw new ApiError('Course exam not found', 404);
+    if (dto.title !== undefined) exam.title = dto.title;
+    if (dto.description !== undefined) exam.description = dto.description;
+    if (dto.passScore !== undefined) exam.passScore = dto.passScore;
+    if (dto.durationMin !== undefined) exam.durationMin = dto.durationMin;
+    if (dto.published !== undefined) exam.published = dto.published;
+    if (dto.kind !== undefined) exam.kind = dto.kind;
+    if (dto.afterLessonId !== undefined) {
+      exam.afterLessonId = dto.afterLessonId;
+      exam.afterLessonSlug = demoLessonSlugById(courseSlug, dto.afterLessonId);
+    }
+    if (dto.questions !== undefined) exam.questions = structuredClone(dto.questions);
+    exam.updatedAt = new Date().toISOString();
+    writeExamStore(store);
+    return demoAdminExam(exam);
+  },
+
+  async adminDeleteCourseExam(courseSlug: string, examId: string): Promise<{ deleted: true }> {
+    requireUser();
+    const store = readExamStore();
+    const idx = store.exams.findIndex((e) => e.id === examId && e.courseSlug === courseSlug);
+    if (idx === -1) throw new ApiError('Course exam not found', 404);
+    store.exams.splice(idx, 1);
+    store.attempts = store.attempts.filter((a) => a.examId !== examId);
+    writeExamStore(store);
+    return { deleted: true };
   },
 
   async listCourseExamAttempts(examId: string): Promise<CourseExamAttemptSummary[]> {
@@ -1975,6 +2110,62 @@ export const demoApi = {
       })),
     };
     courses = [...courses, course];
+
+    // Default midterm + final exam for every new demo course.
+    const examStore = readExamStore();
+    const anchor = course.lessons[1] ?? course.lessons[0] ?? null;
+    const bank = defaultExamBanks[course.slug];
+    const baseExam = (
+      kind: CourseExamKind,
+      suffix: string,
+      passScore: number,
+      afterLessonId: string | null,
+      afterLessonSlug: string | null,
+      questions: CourseExamQuestion[],
+    ): DemoStoredExam => ({
+      id: `demo-exam-${course.slug}-${suffix}-${Date.now()}`,
+      courseId: course.id,
+      courseSlug: course.slug,
+      courseTitle: course.title,
+      title:
+        kind === 'MIDTERM'
+          ? `آزمون میان‌دوره ${course.title}`
+          : `آزمون نهایی ${course.title}`,
+      description:
+        kind === 'MIDTERM'
+          ? 'سنجش نیمهٔ اول دوره — به‌صورت پیش‌فرض ساخته شد.'
+          : 'پوشش کل دوره — به‌صورت پیش‌فرض ساخته شد.',
+      passScore,
+      durationMin: 10,
+      sortOrder: examStore.exams.length + 1,
+      published: true,
+      kind,
+      afterLessonId,
+      afterLessonSlug,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      questions,
+    });
+    examStore.exams.push(
+      baseExam(
+        'MIDTERM',
+        'midterm',
+        50,
+        anchor?.id ?? null,
+        anchor?.slug ?? null,
+        bank?.midterm ?? genericExamQuestions(course.title),
+      ),
+      baseExam(
+        'FINAL',
+        'final',
+        60,
+        null,
+        null,
+        bank?.final ?? genericExamQuestions(course.title),
+      ),
+    );
+    writeExamStore(examStore);
+
     return delay({
       id: course.id,
       slug: course.slug,

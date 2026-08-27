@@ -78,6 +78,7 @@ import type {
   CourseExamSubmitResult,
   CourseExamQuestion,
   CourseExamAttemptSummary,
+  CourseExamKind,
 } from '@kia-academy/shared';
 import { clearTokens, getAccessToken, setAccessToken } from '@/lib/auth';
 import { ApiError } from '@/lib/apiError';
@@ -667,6 +668,8 @@ const liveApi = {
 
   adminCreateCourseExam(courseSlug: string, dto: {
     title: string;
+    kind?: CourseExamKind;
+    afterLessonId?: string | null;
     description?: string;
     passScore?: number;
     durationMin?: number;
@@ -681,6 +684,8 @@ const liveApi = {
 
   adminUpdateCourseExam(courseSlug: string, examId: string, dto: {
     title?: string;
+    kind?: CourseExamKind;
+    afterLessonId?: string | null;
     description?: string;
     passScore?: number;
     durationMin?: number;

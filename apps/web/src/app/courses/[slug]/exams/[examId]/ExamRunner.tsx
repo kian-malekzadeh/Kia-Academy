@@ -179,6 +179,11 @@ export default function CourseExamRunner() {
         <h1>{session.examTitle}</h1>
         <div className="catalog-meta" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <span>
+            {session.kind === 'MIDTERM'
+              ? t('courses.examKindMidterm')
+              : t('courses.examKindFinal')}
+          </span>
+          <span>
             <Timer size={14} className="inline-leading-icon" /> {t('courses.runner.timeLeft')}:{' '}
             <strong dir="ltr">
               {mm}:{ss}

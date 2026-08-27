@@ -71,6 +71,7 @@ export interface CourseExamAttemptSession {
   examId: string;
   examTitle: string;
   courseSlug: string;
+  kind: CourseExamKind;
   durationMin: number;
   passScore: number;
   startedAt: string;

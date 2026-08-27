@@ -9,6 +9,8 @@ import {
   MINI_IPIP_ITEMS,
   buildCourseCatalog,
   createDefaultSiteSettings,
+  defaultExamBanks,
+  genericExamQuestions,
   type CourseDbFile,
 } from '@kia-academy/shared';
 
@@ -275,82 +277,58 @@ Review the STAR method on [Wikipedia](https://en.wikipedia.org/wiki/Situation,_T
       update: { payload: JSON.stringify(bank.payload) },
     });
   }
-  // ---- Sample course exam (attached to the first JS course when present) ----
-  const examCourse =
-    (await prisma.course.findFirst({ where: { slug: { contains: 'js' } } })) ??
-    (await prisma.course.findFirst());
-  const sampleExamTitle = 'آزمون جامع جاوااسکریپت';
-  if (examCourse && !(await prisma.courseExam.findFirst({ where: { title: sampleExamTitle } }))) {
-    await prisma.courseExam.create({
-      data: {
-        courseId: examCourse.id,
-        title: sampleExamTitle,
-        description: 'پوشش همهٔ ماژول‌های دوره: متغیرها، توابع، آرایه‌ها، رویدادها و DOM.',
-        passScore: 60,
-        durationMin: 10,
-        published: true,
+  // ---- Default midterm & final exam for every course ----
+  for (const seeded of seededCourses) {
+    const course = await prisma.course.findUnique({ where: { id: seeded.id } });
+    if (!course) continue;
+    const bank = defaultExamBanks[seeded.slug];
+    const firstLesson =
+      (await prisma.lesson.findFirst({
+        where: { courseId: course.id },
+        orderBy: { sortOrder: 'asc' },
+      })) ?? null;
+    const defaults = [
+      {
+        kind: 'MIDTERM' as const,
+        title: `آزمون میان‌دوره ${course.title}`,
+        description: 'سنجش نیمهٔ اول دوره — به‌صورت پیش‌فرض ساخته شد.',
+        passScore: 50,
         sortOrder: 0,
-        questions: JSON.stringify([
-          {
-            id: 'q1', type: 'single_choice',
-            prompt: 'خروجی کد زیر چیست؟\n\nlet x = 5; { let x = 10; } console.log(x);',
-            options: [
-              { id: 'a', label: '۵' },
-              { id: 'b', label: '۱۰' },
-              { id: 'c', label: 'undefined' },
-              { id: 'd', label: 'خطای ReferenceError' },
-            ],
-            answer: 'a',
-          },
-          {
-            id: 'q2', type: 'single_choice',
-            prompt: 'کدام روش آرایه، یک آرایهٔ جدید برمی‌گرداند و آرایهٔ اصلی را تغییر نمی‌دهد؟',
-            options: [
-              { id: 'a', label: 'push' },
-              { id: 'b', label: 'map' },
-              { id: 'c', label: 'splice' },
-              { id: 'd', label: 'sort' },
-            ],
-            answer: 'b',
-          },
-          {
-            id: 'q3', type: 'multi_choice',
-            prompt: 'کدام گزینه‌ها مقادیر falsy در جاوااسکریپت هستند؟',
-            options: [
-              { id: 'a', label: '۰ (صفر)' },
-              { id: 'b', label: "'' (رشتهٔ خالی)" },
-              { id: 'c', label: '[] (آرایهٔ خالی)' },
-              { id: 'd', label: 'NaN' },
-            ],
-            answer: ['a', 'b', 'd'],
-          },
-          {
-            id: 'q4', type: 'single_choice',
-            prompt: 'تفاوت == و === در چیست؟',
-            options: [
-              { id: 'a', label: 'هیچ تفاوتی ندارند' },
-              { id: 'b', label: '== نوع‌ها را مقایسه می‌کند، === مقدار را' },
-              { id: 'c', label: '=== پیش از مقایسه تبدیل نوع انجام نمی‌دهد' },
-              { id: 'd', label: '== فقط برای اعداد است' },
-            ],
-            answer: 'c',
-          },
-          {
-            id: 'q5', type: 'multi_choice',
-            prompt: 'کدام‌ها روش‌های انتخاب عنصر در DOM هستند؟',
-            options: [
-              { id: 'a', label: 'document.querySelector' },
-              { id: 'b', label: 'document.createElement' },
-              { id: 'c', label: 'element.addEventListener' },
-              { id: 'd', label: 'document.getElementById' },
-            ],
-            answer: ['a', 'd'],
-          },
-        ]),
+        afterLessonId: firstLesson?.id ?? null,
+        questions: bank?.midterm ?? genericExamQuestions(course.title),
       },
-    });
-    console.log('Seeded sample course exam');
+      {
+        kind: 'FINAL' as const,
+        title: `آزمون نهایی ${course.title}`,
+        description: 'پوشش کل دوره — به‌صورت پیش‌فرض ساخته شد.',
+        passScore: 60,
+        sortOrder: 1,
+        afterLessonId: null,
+        questions: bank?.final ?? genericExamQuestions(course.title),
+      },
+    ];
+    for (const exam of defaults) {
+      const exists = await prisma.courseExam.findFirst({
+        where: { courseId: course.id, kind: exam.kind },
+      });
+      if (exists) continue;
+      await prisma.courseExam.create({
+        data: {
+          courseId: course.id,
+          title: exam.title,
+          description: exam.description,
+          passScore: exam.passScore,
+          durationMin: 10,
+          published: true,
+          sortOrder: exam.sortOrder,
+          kind: exam.kind,
+          afterLessonId: exam.afterLessonId,
+          questions: JSON.stringify(exam.questions),
+        },
+      });
+    }
   }
+  console.log('Seeded default midterm/final exams for all courses');
 
   console.log('Seeded test banks: personality, assessment, readiness');
 }

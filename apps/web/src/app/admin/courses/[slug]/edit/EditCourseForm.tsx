@@ -8,6 +8,7 @@ import { useLanguage } from '@/context/LanguageProvider';
 import { api, ApiError } from '@/lib/api';
 import type { AdminCourse, AdminLesson } from '@kia-academy/shared';
 import { mediaUrl } from '@/lib/mediaUrl';
+import AdminCourseExams from './AdminCourseExams';
 
 const LESSON_VIDEO_PATH_RE = /^\/uploads\/lessons\/[a-z0-9/_-]+\.(mp4|webm|ogg|mov|m4v)$/i;
 
@@ -431,6 +432,8 @@ export default function AdminEditCoursePage() {
           </div>
         </form>
       </section>
+
+      <AdminCourseExams courseSlug={slug} lessons={lessons} />
     </div>
   );
 }
