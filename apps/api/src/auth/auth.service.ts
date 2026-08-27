@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { ThrottlerException } from '@nestjs/throttler';
 import type {
   AuthResponse,
   AuthTokens,
@@ -32,6 +33,7 @@ import { EmailService } from '../email/email.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SiteSettingsService } from '../site-settings/site-settings.service';
 import { SmsService } from '../sms/sms.service';
+import { sniffImageMime } from '../common/utils/image-sniff';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { addDurationToDate, parseExpiresInSeconds } from './auth.utils';
@@ -39,6 +41,9 @@ import { addDurationToDate, parseExpiresInSeconds } from './auth.utils';
 const BCRYPT_ROUNDS = 12;
 const OTP_TTL_MS = 5 * 60 * 1000;
 const OTP_MAX_ATTEMPTS = 5;
+/** Per-phone SMS-bomb protection: max codes generated per window regardless of IP. */
+const OTP_PHONE_WINDOW_MS = 10 * 60 * 1000;
+const OTP_MAX_PER_PHONE = 3;
 
 @Injectable()
 export class AuthService {
@@ -118,6 +123,15 @@ export class AuthService {
     }
 
     const code = String(randomInt(100000, 999999));
+    const recentForPhone = await this.prisma.phoneOtp.count({
+      where: {
+        phone,
+        createdAt: { gte: new Date(Date.now() - OTP_PHONE_WINDOW_MS) },
+      },
+    });
+    if (recentForPhone >= OTP_MAX_PER_PHONE) {
+      throw new ThrottlerException('Too many verification codes requested. Try again later.');
+    }
     const codeHash = this.hashOtp(phone, code);
     const expiresAt = new Date(Date.now() + OTP_TTL_MS);
 
@@ -324,6 +338,11 @@ export class AuthService {
     const allowed = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
     if (!allowed.has(file.mimetype)) {
       throw new BadRequestException('Avatar must be a JPEG, PNG, WebP, or GIF image');
+    }
+    // Defense in depth: client-supplied MIME is untrusted — verify magic bytes.
+    const detectedMime = sniffImageMime(file.buffer);
+    if (!detectedMime || detectedMime !== file.mimetype) {
+      throw new BadRequestException('Avatar content does not match its declared image type');
     }
     if (file.size > 2 * 1024 * 1024) {
       throw new BadRequestException('Avatar must be under 2MB');

@@ -19,11 +19,16 @@ const contentSecurityPolicy = [
   "form-action 'self'",
   "frame-ancestors 'none'",
   "object-src 'none'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  // unsafe-eval is only needed by the Next dev runtime — never in production.
+  `script-src 'self' 'unsafe-inline'${isProd ? '' : " 'unsafe-eval'"}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "connect-src 'self' https: http://localhost:3001 http://127.0.0.1:3001",
+  // All API traffic flows through the same-origin /api proxy. Direct localhost
+  // API calls are allowed only outside production (local dev pointing at :3001).
+  isProd
+    ? "connect-src 'self'"
+    : "connect-src 'self' http://localhost:3001 http://127.0.0.1:3001",
   "media-src 'self' blob:",
   "worker-src 'self' blob:",
   ...(isProd ? ['upgrade-insecure-requests'] : []),

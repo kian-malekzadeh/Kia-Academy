@@ -21,6 +21,7 @@ import type {
   PaymentResponse,
 } from '@kia-academy/shared';
 import { IsOptional, IsString } from 'class-validator';
+import { Throttle } from '@nestjs/throttler';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../common/guards/optional-jwt-auth.guard';
@@ -52,18 +53,21 @@ export class PaymentsController {
 
   @Post('checkout')
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   checkout(@CurrentUser() user: AuthUser, @Body() dto: CheckoutBodyDto): Promise<PaymentResponse> {
     return this.paymentsService.createCheckout(user.id, dto);
   }
 
   @Post('checkout/cart')
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   checkoutCart(@CurrentUser() user: AuthUser): Promise<PaymentResponse> {
     return this.paymentsService.checkoutCart(user.id);
   }
 
   @Post('retry')
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   retry(
     @CurrentUser() user: AuthUser,
     @Body() dto: RetryPaymentBodyDto,
@@ -79,6 +83,7 @@ export class PaymentsController {
 
   @Post('verify')
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   verify(
     @CurrentUser() user: AuthUser,
     @Body() dto: GatewayVerifyBodyDto,
@@ -89,6 +94,7 @@ export class PaymentsController {
   /** ZarinPal redirect callback — verifies then redirects the browser. */
   @Get('callback')
   @UseGuards(OptionalJwtAuthGuard)
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   async callbackGet(
     @Res() res: Response,
     @Req() req: Request,

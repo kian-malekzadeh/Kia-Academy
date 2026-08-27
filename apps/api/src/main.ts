@@ -31,6 +31,7 @@ async function bootstrap() {
   app.use(
     helmet({
       crossOriginResourcePolicy: { policy: 'cross-origin' },
+      frameguard: { action: 'deny' },
       // Keep Helmet CSP enabled (default policy) for defense in depth.
       hsts: isProductionEnv()
         ? { maxAge: 31536000, includeSubDomains: true, preload: false }
@@ -54,15 +55,20 @@ async function bootstrap() {
   );
   app.useGlobalFilters(new HttpExceptionFilter());
 
-  const corsOrigin = process.env.CORS_ORIGIN ?? 'http://localhost:3000';
-  if (isProductionEnv() && /localhost|127\.0\.0\.1/i.test(corsOrigin)) {
+  // Support comma-separated origins (e.g. "https://a.com,https://b.com") so
+  // deployments with multiple public hosts can restrict CORS precisely.
+  const corsOrigins = (process.env.CORS_ORIGIN ?? 'http://localhost:3000')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  if (isProductionEnv() && corsOrigins.some((o) => /localhost|127\.0\.0\.1/i.test(o))) {
     console.warn(
       '[security] CORS_ORIGIN still points at localhost in production — set it to your public web origin.',
     );
   }
 
   app.enableCors({
-    origin: corsOrigin,
+    origin: corsOrigins.length > 1 ? corsOrigins : corsOrigins[0],
     credentials: true,
   });
 

@@ -18,6 +18,8 @@ x-api-env: &api-env
   JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?Set JWT_REFRESH_SECRET in .env.docker (min 32 chars)}
   JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
   SEED_DATABASE: ${SEED_DATABASE:-false}
+  # Explicitly opt-in only; never defaults to exposing OTP codes.
+  OTP_DEV_EXPOSE: ${OTP_DEV_EXPOSE:-false}
   TRUST_PROXY: ${TRUST_PROXY:-true}
   DB_HOST: postgres
   DB_PORT: "5432"
@@ -52,6 +54,11 @@ services:
       retries: 10
       start_period: 10s
     stop_grace_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    # Note: official postgres image entrypoint needs its default capabilities
+    # (gosu setuid/chown of the data dir), so we deliberately do NOT cap_drop.
+    shm_size: 128mb
 
   # --------------------------------------------------------------- api ------
   api:
@@ -66,6 +73,13 @@ services:
     init: true                       # proper PID-1 signal handling & zombie reaping
     security_opt:
       - no-new-privileges:true       # hardening: process tree cannot escalate
+    cap_drop:
+      - ALL                          # hardening: no Linux capabilities required by Node
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 768M
     env_file:
       - path: .env.docker
         required: false
@@ -97,6 +111,13 @@ services:
     init: true
     security_opt:
       - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
     environment:
       PORT: ${WEB_PORT:-3000}
       HOSTNAME: 0.0.0.0

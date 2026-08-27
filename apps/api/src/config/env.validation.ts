@@ -45,6 +45,8 @@ export const envValidationSchema = Joi.object({
     otherwise: Joi.string().valid('true', 'false').default('true'),
   }),
   TRUST_PROXY: Joi.string().valid('true', 'false').optional(),
+  /** Force cookie SameSite override ('none' required when API+Web sit on different sites). */
+  COOKIE_SAMESITE: Joi.string().valid('none', 'lax', 'strict').optional(),
   STRIPE_SECRET_KEY: Joi.string().optional(),
   STRIPE_WEBHOOK_SECRET: Joi.string().optional(),
   SMTP_HOST: Joi.string().optional(),
