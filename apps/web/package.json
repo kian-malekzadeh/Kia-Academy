@@ -1,0 +1,30 @@
+{
+  "name": "@kia-academy/web",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --webpack --hostname 0.0.0.0",
+    "build": "next build --webpack",
+    "build:pages": "GITHUB_PAGES=true NEXT_BASE_PATH=/${PAGES_REPO_NAME:-Kia-Academy} NEXT_PUBLIC_APP_URL=https://kian-malekzadeh.github.io/${PAGES_REPO_NAME:-Kia-Academy} NEXT_PUBLIC_DEMO_MODE=true next build",
+    "start": "next start",
+    "lint": "eslint src --config ../../eslint.config.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@kia-academy/shared": "workspace:*",
+    "lucide-react": "^1.27.0",
+    "next": "^16.2.12",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.0",
+    "@types/node": "^26.1.2",
+    "@types/react": "^19.1.4",
+    "@types/react-dom": "^19.1.5",
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.10"
+  }
+}

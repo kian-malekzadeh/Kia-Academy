@@ -1,0 +1,762 @@
+/* =============================================================================
+   Course catalog + lesson studio + legal pages
+   ========================================================================== */
+
+.catalog-shell {
+  padding: var(--space-2) 0 var(--space-section);
+}
+
+.catalog-shell h1 {
+  font-size: var(--fs-h1);
+  font-weight: 800;
+  margin: var(--space-3) 0;
+}
+
+.catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+  gap: var(--bento-gap);
+  margin-top: var(--space-6);
+}
+
+.catalog-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  box-shadow: var(--shadow-xs);
+  transition:
+    border-color var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out),
+    transform var(--dur-base) var(--ease-out);
+}
+
+.catalog-card:hover {
+  border-color: var(--brand-hairline);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.catalog-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: max-content;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--brand-tint);
+  border: 1px solid var(--brand-hairline);
+  color: var(--brand);
+  font-size: 1rem;
+  padding: 0 0.7rem;
+}
+
+.catalog-card h3 {
+  font-size: var(--fs-h3);
+  font-weight: 700;
+}
+
+.catalog-card p {
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+  flex: 1;
+}
+
+.catalog-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-soft);
+  font-size: var(--fs-micro);
+  color: var(--text-faint);
+  font-family: var(--font-yekanbakh);
+}
+
+.catalog-progress {
+  color: var(--progress);
+  font-weight: 700;
+}
+
+.catalog-actions {
+  margin-top: var(--space-2);
+}
+
+.lesson-nav-item {
+  margin-inline-end: 1rem;
+}
+/* =============================================================================
+   Lesson studio
+   ========================================================================== */
+
+.lesson-shell {
+  max-width: 1360px;
+  padding: var(--space-2) 0 var(--space-section);
+}
+
+.kia-lesson-shell .learn-layout {
+  display: grid;
+  grid-template-columns: minmax(min(240px, 100%), 300px) minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.kia-lesson-shell .learn-sidebar {
+  position: sticky;
+  top: calc(var(--space-4) + 60px);
+  max-height: calc(100vh - 100px);
+  overflow: auto;
+  padding: var(--space-4);
+}
+
+.kia-lesson-shell .sidebar-head {
+  margin-bottom: var(--space-4);
+}
+
+.kia-lesson-shell .learn-brand {
+  margin: 0 0 var(--space-1);
+  font-size: var(--fs-h3);
+  font-weight: 800;
+  color: var(--text);
+}
+
+.kia-lesson-shell .muted {
+  margin: 0;
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+}
+
+.kia-lesson-shell .field-label {
+  display: block;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--text-dim);
+  margin-bottom: var(--space-2);
+}
+
+.kia-lesson-shell .input,
+.kia-lesson-shell .note-editor {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  color: var(--text);
+  font: inherit;
+  outline: none;
+  transition:
+    border-color var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
+}
+
+.kia-lesson-shell .input:focus,
+.kia-lesson-shell .note-editor:focus {
+  border-color: var(--brand-500);
+  box-shadow: var(--focus-ring);
+}
+
+/* --- course progress ----------------------------------------------------- */
+.kia-lesson-shell .learn-progress {
+  margin-top: var(--space-4);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border-soft);
+}
+
+.kia-lesson-shell .learn-progress-label {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.kia-lesson-shell .progress-bar {
+  width: 100%;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--progress-track);
+  overflow: hidden;
+  margin-top: var(--space-2);
+}
+
+.kia-lesson-shell .progress-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--progress-fill);
+  transition: width var(--dur-slow) var(--ease-out);
+}
+
+/* --- lesson list --------------------------------------------------------- */
+.kia-lesson-shell .lesson-nav {
+  margin-top: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.kia-lesson-shell .lesson-nav-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-decoration: none;
+  color: var(--text);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  transition:
+    border-color var(--dur-base) var(--ease-out),
+    background var(--dur-base) var(--ease-out);
+}
+
+.kia-lesson-shell .lesson-nav-item:hover {
+  border-color: var(--brand-hairline);
+}
+
+.kia-lesson-shell .lesson-nav-item.active {
+  border-color: var(--brand-500);
+  background: var(--brand-tint);
+  box-shadow: inset 3px 0 0 var(--brand-500);
+}
+
+[dir='rtl'] .kia-lesson-shell .lesson-nav-item.active {
+  box-shadow: inset -3px 0 0 var(--brand-500);
+}
+
+.kia-lesson-shell .lesson-nav-title {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+
+.kia-lesson-shell .lesson-nav-meta {
+  font-size: var(--fs-micro);
+  color: var(--text-faint);
+}
+
+/* --- main column --------------------------------------------------------- */
+.kia-lesson-shell .learn-main {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.kia-lesson-shell .glass-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+}
+
+.kia-lesson-shell .lesson-content-card,
+.kia-lesson-shell .notes-card {
+  padding: var(--space-6);
+}
+
+.kia-lesson-shell .lesson-top-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.kia-lesson-shell .lesson-back {
+  display: inline-flex;
+  margin-bottom: var(--space-3);
+}
+
+.kia-lesson-shell .lesson-content-card h1 {
+  margin: 0;
+  font-size: var(--fs-h1);
+  font-weight: 800;
+  color: var(--text);
+}
+
+.kia-lesson-shell .lesson-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.kia-lesson-shell .meta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border-soft);
+  color: var(--text-dim);
+  border-radius: var(--radius-pill);
+  padding: 3px var(--space-3);
+  font-size: var(--fs-micro);
+  font-weight: 700;
+}
+
+.kia-lesson-shell .meta-chip--done {
+  color: var(--progress);
+  border-color: rgba(70, 179, 133, 0.32);
+  background: var(--progress-tint);
+}
+
+/* --- video --------------------------------------------------------------- */
+.kia-lesson-shell .lesson-video-block {
+  margin: var(--space-4) 0 var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--ink-950);
+}
+
+.lesson-video-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid rgba(154, 164, 206, 0.16);
+  background: var(--ink-900);
+  color: var(--ink-100);
+}
+
+.lesson-video-label {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+
+.lesson-fullscreen-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--ink-100);
+  border-radius: var(--radius-pill);
+  padding: var(--space-1) var(--space-3);
+  cursor: pointer;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  transition: background var(--dur-base) var(--ease-out);
+}
+
+.lesson-fullscreen-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.kia-lesson-shell .lesson-video {
+  margin: 0;
+  background: var(--ink-950);
+}
+
+.kia-lesson-shell .lesson-video video {
+  width: 100%;
+  max-height: min(70vh, 560px);
+  display: block;
+}
+
+.lesson-video-placeholder {
+  min-height: min(42vh, 320px);
+  display: grid;
+  place-content: center;
+  gap: var(--space-3);
+  text-align: center;
+  padding: var(--space-10) var(--space-5);
+  background:
+    radial-gradient(ellipse 60% 70% at 28% 18%, rgba(100, 100, 255, 0.28), transparent 60%),
+    radial-gradient(ellipse 50% 60% at 82% 90%, rgba(255, 200, 100, 0.14), transparent 60%),
+    var(--ink-950);
+}
+
+.lesson-video-placeholder span {
+  font-size: 1.75rem;
+  color: var(--amber-400);
+}
+
+.lesson-video-placeholder p {
+  margin: 0 auto;
+  max-width: 32ch;
+  color: var(--ink-300);
+}
+
+.lesson-video-block:fullscreen,
+.lesson-video-block:-webkit-full-screen {
+  background: #000;
+  display: flex;
+  flex-direction: column;
+}
+
+.lesson-video-block:fullscreen .lesson-video video,
+.lesson-video-block:-webkit-full-screen .lesson-video video {
+  max-height: calc(100vh - 52px);
+  height: 100%;
+}
+
+.kia-lesson-shell .lesson-description {
+  color: var(--text-dim);
+  margin-top: var(--space-2);
+}
+
+.kia-lesson-shell .lesson-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border-soft);
+}
+
+/* --- pill buttons -------------------------------------------------------- */
+.kia-lesson-shell .pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-h-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+  border-radius: var(--radius-pill);
+  padding: 0 var(--space-4);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  text-decoration: none;
+  transition:
+    border-color var(--dur-base) var(--ease-out),
+    background var(--dur-base) var(--ease-out),
+    color var(--dur-base) var(--ease-out);
+}
+
+.kia-lesson-shell .pill-btn:hover {
+  border-color: var(--brand-hairline);
+  color: var(--brand);
+}
+
+.kia-lesson-shell .pill-btn--primary {
+  background: var(--brand-fill);
+  border-color: transparent;
+  color: var(--on-fill);
+  box-shadow: var(--glow-brand);
+}
+
+.kia-lesson-shell .pill-btn--primary:hover {
+  background: var(--brand-fill-hover);
+  color: var(--on-fill);
+}
+
+.kia-lesson-shell .pill-btn.active {
+  background: var(--brand-tint);
+  border-color: var(--brand-500);
+  color: var(--brand);
+}
+
+.kia-lesson-shell .learn-utility-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+}
+
+.kia-lesson-shell .notes-card h3,
+.kia-lesson-shell .editor-head h3 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--fs-h3);
+  font-weight: 700;
+  color: var(--text);
+}
+
+.kia-lesson-shell .note-editor {
+  margin-top: var(--space-3);
+  min-height: 140px;
+  resize: vertical;
+  line-height: 1.7;
+}
+
+/* --- playground ---------------------------------------------------------- */
+.kia-lesson-shell .editor-card {
+  padding: var(--space-6);
+}
+
+.kia-lesson-shell .editor-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.kia-lesson-shell .control-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.kia-lesson-shell .check-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.kia-lesson-shell .check-wrap input {
+  accent-color: var(--brand-500);
+}
+
+.kia-lesson-shell .preview-toolbar,
+.kia-lesson-shell .editor-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.kia-lesson-shell .editor-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.kia-lesson-shell .code-editor {
+  width: 100%;
+  min-height: 300px;
+  border: 1px solid var(--ink-800);
+  border-radius: var(--radius-md);
+  background: var(--code-bg);
+  color: var(--code-text);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  line-height: 1.65;
+  padding: var(--space-4);
+  resize: vertical;
+  tab-size: 2;
+}
+
+.kia-lesson-shell .code-editor:focus-visible {
+  outline: none;
+  border-color: var(--brand-500);
+  box-shadow: var(--focus-ring);
+}
+
+.kia-lesson-shell .preview-stack {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.kia-lesson-shell .preview-frame-wrap {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: #fff;
+  min-height: 240px;
+}
+
+.kia-lesson-shell .code-preview {
+  width: 100%;
+  min-height: 240px;
+  border: 0;
+  display: block;
+  background: #fff;
+}
+
+.kia-lesson-shell .console-panel {
+  border: 1px solid var(--ink-800);
+  border-radius: var(--radius-md);
+  background: var(--code-bg);
+  overflow: hidden;
+}
+
+.kia-lesson-shell .console-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid rgba(154, 164, 206, 0.16);
+  color: var(--code-muted);
+  font-size: var(--fs-micro);
+  font-weight: 700;
+}
+
+.kia-lesson-shell .console-output {
+  max-height: 180px;
+  overflow: auto;
+  padding: var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+}
+
+.kia-lesson-shell .console-line {
+  color: var(--code-muted);
+  margin-bottom: var(--space-1);
+  word-break: break-word;
+}
+
+.kia-lesson-shell .console-line.error {
+  color: var(--danger-400);
+}
+
+.kia-lesson-shell .console-line.warn {
+  color: var(--amber-400);
+}
+
+@media (max-width: 900px) {
+  .kia-lesson-shell .learn-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .kia-lesson-shell .learn-sidebar {
+    position: static;
+    max-height: none;
+  }
+
+  .kia-lesson-shell .editor-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .kia-lesson-shell .lesson-shell,
+  .lesson-shell {
+    padding-inline: 0;
+  }
+
+  .kia-lesson-shell .lesson-content-card,
+  .kia-lesson-shell .notes-card,
+  .kia-lesson-shell .editor-card,
+  .kia-lesson-shell .learn-sidebar {
+    padding: var(--space-4);
+  }
+}
+
+/* =============================================================================
+   Lesson markdown
+   ========================================================================== */
+
+.lesson-md h1,
+.lesson-md h2,
+.lesson-md h3 {
+  margin: 1.4em 0 0.5em;
+  color: var(--text);
+}
+
+.lesson-md h1:first-child,
+.lesson-md h2:first-child,
+.lesson-md h3:first-child {
+  margin-top: 0;
+}
+
+.lesson-md p {
+  margin-bottom: 1em;
+  color: var(--text-dim);
+}
+
+.lesson-md ul,
+.lesson-md ol {
+  margin-block: 0 1em;
+  margin-inline: 1.4em 0;
+  color: var(--text-dim);
+}
+
+.lesson-md li {
+  margin-bottom: 0.35em;
+}
+
+.lesson-md a {
+  color: var(--brand);
+}
+
+.lesson-md strong {
+  color: var(--text);
+}
+
+.lesson-md blockquote {
+  margin: 1em 0;
+  padding: var(--space-3) var(--space-5);
+  border-inline-start: 3px solid var(--brand-500);
+  background: var(--brand-tint);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+}
+
+.lesson-md code {
+  font-family: var(--font-mono);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border-soft);
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+  font-size: 0.9em;
+}
+
+.lesson-md pre {
+  background: var(--code-bg);
+  border: 1px solid var(--ink-800);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  overflow-x: auto;
+  margin: 1em 0;
+  color: var(--code-text);
+}
+
+.lesson-md pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+}
+
+/* =============================================================================
+   Legal pages
+   ========================================================================== */
+
+.legal-shell {
+  max-width: 720px;
+  padding: var(--space-2) 0 var(--space-section);
+}
+
+.legal-shell h1 {
+  font-size: var(--fs-h1);
+  font-weight: 800;
+  margin-bottom: var(--space-2);
+}
+
+.legal-updated {
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  margin-bottom: var(--space-10);
+}
+
+.legal-shell section {
+  margin-bottom: var(--space-8);
+}
+
+.legal-shell h2 {
+  font-size: var(--fs-h3);
+  font-weight: 700;
+  margin-bottom: var(--space-3);
+}
+
+.legal-shell p,
+.legal-shell li {
+  color: var(--text-dim);
+}
+
+.legal-shell ul {
+  margin-block: var(--space-2) 0;
+  margin-inline: 1.4em 0;
+}
+
+.legal-shell a {
+  color: var(--brand);
+}

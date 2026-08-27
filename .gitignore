@@ -1,0 +1,67 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build output
+dist/
+**/dist/
+.next/
+**/.next/
+out/
+**/out/
+*.tsbuildinfo
+
+# Next.js auto-generated (flip-flops between dev/build modes)
+apps/web/next-env.d.ts
+
+# Tooling caches
+.turbo/
+.pnpm-store/
+.npm-cache/
+.eslintcache
+
+# Test output
+coverage/
+**/coverage/
+test-results/
+**/test-results/
+playwright-report/
+**/playwright-report/
+.playwright-browsers/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Local configuration & secrets — commit templates only
+.env
+.env.*
+!.env.example
+!.env.docker.example
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.docker.example
+
+# Prisma local artifacts
+apps/api/prisma/*.db
+apps/api/prisma/*.db-journal
+
+# User uploads
+apps/api/uploads/
+uploads/
+
+# Editors & OS
+.claude/
+.cursor/
+.vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Deploy / misc
+*.zip
+nohup.out
+

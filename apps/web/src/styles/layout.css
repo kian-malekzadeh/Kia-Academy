@@ -1,0 +1,546 @@
+/* =============================================================================
+   Global chrome — demo banner, floating top bar, page back button
+   ========================================================================== */
+
+.demo-banner {
+  width: 100%;
+  padding: var(--space-2) var(--space-4);
+  text-align: center;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--value);
+  background: var(--value-tint);
+  border-bottom: 1px solid rgba(255, 200, 100, 0.32);
+}
+
+/* --- floating top bar ----------------------------------------------------- */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5);
+  width: calc(100% - 24px);
+  max-width: var(--shell-max);
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4);
+  margin: var(--space-3) auto var(--space-6);
+  position: sticky;
+  top: var(--space-3);
+  z-index: var(--z-sticky);
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-md);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .topbar {
+    background: var(--bg-card);
+  }
+}
+
+/* --- logged-in panel shell (sidebar on desktop) -------------------------- */
+.panel-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  position: relative;
+  z-index: var(--z-raised);
+  overflow-x: clip;
+}
+
+.panel-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+@media (min-width: 901px) {
+  .panel-shell {
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  .panel-shell .topbar {
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+    flex: 0 0 18.5rem;
+    width: 18.5rem;
+    max-width: 18.5rem;
+    height: 100vh;
+    margin: 0;
+    padding: var(--space-5) var(--space-4);
+    border-radius: 0;
+    border: none;
+    border-inline-end: 1px solid var(--border);
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: var(--space-5);
+    /* Scroll lives on .learner-nav so expanded groups never cover secondary. */
+    overflow: hidden;
+  }
+
+  /* Flatten so logo / secondary / nav can be ordered as topbar flex children. */
+  .panel-shell .topbar-primary {
+    display: contents;
+  }
+
+  .panel-shell .logo {
+    order: 1;
+    width: 100%;
+    justify-content: flex-start;
+    padding-inline: var(--space-2);
+    flex: 0 0 auto;
+  }
+
+  /* Fixed account/tools cluster — stays fully visible above the nav. */
+  .panel-shell .topbar-secondary,
+  .panel-shell .top-right {
+    order: 2;
+    flex: 0 0 auto;
+    margin-top: 0;
+    margin-bottom: 0;
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--border-soft);
+  }
+
+  .panel-shell .top-nav {
+    order: 3;
+    flex: 1 1 auto;
+    min-height: 0;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: var(--space-1);
+    min-width: 0;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .panel-shell .learner-nav {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: hidden;
+  }
+
+  .panel-shell .top-nav-link {
+    width: 100%;
+    justify-content: flex-start;
+    border-radius: var(--radius-md);
+    padding: var(--space-3);
+  }
+
+  .panel-shell .top-right-tools {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+  }
+
+  /* Desktop order: user → color mode → language */
+  .panel-shell .user-menu-wrap {
+    order: 1;
+    width: 100%;
+  }
+
+  .panel-shell .top-right-tools {
+    order: 2;
+  }
+
+  .panel-shell .top-right-tools .theme-toggle {
+    order: 1;
+  }
+
+  .panel-shell .top-right-tools .lang-selector {
+    order: 2;
+  }
+
+  .panel-shell .top-right-tools .theme-toggle,
+  .panel-shell .top-right-tools .lang-toggle,
+  .panel-shell .topbar button.lang-toggle {
+    width: 100%;
+    min-width: 0;
+    justify-content: flex-start;
+  }
+
+  .panel-shell .user-chip {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .panel-shell .user-dropdown {
+    inset-inline-start: 0;
+    inset-inline-end: auto;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .panel-content {
+    flex: 1 1 auto;
+    min-height: 100vh;
+  }
+
+  .panel-content .site-main {
+    flex: 1 0 auto;
+  }
+}
+
+/* --- brand --------------------------------------------------------------- */
+.logo {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border: none;
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  cursor: pointer;
+  transition: color var(--dur-base) var(--ease-out);
+}
+
+[dir='rtl'] .logo {
+  font-family: var(--font-fa);
+}
+
+.logo:hover {
+  color: var(--brand);
+}
+
+.logo-mark {
+  display: block;
+  height: 26px;
+  width: auto;
+  aspect-ratio: 497.37 / 512;
+  flex: 0 0 auto;
+  color: var(--brand-500);
+  overflow: visible;
+}
+
+.logo-mark .brand-mark-shape {
+  color: inherit;
+}
+
+.logo-text {
+  white-space: nowrap;
+}
+
+/* --- nav ----------------------------------------------------------------- */
+.mobile-nav-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--bg-card);
+  color: var(--text);
+  flex-shrink: 0;
+}
+
+.top-right {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.top-right-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.top-nav-tools {
+  display: none;
+}
+
+/* --- theme + language controls ------------------------------------------- */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--control-h-sm);
+  padding: 0 var(--space-3);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--text-dim);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    color var(--dur-base) var(--ease-out),
+    border-color var(--dur-base) var(--ease-out);
+}
+
+.theme-toggle-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.theme-toggle:hover {
+  color: var(--brand);
+  border-color: var(--brand-hairline);
+}
+
+.lang-selector {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.topbar button.lang-toggle {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--control-h-sm);
+  min-width: 86px;
+  padding-inline: var(--space-2) var(--space-3);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    color var(--dur-base) var(--ease-out),
+    border-color var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
+}
+
+.topbar button.lang-toggle svg {
+  color: var(--brand);
+}
+
+.topbar button.lang-toggle:hover {
+  color: var(--brand);
+  border-color: var(--brand-hairline);
+}
+
+.topbar button.lang-toggle[aria-expanded='true'] {
+  color: var(--brand);
+  border-color: var(--brand-hairline);
+  box-shadow: var(--focus-ring);
+}
+
+.lang-code {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  min-height: 20px;
+  padding-inline: 5px;
+  border-radius: var(--radius-xs);
+  background: var(--brand-tint);
+  color: var(--brand);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.lang-label {
+  font-size: var(--fs-micro);
+  white-space: nowrap;
+}
+
+.lang-selector [lang='fa'] {
+  font-family: var(--font-fa);
+}
+
+.lang-menu {
+  position: absolute;
+  inset-inline-end: 0;
+  top: calc(100% + var(--space-2));
+  width: max-content;
+  min-width: min(190px, calc(100dvw - 32px));
+  max-width: min(100vw - 32px, 100dvw - 32px);
+  box-sizing: border-box;
+  overflow: hidden;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+  box-shadow: var(--shadow-lg);
+  list-style: none;
+  margin: 0;
+  z-index: var(--z-dropdown);
+}
+
+.lang-menu li {
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.lang-menu button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+  padding: var(--space-3);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-align: start;
+  cursor: pointer;
+  transition: background var(--dur-base) var(--ease-out);
+}
+
+.lang-menu button:hover,
+.lang-menu button.active {
+  background: var(--brand-tint);
+}
+
+.lang-menu button.active {
+  color: var(--brand);
+  box-shadow: inset 3px 0 0 var(--brand-500);
+}
+
+[dir='rtl'] .lang-code {
+  letter-spacing: normal;
+}
+
+[dir='rtl'] .lang-menu button.active {
+  box-shadow: inset -3px 0 0 var(--brand-500);
+}
+
+/* --- account chip -------------------------------------------------------- */
+.user-chip {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: var(--space-2);
+  min-height: var(--control-h-sm);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--text);
+  padding-block: 4px;
+  padding-inline: 4px var(--space-3);
+  font-family: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
+}
+
+.user-chip:hover {
+  border-color: var(--brand-hairline);
+  box-shadow: var(--shadow-xs);
+}
+
+.user-chip-name {
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.avatar {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--gradient-brand);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+
+/* --- page back ----------------------------------------------------------- */
+.page-back-wrap {
+  display: flex;
+  margin: 0 0 var(--space-5);
+  padding-inline: var(--space-6);
+  position: relative;
+  z-index: var(--z-raised);
+}
+
+/* Avoid double inset when the back control already lives inside .container */
+.container .page-back-wrap,
+.auth-shell .page-back-wrap {
+  padding-inline: 0;
+}
+
+.page-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-h-sm);
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  box-shadow: var(--shadow-xs);
+  transition:
+    color var(--dur-base) var(--ease-out),
+    border-color var(--dur-base) var(--ease-out);
+}
+
+.page-back-btn:hover {
+  color: var(--brand);
+  border-color: var(--brand-hairline);
+}
+
+/* --- page header pattern ------------------------------------------------- */
+.page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+}
+
+.page-head h1 {
+  font-size: var(--fs-h1);
+  font-weight: 800;
+}
+
+.page-head p {
+  color: var(--text-dim);
+  max-width: 60ch;
+  margin-top: var(--space-2);
+}

@@ -1,0 +1,595 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  LEARNER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum ProductType {
+  READINESS_TEST
+  ROADMAP_BUNDLE
+  COURSE
+}
+
+enum EntitlementSource {
+  PURCHASE
+  CHALLENGE
+  BUNDLE
+  FREE
+}
+
+enum OrderStatus {
+  PENDING
+  AWAITING_PAYMENT
+  PAID
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+model User {
+  id              String    @id @default(cuid())
+  name            String    @default("")
+  firstName       String?
+  lastName        String?
+  province        String?
+  city            String?
+  bio             String?
+  avatarUrl       String?
+  phone           String?   @unique
+  phoneVerified   Boolean   @default(false)
+  email           String?   @unique
+  passwordHash    String?
+  role            UserRole  @default(LEARNER)
+  emailVerified   Boolean   @default(false)
+  profileComplete Boolean   @default(false)
+  /** Per-moderator admin panel permissions (ADMIN role). Null → site default template. */
+  adminPanelAccess Json?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  refreshTokens        RefreshToken[]
+  assessments          Assessment[]
+  roadmaps             Roadmap[]
+  readinessTests       ReadinessTest[]
+  examAttempts         ExamAttempt[]
+  personalityResults   PersonalityResult[]
+  bootcampProfile      BootcampProfile?
+  challengeSubmissions ChallengeSubmission[]
+  payments             Payment[]
+  orders               Order[]
+  cart                 Cart?
+  entitlements         Entitlement[]
+  enrollments          Enrollment[]
+  lessonProgress       LessonProgress[]
+  supportTickets       SupportTicket[]
+  ticketReplies        TicketReply[]
+  learnerMessages      LearnerMessage[]
+  learnerTodos         LearnerTodo[]
+  competitionRegs      CompetitionRegistration[]
+  wallet               LearnerWallet?
+}
+
+model PhoneOtp {
+  id         String    @id @default(cuid())
+  phone      String
+  codeHash   String
+  attempts   Int       @default(0)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([phone])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Assessment {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers   String
+  createdAt DateTime @default(now())
+
+  roadmaps Roadmap[]
+
+  @@index([userId, createdAt])
+}
+
+model Roadmap {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assessmentId String?
+  assessment   Assessment? @relation(fields: [assessmentId], references: [id], onDelete: SetNull)
+  trackKey     String
+  trackName    String
+  modules      String
+  level        String
+  profile      String
+  pricing      String
+  enrolled     Boolean  @default(false)
+  paymentId    String?
+  createdAt    DateTime @default(now())
+}
+
+model ReadinessTest {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scores      String
+  percentages String
+  average     Int
+  passed      Boolean
+  verdict     String
+  paymentId   String?
+  createdAt   DateTime @default(now())
+}
+
+/** Mini-IPIP Big Five personality result (Donnellan et al., 2006). */
+model PersonalityResult {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  instrument String   @default("mini-ipip")
+  answers    String
+  scores     String
+  createdAt  DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+/** Server-graded timed digital readiness exam attempt. */
+model ExamAttempt {
+  id               String    @id @default(cuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roadmapId        String?
+  blueprintVersion String
+  status           String    @default("IN_PROGRESS")
+  questionIds      String
+  answers          String    @default("{}")
+  startedAt        DateTime  @default(now())
+  endsAt           DateTime
+  submittedAt      DateTime?
+  average          Int?
+  passed           Boolean?
+  domainScores     String?
+  percentages      String?
+  outcome          String?
+  verdict          String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([userId, status])
+}
+
+model BootcampProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rank   Int    @default(12)
+  points Int    @default(340)
+}
+
+model ChallengeSubmission {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code      String
+  score     Int
+  topScore  Boolean
+  result    String
+  createdAt DateTime @default(now())
+}
+
+model Payment {
+  id          String        @id @default(cuid())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId     String?       @unique
+  order       Order?        @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  productType ProductType
+  productRef  String?
+  amountCents Int
+  currency    String        @default("irr")
+  status      PaymentStatus @default(PENDING)
+  /** Active provider id at checkout time (dev / zarinpal / idpay / stripe). */
+  provider    String?
+  stripeId    String?
+  gatewayRef  String?
+  metadata    String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([userId, status])
+  @@index([stripeId])
+}
+
+model Order {
+  id             String      @id @default(cuid())
+  userId         String
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status         OrderStatus @default(PENDING)
+  invoiceNumber  String?     @unique
+  subtotalCents  Int
+  discountCents  Int         @default(0)
+  totalCents     Int
+  currency       String      @default("irr")
+  source         String      @default("DIRECT")
+  metadata       String?
+  items          OrderItem[]
+  payment        Payment?
+  invoice        Invoice?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([userId, createdAt])
+}
+
+model OrderItem {
+  id              String      @id @default(cuid())
+  orderId         String
+  order           Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productType     ProductType
+  productRef      String
+  title           String
+  thumbnail       String?
+  instructor      String?
+  unitPriceCents  Int
+  discountCents   Int         @default(0)
+  finalPriceCents Int
+  quantity        Int         @default(1)
+  courseId        String?
+}
+
+model Invoice {
+  id             String   @id @default(cuid())
+  orderId        String   @unique
+  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  invoiceNumber  String   @unique
+  issuedAt       DateTime @default(now())
+  buyerName      String
+  buyerEmail     String?
+  buyerPhone     String?
+  currency       String   @default("irr")
+  subtotalCents  Int
+  discountCents  Int      @default(0)
+  totalCents     Int
+  /** JSON-serialized OrderItemResponse[]. */
+  lineItems      String
+  createdAt      DateTime @default(now())
+}
+
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String     @unique
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  cartId    String
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([cartId, courseId])
+  @@index([courseId])
+}
+
+model Entitlement {
+  id           String            @id @default(cuid())
+  userId       String
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resourceType String
+  resourceId   String
+  source       EntitlementSource
+  createdAt    DateTime          @default(now())
+
+  @@unique([userId, resourceType, resourceId])
+}
+
+model Course {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  description String
+  icon        String   @default("book")
+  trackKey    String?
+  sortOrder   Int      @default(0)
+  published   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  lessons     Lesson[]
+  enrollments Enrollment[]
+  attachments CourseAttachment[]
+  tickets     SupportTicket[]
+  cartItems   CartItem[]
+}
+
+model Lesson {
+  id          String  @id @default(cuid())
+  courseId    String
+  course      Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  slug        String
+  title       String
+  content     String
+  videoUrl    String?
+  durationMin Int     @default(10)
+  sortOrder   Int     @default(0)
+
+  progress LessonProgress[]
+
+  @@unique([courseId, slug])
+  @@index([courseId, sortOrder])
+}
+
+model Enrollment {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, courseId])
+}
+
+model LessonProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId    String
+  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  completed   Boolean  @default(false)
+  completedAt DateTime?
+
+  @@unique([userId, lessonId])
+}
+
+model Challenge {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  description String
+  points      Int      @default(120)
+  startsAt    DateTime
+  endsAt      DateTime
+  active      Boolean  @default(true)
+  starterCode String   @default("")
+  createdAt   DateTime @default(now())
+}
+
+model EmailLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  to        String
+  subject   String
+  template  String
+  status    String
+  createdAt DateTime @default(now())
+}
+
+model SiteSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+/** Editable learner test banks (personality / assessment / readiness). */
+model TestBank {
+  id        String   @id
+  payload   String
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+}
+
+model ContactMessage {
+  id        String    @id @default(cuid())
+  name      String
+  email     String
+  subject   String
+  message   String
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  NORMAL
+  HIGH
+}
+
+/** Learner support tickets (course-scoped or general). */
+model SupportTicket {
+  id        String         @id @default(cuid())
+  userId    String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId  String?
+  course    Course?        @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  subject   String
+  body      String
+  /** Optional support category label (technical / admin / education / finance). */
+  category  String?
+  status    TicketStatus   @default(OPEN)
+  priority  TicketPriority @default(NORMAL)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  replies     TicketReply[]
+  attachments TicketAttachment[]
+
+  @@index([userId, createdAt])
+}
+
+enum WalletTxnType {
+  CREDIT
+  DEBIT
+}
+
+/** Prepaid learner wallet (IRR). */
+model LearnerWallet {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /** Balance in Iranian Rials. */
+  balanceCents Int      @default(0)
+  currency     String   @default("irr")
+  /** Last 4 digits shown on the dashboard card UI. */
+  cardLast4    String   @default("1234")
+  /** Display-only expiry MM/YY for the digital card. */
+  expiresLabel String   @default("06/27")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  transactions WalletTransaction[]
+}
+
+model WalletTransaction {
+  id          String       @id @default(cuid())
+  walletId    String
+  wallet      LearnerWallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  type        WalletTxnType
+  /** Absolute amount in IRR (sign inferred from type). */
+  amountCents Int
+  description String
+  paymentId   String?
+  createdAt   DateTime     @default(now())
+
+  @@index([walletId, createdAt])
+}
+
+model TicketReply {
+  id        String        @id @default(cuid())
+  ticketId  String
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  body      String
+  isStaff   Boolean       @default(false)
+  createdAt DateTime      @default(now())
+
+  attachments TicketAttachment[]
+
+  @@index([ticketId, createdAt])
+}
+
+/** File/image attachments on tickets or ticket replies. */
+model TicketAttachment {
+  id         String         @id @default(cuid())
+  ticketId   String?
+  ticket     SupportTicket? @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  replyId    String?
+  reply      TicketReply?   @relation(fields: [replyId], references: [id], onDelete: Cascade)
+  fileName   String
+  storedName String
+  mimeType   String
+  sizeBytes  Int
+  createdAt  DateTime       @default(now())
+
+  @@index([ticketId])
+  @@index([replyId])
+}
+
+/** Admin → learner inbox messages. */
+model LearnerMessage {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject   String
+  body      String
+  readAt    DateTime?
+  createdBy String?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
+}
+
+/** Todo list on the learner dashboard. */
+model LearnerTodo {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  done      Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, sortOrder])
+}
+
+model Competition {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  description String
+  startsAt    DateTime
+  endsAt      DateTime
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  registrations CompetitionRegistration[]
+}
+
+model CompetitionRegistration {
+  id            String      @id @default(cuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  competitionId String
+  competition   Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+
+  @@unique([userId, competitionId])
+}
+
+model CourseAttachment {
+  id        String   @id @default(cuid())
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title     String
+  fileName  String
+  fileUrl   String
+  mimeType  String?
+  sizeBytes Int?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([courseId, sortOrder])
+}

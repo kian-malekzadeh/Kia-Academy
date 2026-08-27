@@ -1,0 +1,334 @@
+/* =============================================================================
+   Buttons & controls — Layer 3 primitives
+   Contract: docs/design-system/MASTER.md §7
+   ========================================================================== */
+
+.btn,
+.cta-primary,
+.cta-secondary,
+.btn-next,
+.btn-accent,
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--control-h);
+  padding: 0 var(--space-6);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: var(--fs-body);
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background var(--dur-base) var(--ease-out),
+    border-color var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out),
+    color var(--dur-base) var(--ease-out),
+    transform var(--dur-base) var(--ease-out);
+}
+
+.btn:focus-visible,
+.cta-primary:focus-visible,
+.cta-secondary:focus-visible,
+.btn-next:focus-visible,
+.btn-accent:focus-visible,
+.btn-danger:focus-visible,
+.btn-ghost:focus-visible,
+.back-link:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.btn:disabled,
+.cta-primary:disabled,
+.cta-secondary:disabled,
+.btn-next:disabled,
+.btn-accent:disabled,
+.btn-danger:disabled,
+.btn[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* --- primary: brand fill, white text (5.8:1) ----------------------------- */
+.btn--primary,
+.cta-primary,
+.btn-next {
+  background: var(--brand-fill);
+  color: var(--on-fill);
+  box-shadow: var(--glow-brand);
+}
+
+.btn--primary:hover:not(:disabled),
+.cta-primary:hover:not(:disabled),
+.btn-next:hover:not(:disabled) {
+  background: var(--brand-fill-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.btn--primary:active:not(:disabled),
+.cta-primary:active:not(:disabled),
+.btn-next:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
+}
+
+/* --- accent: amber fill, ink text (15.4:1) — value / reward moments ------ */
+.btn--accent,
+.btn-accent {
+  background: var(--value-fill);
+  color: var(--value-on-fill);
+  box-shadow: var(--glow-amber);
+}
+
+.btn--accent:hover:not(:disabled),
+.btn-accent:hover:not(:disabled) {
+  background: var(--amber-300);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* --- secondary: surface + hairline --------------------------------------- */
+.btn--secondary,
+.cta-secondary {
+  background: var(--bg-card);
+  color: var(--text);
+  border-color: var(--border);
+  box-shadow: var(--shadow-xs);
+}
+
+.btn--secondary:hover:not(:disabled),
+.cta-secondary:hover:not(:disabled) {
+  border-color: var(--brand-hairline);
+  color: var(--brand);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+/* --- quiet: tinted, no border -------------------------------------------- */
+.btn--quiet {
+  background: var(--brand-tint);
+  color: var(--brand);
+}
+
+.btn--quiet:hover:not(:disabled) {
+  background: var(--brand-tint-strong);
+}
+
+/* --- danger -------------------------------------------------------------- */
+.btn--danger,
+.btn-danger {
+  background: var(--negative);
+  color: var(--ink-0);
+}
+
+.btn--danger:hover:not(:disabled),
+.btn-danger:hover:not(:disabled) {
+  background: var(--danger-700);
+  transform: translateY(-2px);
+}
+
+/* --- ghost --------------------------------------------------------------- */
+.btn--ghost,
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--control-h-sm);
+  padding: 0 var(--space-3);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background var(--dur-base) var(--ease-out),
+    color var(--dur-base) var(--ease-out);
+}
+
+.btn--ghost:hover:not(:disabled),
+.btn-ghost:hover:not(:disabled) {
+  background: var(--bg-sunken);
+  color: var(--text);
+}
+
+/* --- sizes --------------------------------------------------------------- */
+.btn--sm {
+  min-height: var(--control-h-sm);
+  padding: 0 var(--space-4);
+  font-size: var(--fs-sm);
+  border-radius: var(--radius-sm);
+}
+
+.btn--lg,
+.cta-primary {
+  min-height: var(--control-h-lg);
+  padding: 0 var(--space-8);
+  font-size: var(--fs-body-lg);
+}
+
+.btn--block {
+  width: 100%;
+}
+
+.btn--icon {
+  min-height: var(--control-h);
+  width: var(--control-h);
+  padding: 0;
+  border-radius: var(--radius-md);
+}
+
+/* --- links --------------------------------------------------------------- */
+.back-link,
+.link-quiet {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text-faint);
+  font-family: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color var(--dur-base) var(--ease-out);
+}
+
+.back-link:hover,
+.link-quiet:hover {
+  color: var(--brand);
+}
+
+/* --- action clusters ----------------------------------------------------- */
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.hero-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+/* --- segmented control --------------------------------------------------- */
+.segmented {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--bg-sunken);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-pill);
+}
+
+.segmented > button {
+  min-height: var(--control-h-sm);
+  padding: 0 var(--space-4);
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background var(--dur-base) var(--ease-out),
+    color var(--dur-base) var(--ease-out);
+}
+
+.segmented > button:hover {
+  color: var(--text);
+}
+
+.segmented > button[aria-selected='true'],
+.segmented > button.active {
+  background: var(--bg-card);
+  color: var(--brand);
+  box-shadow: var(--shadow-xs);
+}
+
+/* =============================================================================
+   Feature grid — reusable marketing block
+   ========================================================================== */
+
+.features-section {
+  /* Vertical only — horizontal padding comes from .container / landing media queries */
+  padding-block: var(--space-section);
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+  gap: var(--bento-gap);
+}
+
+.feature-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-sm);
+  transition:
+    border-color var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out),
+    transform var(--dur-base) var(--ease-out);
+}
+
+.feature-card:hover {
+  border-color: var(--brand-hairline);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.feature-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--brand-tint);
+  border: 1px solid var(--brand-hairline);
+  color: var(--brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--space-4);
+}
+
+.feature-icon--mint {
+  background: var(--progress-tint);
+  border-color: rgba(70, 179, 133, 0.32);
+  color: var(--progress);
+}
+
+.feature-icon--amber {
+  background: var(--value-tint);
+  border-color: rgba(255, 200, 100, 0.4);
+  color: var(--value);
+}
+
+.feature-card h3 {
+  font-size: var(--fs-h3);
+  font-weight: 700;
+  margin-bottom: var(--space-2);
+}
+
+.feature-card p {
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}

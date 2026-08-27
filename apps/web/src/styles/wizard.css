@@ -1,0 +1,339 @@
+/* =============================================================================
+   Assessment wizard
+   ========================================================================== */
+
+.wizard-shell {
+  padding: var(--space-2) 0 var(--space-section);
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+/* --- stage progress ------------------------------------------------------- */
+.stage-track {
+  display: flex;
+  gap: var(--space-1);
+  margin-bottom: var(--space-8);
+}
+
+.stage-seg {
+  flex: 1;
+  height: 5px;
+  border-radius: var(--radius-pill);
+  background: var(--progress-track);
+  transition: background var(--dur-slow) var(--ease-out);
+}
+
+.stage-seg.done {
+  background: var(--progress-fill);
+}
+
+.stage-seg.current {
+  background: var(--brand-500);
+  box-shadow: var(--glow-brand);
+}
+
+.stage-label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: var(--space-2);
+}
+
+.stage-label b {
+  color: var(--brand);
+}
+
+.q-title {
+  font-size: var(--fs-h1);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: var(--space-2);
+}
+
+.q-sub {
+  color: var(--text-dim);
+  font-size: var(--fs-body);
+  margin-bottom: var(--space-8);
+}
+
+/* --- option cards -------------------------------------------------------- */
+.option-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+  gap: var(--space-3);
+}
+
+.opt-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  background: var(--bg-card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+  color: var(--text);
+  text-align: start;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-base) var(--ease-out),
+    background var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out),
+    transform var(--dur-base) var(--ease-out);
+}
+
+.opt-card:hover {
+  border-color: var(--brand-hairline);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-2px);
+}
+
+.opt-card.selected {
+  border-color: var(--brand-500);
+  background: var(--brand-tint);
+  box-shadow: var(--focus-ring);
+}
+
+/* Selection is marked by a checkmark as well as colour. */
+.opt-card.selected::after {
+  content: '';
+  position: absolute;
+  top: var(--space-4);
+  inset-inline-end: var(--space-4);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--brand-fill);
+  box-shadow: inset 0 0 0 2px var(--bg-card);
+}
+
+.opt-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border-soft);
+  color: var(--text-dim);
+  font-size: 1.25rem;
+}
+
+.opt-card.selected .opt-icon {
+  background: var(--brand-fill);
+  border-color: transparent;
+  color: var(--on-fill);
+}
+
+.opt-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-body);
+  color: var(--text);
+}
+
+[dir='rtl'] .opt-title {
+  font-family: var(--font-fa);
+}
+
+.opt-desc {
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+}
+
+/* --- tag pickers --------------------------------------------------------- */
+.tag-group {
+  margin-bottom: var(--space-6);
+}
+
+.tag-label {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  margin-bottom: var(--space-3);
+}
+
+.tag-row {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.tag {
+  min-height: var(--control-h-sm);
+  padding: 0 var(--space-4);
+  border: 1.5px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-dim);
+  border-radius: var(--radius-pill);
+  font-family: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-base) var(--ease-out),
+    background var(--dur-base) var(--ease-out),
+    color var(--dur-base) var(--ease-out);
+}
+
+.tag:hover {
+  border-color: var(--brand-hairline);
+  color: var(--brand);
+}
+
+.tag.selected {
+  background: var(--brand-fill);
+  border-color: var(--brand-fill);
+  color: var(--on-fill);
+}
+
+/* --- sliders ------------------------------------------------------------- */
+.slider-block {
+  margin-bottom: var(--space-8);
+  direction: ltr;
+}
+
+.slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+  margin-top: var(--space-2);
+}
+
+.wizard-range {
+  position: relative;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  direction: ltr;
+}
+
+.wizard-range::before {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--range-track, var(--progress-track));
+  pointer-events: none;
+}
+
+input[type='range'] {
+  position: relative;
+  z-index: var(--z-raised);
+  width: 100%;
+  height: 20px;
+  margin: 0;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  accent-color: transparent;
+  cursor: pointer;
+}
+
+input[type='range']::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: transparent;
+}
+
+input[type='range']::-moz-range-track {
+  width: 100%;
+  height: 8px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+}
+
+input[type='range']::-moz-range-progress {
+  height: 8px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+}
+
+input[type='range']::-webkit-slider-thumb {
+  width: 20px;
+  height: 20px;
+  margin-top: -6px;
+  border: 3px solid var(--bg-card);
+  border-radius: 50%;
+  background: var(--brand-fill);
+  box-shadow: 0 0 0 2px var(--brand-500);
+  -webkit-appearance: none;
+  appearance: none;
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+input[type='range']::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 3px solid var(--bg-card);
+  border-radius: 50%;
+  background: var(--brand-fill);
+  box-shadow: 0 0 0 2px var(--brand-500);
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+input[type='range']:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-pill);
+}
+
+input[type='range']:active::-webkit-slider-thumb {
+  transform: scale(1.15);
+  box-shadow: 0 0 0 6px var(--brand-tint);
+}
+
+input[type='range']:active::-moz-range-thumb {
+  transform: scale(1.15);
+  box-shadow: 0 0 0 6px var(--brand-tint);
+}
+
+.wizard-range--left input[type='range']::-webkit-slider-thumb,
+.wizard-range--left input[type='range']::-moz-range-thumb {
+  background: var(--mint-600);
+  box-shadow: 0 0 0 2px var(--progress-fill);
+}
+
+.wizard-range--left input[type='range']:active::-webkit-slider-thumb,
+.wizard-range--left input[type='range']:active::-moz-range-thumb {
+  box-shadow: 0 0 0 6px var(--progress-tint);
+}
+
+.wizard-range--right input[type='range']::-webkit-slider-thumb,
+.wizard-range--right input[type='range']::-moz-range-thumb,
+.wizard-range--progress input[type='range']::-webkit-slider-thumb,
+.wizard-range--progress input[type='range']::-moz-range-thumb {
+  background: var(--brand-fill);
+  box-shadow: 0 0 0 2px var(--brand-500);
+}
+
+.wizard-range--right input[type='range']:active::-webkit-slider-thumb,
+.wizard-range--right input[type='range']:active::-moz-range-thumb,
+.wizard-range--progress input[type='range']:active::-webkit-slider-thumb,
+.wizard-range--progress input[type='range']:active::-moz-range-thumb {
+  box-shadow: 0 0 0 6px var(--brand-tint);
+}
+
+/* --- wizard navigation --------------------------------------------------- */
+.wizard-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-10);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--border-soft);
+}

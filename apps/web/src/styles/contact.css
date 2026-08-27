@@ -1,0 +1,209 @@
+/* =============================================================================
+   Contact page, unified test flow, roadmap course picker, admin perm matrix
+   Note: test-history styles live in hub.css — do not duplicate them here,
+   this file is imported last and would silently win.
+   ========================================================================== */
+
+.contact-shell {
+  max-width: 1000px;
+  padding-bottom: var(--space-section);
+}
+
+.contact-grid {
+  display: grid;
+  grid-template-columns: minmax(min(240px, 100%), 1fr) minmax(0, 1.4fr);
+  gap: var(--bento-gap);
+  margin-top: var(--space-8);
+}
+
+.contact-info,
+.contact-form {
+  padding: var(--space-6);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+}
+
+.contact-info h2 {
+  margin: 0 0 var(--space-3);
+  font-size: var(--fs-h3);
+  font-weight: 800;
+}
+
+.contact-info p {
+  margin: 0 0 var(--space-4);
+  color: var(--text-dim);
+}
+
+.contact-info-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.contact-info-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  color: var(--text);
+  font-size: var(--fs-sm);
+}
+
+.contact-info-list a {
+  color: var(--brand);
+  text-decoration: none;
+}
+
+.contact-info-list a:hover {
+  text-decoration: underline;
+}
+
+.contact-note {
+  margin-top: var(--space-5) !important;
+  font-size: var(--fs-xs);
+  color: var(--text-faint) !important;
+}
+
+.contact-form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.contact-alt {
+  margin-top: var(--space-6);
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+
+.contact-alt a {
+  color: var(--brand);
+}
+
+@media (max-width: 800px) {
+  .contact-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =============================================================================
+   Unified test flow
+   ========================================================================== */
+
+.unified-test-flow {
+  margin-top: var(--space-2);
+}
+
+.unified-test-flow--transition .unified-test-panel {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.unified-test-panel {
+  animation: fadeUp var(--dur-slow) var(--ease-out) both;
+}
+
+/* =============================================================================
+   Roadmap course picker
+   ========================================================================== */
+
+.course-picker-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 var(--space-5);
+}
+
+.course-picker-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  cursor: pointer;
+  font-size: var(--fs-sm);
+  transition:
+    border-color var(--dur-base) var(--ease-out),
+    background var(--dur-base) var(--ease-out);
+}
+
+.course-picker-item:hover {
+  border-color: var(--brand-hairline);
+}
+
+.course-picker-item.selected {
+  border-color: var(--brand-500);
+  background: var(--brand-tint);
+}
+
+.course-picker-item input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--brand-500);
+}
+
+.course-picker-meta {
+  margin-inline-start: auto;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  font-weight: 700;
+}
+
+.course-picker-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-soft);
+  font-weight: 800;
+}
+
+/* Inside the premium panel the picker inherits the ink surface. */
+.p-card.highlight .course-picker-item {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(154, 164, 206, 0.22);
+  color: var(--ink-100);
+}
+
+.p-card.highlight .course-picker-item.selected {
+  border-color: var(--brand-400);
+  background: rgba(100, 100, 255, 0.2);
+}
+
+/* =============================================================================
+   Admin permissions matrix
+   ========================================================================== */
+
+.admin-perm-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: var(--space-3);
+}
+
+.admin-perm-table th,
+.admin-perm-table td {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--admin-line, var(--border));
+  text-align: start;
+}
+
+.admin-perm-table th {
+  font-size: var(--fs-xs);
+  color: var(--admin-muted, var(--text-dim));
+  font-weight: 700;
+}
+
+.admin-role-save-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  max-width: 100%;
+}

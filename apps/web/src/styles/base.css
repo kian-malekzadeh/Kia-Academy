@@ -1,0 +1,1216 @@
+/* =============================================================================
+   Kia Academy — design tokens & primitives
+   Source of truth: docs/design-system/MASTER.md
+   Layer 1 primitives -> Layer 2 semantic -> Layer 3 component.
+   No other stylesheet may hard-code a hex value.
+   ========================================================================== */
+
+:root {
+  /* --- Layer 1: primitive ramps ------------------------------------------ */
+  --brand-50: #f0f0ff;
+  --brand-100: #e5e5ff;
+  --brand-200: #c9c9ff;
+  --brand-300: #a9a9ff;
+  --brand-400: #8a8aff;
+  --brand-500: #6464ff;
+  --brand-600: #4f4fe8;
+  --brand-700: #3e3ec4;
+  --brand-800: #2f2f96;
+  --brand-900: #23236b;
+
+  --mint-50: #f2fcf7;
+  --mint-100: #e3f8ee;
+  --mint-200: #c4eed9;
+  --mint-300: #9fe0c0;
+  --mint-400: #6fcca2;
+  --mint-500: #46b385;
+  --mint-600: #2e9269;
+  --mint-700: #237552;
+  --mint-800: #1b5a3f;
+  --mint-900: #12402d;
+
+  --amber-50: #fff9ec;
+  --amber-100: #fff2d4;
+  --amber-200: #ffe3a8;
+  --amber-300: #ffd68a;
+  --amber-400: #ffc864;
+  --amber-500: #f5ae33;
+  --amber-600: #c87f0d;
+  --amber-700: #96590a;
+  --amber-800: #713f08;
+  --amber-900: #4e2c06;
+
+  --ink-0: #ffffff;
+  --ink-25: #fbfbfe;
+  --ink-50: #f5f6fb;
+  --ink-100: #eaecf5;
+  --ink-200: #d6dae9;
+  --ink-300: #b4bbd2;
+  --ink-400: #8891af;
+  --ink-500: #626c8c;
+  --ink-600: #47506d;
+  --ink-700: #333b54;
+  --ink-800: #1e2739;
+  --ink-900: #141c2e;
+  --ink-950: #0e1626;
+
+  --danger-50: #fef2f3;
+  --danger-200: #fbc9cd;
+  --danger-400: #f0787f;
+  --danger-500: #e0495a;
+  --danger-600: #c42d40;
+  --danger-700: #9b2231;
+
+  /* --- Layer 1: structure ------------------------------------------------ */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-pill: 999px;
+  --radius: var(--radius-lg);
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-14: 56px;
+  --space-18: 72px;
+  --space-24: 96px;
+  --space-section: clamp(56px, 9vw, 96px);
+  --bento-gap: 20px;
+
+  --fs-display: clamp(2.25rem, 5.5vw, 3.75rem);
+  --fs-h1: clamp(1.75rem, 3.6vw, 2.5rem);
+  --fs-h2: clamp(1.375rem, 2.4vw, 1.75rem);
+  --fs-h3: 1.125rem;
+  --fs-body-lg: 1.0625rem;
+  --fs-body: 0.9375rem;
+  --fs-sm: 0.875rem;
+  --fs-xs: 0.8125rem;
+  --fs-micro: 0.75rem;
+
+  /* Yekan Bakh is the site UI font (FaNum). Mono kept for code / Latin digits in LTR. */
+  --font-display: var(--font-yekanbakh), 'Yekan Bakh FaNum', Tahoma, Arial, sans-serif;
+  --font-body: var(--font-yekanbakh), 'Yekan Bakh FaNum', Tahoma, Arial, sans-serif;
+  --font-mono: var(--font-jetbrains), 'JetBrains Mono', ui-monospace, monospace;
+  --font-fa: var(--font-yekanbakh), 'Yekan Bakh FaNum', Tahoma, Arial, sans-serif;
+  --font-pelak-stack: var(--font-pelak), 'Pelak FA', var(--font-fa), Tahoma, sans-serif;
+  /* Legacy aliases (Material Studio / older CSS). */
+  --font-vazirmatn: var(--font-yekanbakh);
+  --font-inter: var(--font-yekanbakh);
+  --font-sora: var(--font-yekanbakh);
+
+  --dur-fast: 120ms;
+  --dur-base: 180ms;
+  --dur-slow: 260ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+
+  --z-base: 0;
+  --z-raised: 10;
+  --z-sticky: 20;
+  --z-dropdown: 30;
+  --z-overlay: 40;
+  --z-modal: 50;
+  --z-toast: 60;
+
+  --control-h-sm: 36px;
+  --control-h: 44px;
+  --control-h-lg: 52px;
+  --shell-max: 1180px;
+}
+
+/* =============================================================================
+   Layer 2: semantic — light (default)
+   ========================================================================== */
+
+:root,
+[data-theme='light'] {
+  --bg: var(--ink-50);
+  --bg-elevated: var(--ink-25);
+  --bg-card: var(--ink-0);
+  --bg-sunken: var(--ink-100);
+  --bg-glass: color-mix(in srgb, var(--ink-0) 42%, transparent);
+  --bg-inverse: var(--ink-950);
+
+  --border: var(--ink-200);
+  --border-soft: rgba(14, 22, 38, 0.07);
+  --border-strong: var(--ink-300);
+
+  --text: var(--ink-950);
+  --text-dim: var(--ink-600);
+  --text-faint: var(--ink-500);
+  --text-inverse: var(--ink-0);
+
+  --brand: var(--brand-700);
+  --brand-strong: var(--brand-800);
+  --brand-fill: var(--brand-600);
+  --brand-fill-hover: var(--brand-700);
+  --brand-tint: rgba(100, 100, 255, 0.1);
+  --brand-tint-strong: rgba(100, 100, 255, 0.18);
+  --brand-hairline: rgba(100, 100, 255, 0.28);
+
+  --progress: var(--mint-700);
+  --progress-fill: var(--mint-500);
+  --progress-tint: rgba(70, 179, 133, 0.14);
+  --progress-track: var(--ink-100);
+
+  --value: var(--amber-700);
+  --value-fill: var(--amber-400);
+  --value-on-fill: var(--ink-950);
+  --value-tint: rgba(255, 200, 100, 0.22);
+
+  --negative: var(--danger-600);
+  --negative-tint: rgba(196, 45, 64, 0.1);
+
+  --on-fill: var(--ink-0);
+
+  --code-bg: var(--ink-950);
+  --code-bg-elevated: var(--ink-900);
+  --code-text: var(--ink-100);
+  --code-muted: var(--ink-400);
+  --code-keyword: var(--brand-300);
+  --code-function: var(--amber-300);
+  --code-string: var(--mint-300);
+
+  --medal-gold: var(--amber-500);
+  --medal-silver: var(--ink-400);
+  --medal-bronze: var(--amber-700);
+
+  --focus-ring: 0 0 0 3px rgba(100, 100, 255, 0.4);
+
+  --shadow-xs: 0 1px 2px rgba(14, 22, 38, 0.06);
+  --shadow-sm: 0 2px 8px -2px rgba(14, 22, 38, 0.1);
+  --shadow-md: 0 10px 28px -12px rgba(14, 22, 38, 0.18);
+  --shadow-lg: 0 24px 60px -24px rgba(14, 22, 38, 0.26);
+  --shadow-xl: 0 40px 96px -32px rgba(14, 22, 38, 0.34);
+  --glow-brand: 0 14px 34px -14px rgba(79, 79, 232, 0.55);
+  --glow-mint: 0 14px 34px -14px rgba(46, 146, 105, 0.4);
+  --glow-amber: 0 14px 34px -14px rgba(200, 127, 13, 0.42);
+
+  --gradient-brand: linear-gradient(135deg, var(--brand-500) 0%, var(--brand-700) 100%);
+  --gradient-ink: linear-gradient(150deg, var(--ink-900) 0%, var(--ink-950) 100%);
+  --gradient-aurora:
+    radial-gradient(ellipse 70% 50% at 78% -8%, rgba(100, 100, 255, 0.16), transparent 62%),
+    radial-gradient(ellipse 58% 44% at 8% 4%, rgba(196, 238, 217, 0.4), transparent 60%),
+    radial-gradient(ellipse 50% 38% at 50% 108%, rgba(255, 200, 100, 0.14), transparent 62%);
+  --gradient-hero: var(--gradient-aurora);
+}
+
+/* =============================================================================
+   Layer 2: semantic — dark
+   ========================================================================== */
+
+[data-theme='dark'] {
+  --bg: var(--ink-950);
+  --bg-elevated: var(--ink-700);
+  --bg-card: var(--ink-800);
+  --bg-sunken: var(--ink-900);
+  --bg-glass: color-mix(in srgb, var(--ink-800) 48%, transparent);
+  --bg-inverse: var(--ink-0);
+
+  --border: rgba(154, 164, 206, 0.16);
+  --border-soft: rgba(154, 164, 206, 0.09);
+  --border-strong: rgba(154, 164, 206, 0.28);
+
+  --text: var(--ink-100);
+  --text-dim: #a9b2ce;
+  --text-faint: #7c87a8;
+  --text-inverse: var(--ink-950);
+
+  --brand: var(--brand-400);
+  --brand-strong: var(--brand-300);
+  --brand-fill: var(--brand-600);
+  --brand-fill-hover: var(--brand-500);
+  --brand-tint: rgba(138, 138, 255, 0.16);
+  --brand-tint-strong: rgba(138, 138, 255, 0.26);
+  --brand-hairline: rgba(138, 138, 255, 0.34);
+
+  --progress: var(--mint-400);
+  --progress-fill: var(--mint-500);
+  --progress-tint: rgba(111, 204, 162, 0.16);
+  --progress-track: rgba(154, 164, 206, 0.14);
+
+  --value: var(--amber-400);
+  --value-fill: var(--amber-400);
+  --value-on-fill: var(--ink-950);
+  --value-tint: rgba(255, 200, 100, 0.16);
+
+  --negative: var(--danger-400);
+  --negative-tint: rgba(240, 120, 127, 0.16);
+
+  --code-bg: #0a1120;
+  --code-bg-elevated: var(--ink-900);
+
+  --medal-silver: var(--ink-300);
+  --medal-bronze: var(--amber-600);
+
+  --focus-ring: 0 0 0 3px rgba(138, 138, 255, 0.45);
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 2px 10px -2px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 14px 32px -14px rgba(0, 0, 0, 0.66);
+  --shadow-lg: 0 28px 64px -26px rgba(0, 0, 0, 0.74);
+  --shadow-xl: 0 44px 100px -34px rgba(0, 0, 0, 0.8);
+  --glow-brand: 0 14px 38px -14px rgba(100, 100, 255, 0.6);
+  --glow-mint: 0 14px 38px -14px rgba(111, 204, 162, 0.34);
+  --glow-amber: 0 14px 38px -14px rgba(255, 200, 100, 0.32);
+
+  --gradient-brand: linear-gradient(135deg, var(--brand-500) 0%, var(--brand-800) 100%);
+  --gradient-ink: linear-gradient(150deg, var(--ink-800) 0%, var(--ink-950) 100%);
+  --gradient-aurora:
+    radial-gradient(ellipse 70% 50% at 78% -8%, rgba(100, 100, 255, 0.22), transparent 62%),
+    radial-gradient(ellipse 58% 44% at 8% 4%, rgba(46, 146, 105, 0.18), transparent 60%),
+    radial-gradient(ellipse 50% 38% at 50% 108%, rgba(255, 200, 100, 0.1), transparent 62%);
+  --gradient-hero: var(--gradient-aurora);
+}
+
+/* =============================================================================
+   Legacy aliases — keep older selectors on-brand until they are refactored.
+   Do not use these in new code.
+   ========================================================================== */
+
+:root,
+[data-theme='light'],
+[data-theme='dark'] {
+  --kia-deep: var(--ink-950);
+  --kia-accent: var(--brand);
+  --kia-soft: var(--brand-500);
+  --kia-gold: var(--value);
+
+  --indigo: var(--brand);
+  --indigo-bright: var(--brand-strong);
+  --teal: var(--brand-500);
+  --emerald: var(--progress);
+  --amber: var(--value);
+  --danger: var(--negative);
+
+  --indigo-fill: var(--brand-fill);
+  --teal-fill: var(--brand-700);
+  --emerald-fill: var(--mint-600);
+
+  --indigo-dim: var(--brand-tint);
+  --teal-dim: var(--brand-tint);
+  --emerald-dim: var(--progress-tint);
+  --amber-dim: var(--value-tint);
+  --danger-dim: var(--negative-tint);
+
+  --shadow-glow: var(--glow-brand);
+}
+
+/* =============================================================================
+   Reset & document
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  /* clip both roots — body-only overflow-x:hidden still lets html scroll
+     when descendants (admin tables, wide grids) expand past the viewport. */
+  overflow-x: clip;
+}
+
+body {
+  background: var(--bg);
+  background-image: var(--gradient-aurora);
+  background-attachment: fixed;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: 1.7;
+  min-height: 100vh;
+  max-width: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: clip;
+  transition:
+    background-color var(--dur-slow) var(--ease-out),
+    color var(--dur-slow) var(--ease-out);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+a {
+  color: var(--brand);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+svg {
+  flex: 0 0 auto;
+}
+
+img,
+video,
+canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+::selection {
+  background: var(--brand-tint-strong);
+  color: var(--text);
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-xs);
+}
+
+/* Scrollbars follow the theme instead of the OS. */
+* {
+  scrollbar-color: var(--border-strong) transparent;
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border: 3px solid transparent;
+  border-radius: var(--radius-pill);
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--text-faint);
+  background-clip: content-box;
+}
+
+/* =============================================================================
+   Persian / RTL
+   Remap display + body stacks so every `var(--font-display|body)` consumer
+   (logo, landing brand, wizard titles, etc.) picks up Yekan Bakh automatically.
+   ========================================================================== */
+
+[dir='rtl'],
+[lang='fa'] {
+  --font-display: var(--font-fa);
+  --font-body: var(--font-fa);
+}
+
+[dir='rtl'] body,
+[lang='fa'] body,
+[dir='rtl'] h1,
+[dir='rtl'] h2,
+[dir='rtl'] h3,
+[dir='rtl'] h4,
+[dir='rtl'] h5,
+[dir='rtl'] h6,
+[lang='fa'] h1,
+[lang='fa'] h2,
+[lang='fa'] h3,
+[lang='fa'] h4,
+[lang='fa'] h5,
+[lang='fa'] h6 {
+  font-family: var(--font-fa);
+}
+
+[dir='rtl'] body,
+[lang='fa'] body {
+  line-height: 1.85;
+}
+
+[dir='rtl'] h1,
+[dir='rtl'] h2,
+[dir='rtl'] h3,
+[lang='fa'] h1,
+[lang='fa'] h2,
+[lang='fa'] h3 {
+  line-height: 1.45;
+  letter-spacing: 0;
+}
+
+/* Persian shaping breaks under uppercase and positive tracking.
+   Eyebrows / tile micro-labels need Yekan Bakh — JetBrains Mono (next/font)
+   is latin-only, so FA glyphs looked blank / like "no font applied". */
+[dir='rtl'] .eyebrow,
+[dir='rtl'] .label-micro,
+[dir='rtl'] .tile .t-status,
+[dir='rtl'] .tile .t-eyebrow,
+[dir='rtl'] .admin-stat-value,
+[dir='rtl'] .admin-stat-card b,
+[lang='fa'] .eyebrow,
+[lang='fa'] .label-micro,
+[lang='fa'] .tile .t-status,
+[lang='fa'] .tile .t-eyebrow,
+[lang='fa'] .admin-stat-value,
+[lang='fa'] .admin-stat-card b {
+  font-family: var(--font-fa);
+}
+
+[dir='rtl'] .eyebrow,
+[dir='rtl'] .label-micro,
+[dir='rtl'] .footer-tagline,
+[dir='rtl'] .footer-nav-group h2,
+[dir='rtl'] .stage-label,
+[dir='rtl'] .tile .t-status,
+[dir='rtl'] .tile .t-eyebrow,
+[dir='rtl'] .aha,
+[dir='rtl'] .roadmap-title,
+[dir='rtl'] .node-status,
+[dir='rtl'] .badge-rec,
+[dir='rtl'] .module-tag,
+[dir='rtl'] .results-tag,
+[dir='rtl'] .rk-label,
+[dir='rtl'] .section-title,
+[dir='rtl'] .cc-badge,
+[dir='rtl'] .sp-label,
+[dir='rtl'] .rw-tag,
+[dir='rtl'] .chip,
+[dir='rtl'] .badge,
+[dir='rtl'] .stat-label,
+[dir='rtl'] .admin-stat-label,
+[dir='rtl'] .admin-table th {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.ltr-isolate,
+.code-box,
+.blank-select,
+.code-editor,
+.example-box,
+.admin-textarea.mono,
+.admin-table code,
+pre,
+code,
+kbd,
+samp,
+input[type='email'],
+input[type='url'],
+input[type='tel'],
+.timer-box,
+.cc-timer,
+.price-tag,
+.mprice,
+.price-final,
+.checkout-price,
+.lb-rank,
+.lb-score,
+.score-pct,
+.stat-value,
+.sp-val {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+[dir='rtl'] .nav-arrow {
+  transform: scaleX(-1);
+}
+
+/* =============================================================================
+   Overflow containment
+   Flex and grid items compute `min-width: auto`, so they refuse to shrink below
+   their content. A long unbreakable value (currency, count, email, slug) then
+   escapes its card instead of wrapping. These rules opt layout rows into
+   shrinking and let the value wrap. `:where()` keeps specificity at 0 so any
+   component rule — including explicit min-widths on scroll tracks — still wins.
+   ========================================================================== */
+
+:where(
+  .admin-stat-row,
+  .admin-list-item,
+  .admin-toolbar,
+  .admin-header,
+  .admin-header-row,
+  .admin-section-head,
+  .admin-sidebar-profile,
+  .admin-nav-link,
+  .admin-nav-group-toggle,
+  .lb-row,
+  .cc-top,
+  .cc-footer,
+  .ch-top,
+  .dash-head,
+  .score-preview,
+  .course-row,
+  .course-mini,
+  .catalog-meta,
+  .checkout-summary-row,
+  .course-picker-item,
+  .course-picker-total,
+  .test-history-item,
+  .door-top,
+  .page-head,
+  .user-chip,
+  .results-summary-card,
+  .score-row,
+  .exam-order-item,
+  .exam-player__chrome,
+  .exam-player__meta,
+  .teaser,
+  .teaser-left,
+  .test-top,
+  .r-item,
+  .slider-labels,
+  .footer-bottom,
+  .landing-guest-footer,
+  .auth-footer-row
+) > * {
+  min-width: 0;
+}
+
+/* Amounts and counts wrap before their currency word, never mid-digit. */
+:where(
+  .admin-stat-value,
+  .admin-stat-card b,
+  .stat-value,
+  .price-final,
+  .price-strike,
+  .price-tag,
+  .checkout-price,
+  .mprice,
+  .lb-score,
+  .score-pct,
+  .sp-val,
+  .t-value
+) {
+  overflow-wrap: break-word;
+}
+
+/* Emails, slugs and URLs are single tokens with no wrap opportunity at all, so
+   they need `anywhere` to avoid escaping their cell. */
+:where(
+  .admin-sub,
+  .admin-table td,
+  .profile-status,
+  .admin-list-item .admin-sub,
+  .contact-info a,
+  .user-chip-name
+) {
+  overflow-wrap: anywhere;
+}
+
+/* =============================================================================
+   Layer 3: shell & layout primitives
+   ========================================================================== */
+
+.site-main {
+  flex: 1 0 auto;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  position: relative;
+  z-index: var(--z-raised);
+  background: transparent;
+  overflow-x: clip;
+}
+
+.site-main--guest {
+  min-height: 100vh;
+}
+
+/* Fixed aurora wash — animations sit on the body plane behind transparent chrome */
+.site-aurora {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: var(--z-base);
+  overflow: hidden;
+}
+
+.site-aurora > span {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  will-change: transform;
+}
+
+.site-aurora-a {
+  width: min(560px, 82vw);
+  height: min(560px, 82vw);
+  top: -180px;
+  inset-inline-end: -140px;
+  background: radial-gradient(circle, rgba(100, 100, 255, 0.34), transparent 68%);
+  animation: auroraDrift 16s var(--ease-out) infinite;
+}
+
+.site-aurora-b {
+  width: min(440px, 70vw);
+  height: min(440px, 70vw);
+  top: 6vh;
+  inset-inline-start: -160px;
+  background: radial-gradient(circle, rgba(196, 238, 217, 0.55), transparent 68%);
+  animation: auroraDrift 18s var(--ease-out) infinite reverse;
+}
+
+.site-aurora-c {
+  width: min(380px, 62vw);
+  height: min(380px, 62vw);
+  top: 62vh;
+  inset-inline-end: 8vw;
+  background: radial-gradient(circle, rgba(255, 200, 100, 0.32), transparent 68%);
+  animation: auroraDrift 14s var(--ease-out) infinite;
+}
+
+[data-theme='dark'] .site-aurora-b {
+  background: radial-gradient(circle, rgba(46, 146, 105, 0.34), transparent 68%);
+}
+
+[data-theme='dark'] .site-aurora-c {
+  background: radial-gradient(circle, rgba(255, 200, 100, 0.16), transparent 68%);
+}
+
+/* =============================================================================
+   Layout containers — shared section width options
+   .container       → centered, capped at --shell-max
+   .container-fluid → full-bleed width, same horizontal padding
+   .app* kept as aliases for backward compatibility
+   ========================================================================== */
+
+.container,
+.app {
+  max-width: var(--shell-max);
+  margin-inline: auto;
+  padding-inline: var(--space-6);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.container-fluid {
+  max-width: none;
+  margin-inline: auto;
+  padding-inline: var(--space-6);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.container--narrow,
+.app--narrow {
+  max-width: 760px;
+}
+
+.container--wide,
+.app--wide {
+  max-width: 1360px;
+}
+
+.page-content {
+  animation: fadeUp var(--dur-slow) var(--ease-out) both;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.row-wrap {
+  flex-wrap: wrap;
+}
+
+.spread {
+  justify-content: space-between;
+}
+
+.divider {
+  height: 1px;
+  background: var(--border-soft);
+  border: 0;
+}
+
+/* Bento grid — the core layout device. */
+.bento {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--bento-gap);
+}
+
+.tile--full {
+  grid-column: span 12;
+}
+.tile--wide {
+  grid-column: span 8;
+}
+.tile--half {
+  grid-column: span 6;
+}
+.tile--third {
+  grid-column: span 4;
+}
+.tile--quarter {
+  grid-column: span 3;
+}
+.tile--tall {
+  grid-row: span 2;
+}
+
+@media (max-width: 1024px) {
+  .tile--wide,
+  .tile--third,
+  .tile--quarter {
+    grid-column: span 6;
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    --bento-gap: 16px;
+  }
+
+  .container,
+  .container-fluid,
+  .app {
+    padding-inline: var(--space-5);
+  }
+
+  .tile {
+    padding: var(--space-5) var(--space-4);
+  }
+
+  .tile--wide,
+  .tile--half,
+  .tile--third,
+  .tile--quarter {
+    grid-column: span 12;
+  }
+
+  .tile--tall {
+    grid-row: auto;
+  }
+}
+
+/* =============================================================================
+   Layer 3: surface primitives
+   ========================================================================== */
+
+.surface {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.surface--sunken {
+  background: var(--bg-sunken);
+  box-shadow: none;
+}
+
+.surface--tile {
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+}
+
+.surface--pad {
+  padding: var(--space-6);
+}
+
+.surface--interactive {
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  transition:
+    border-color var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out),
+    transform var(--dur-base) var(--ease-out);
+}
+
+.surface--interactive:hover {
+  border-color: var(--brand-hairline);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+/* Inverse ink panel — used for premium / focus moments. */
+.surface--ink {
+  background: var(--gradient-ink);
+  border-color: rgba(154, 164, 206, 0.18);
+  color: var(--ink-100);
+}
+
+.surface--ink .text-dim,
+.surface--ink p {
+  color: var(--ink-300);
+}
+
+/* =============================================================================
+   Layer 3: typography primitives
+   ========================================================================== */
+
+.eyebrow,
+.label-micro {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--brand);
+}
+
+.eyebrow {
+  background: var(--brand-tint);
+  border: 1px solid var(--brand-hairline);
+  border-radius: var(--radius-pill);
+  padding: 6px 14px;
+}
+
+.eyebrow.amber {
+  color: var(--value);
+  background: var(--value-tint);
+  border-color: rgba(255, 200, 100, 0.4);
+}
+
+.eyebrow.mint {
+  color: var(--progress);
+  background: var(--progress-tint);
+  border-color: rgba(70, 179, 133, 0.32);
+}
+
+.page-title {
+  font-size: var(--fs-h1);
+  font-weight: 800;
+}
+
+.section-heading {
+  font-size: var(--fs-h2);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: var(--space-2);
+}
+
+.section-sub {
+  color: var(--text-dim);
+  max-width: 60ch;
+  font-size: var(--fs-body);
+  margin-bottom: var(--space-8);
+}
+
+.text-dim {
+  color: var(--text-dim);
+}
+
+.text-faint {
+  color: var(--text-faint);
+}
+
+.text-brand {
+  color: var(--brand);
+}
+
+.text-progress {
+  color: var(--progress);
+}
+
+.text-value {
+  color: var(--value);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* =============================================================================
+   Layer 3: chips, badges, stats, progress
+   ========================================================================== */
+
+.chip,
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  border-radius: var(--radius-pill);
+  padding: 4px 10px;
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  line-height: 1.5;
+  background: var(--bg-sunken);
+  color: var(--text-dim);
+  border: 1px solid var(--border-soft);
+  white-space: nowrap;
+}
+
+.chip--brand,
+.badge--brand {
+  background: var(--brand-tint);
+  color: var(--brand);
+  border-color: var(--brand-hairline);
+}
+
+.chip--mint,
+.badge--mint {
+  background: var(--progress-tint);
+  color: var(--progress);
+  border-color: rgba(70, 179, 133, 0.32);
+}
+
+.chip--amber,
+.badge--amber {
+  background: var(--value-tint);
+  color: var(--value);
+  border-color: rgba(255, 200, 100, 0.4);
+}
+
+.chip--danger,
+.badge--danger {
+  background: var(--negative-tint);
+  color: var(--negative);
+  border-color: rgba(196, 45, 64, 0.3);
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat-value {
+  font-family: var(--font-mono);
+  font-size: var(--fs-h2);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.stat-label {
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  color: var(--text-faint);
+}
+
+.meter {
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--progress-track);
+  overflow: hidden;
+}
+
+.meter > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--progress-fill);
+  transition: width var(--dur-slow) var(--ease-out);
+}
+
+.meter--brand > span {
+  background: var(--gradient-brand);
+}
+
+/* =============================================================================
+   Layer 3: form fields
+   ========================================================================== */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.field > label,
+.field-label {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+.input,
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  min-height: var(--control-h);
+  padding: 0 var(--space-4);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-size: var(--fs-body);
+  transition:
+    border-color var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out),
+    background var(--dur-base) var(--ease-out);
+}
+
+.field textarea,
+.input--area {
+  min-height: 120px;
+  padding: var(--space-3) var(--space-4);
+  line-height: 1.7;
+  resize: vertical;
+}
+
+.input:hover,
+.field input:hover,
+.field select:hover,
+.field textarea:hover {
+  border-color: var(--border-strong);
+}
+
+.input:focus-visible,
+.field input:focus-visible,
+.field select:focus-visible,
+.field textarea:focus-visible {
+  border-color: var(--brand-500);
+  box-shadow: var(--focus-ring);
+}
+
+.input::placeholder,
+.field input::placeholder,
+.field textarea::placeholder {
+  color: var(--text-faint);
+}
+
+.field-hint {
+  font-size: var(--fs-micro);
+  color: var(--text-faint);
+}
+
+.field-error {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  color: var(--negative);
+}
+
+/* =============================================================================
+   Motion
+   ========================================================================== */
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes auroraDrift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-2.5%, 2%, 0) scale(1.06);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton {
+  border-radius: var(--radius-sm);
+  background:
+    linear-gradient(90deg, var(--bg-sunken) 25%, var(--border-soft) 37%, var(--bg-sunken) 63%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+.inline-leading-icon {
+  display: inline;
+  margin-inline-end: 6px;
+  vertical-align: middle;
+}
+
+.inline-leading-icon--spacious {
+  margin-inline-end: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .skeleton {
+    animation: shimmer 1.4s linear infinite !important;
+  }
+
+  .page-content {
+    animation: none;
+  }
+}

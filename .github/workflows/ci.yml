@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: kia_academy
+          POSTGRES_PASSWORD: kia_academy
+          POSTGRES_DB: kia_academy
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U kia_academy"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://kia_academy:kia_academy@localhost:5432/kia_academy?schema=public
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared package
+        run: pnpm --filter @kia-academy/shared build
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Apply database migrations
+        run: pnpm db:migrate:deploy
+
+      - name: Seed database
+        run: pnpm db:seed
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build

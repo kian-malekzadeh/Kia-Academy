@@ -1,0 +1,113 @@
+name: kia-academy
+
+# ----------------------------------------------------------------------------
+# Default      → database only            : docker compose up -d     (`pnpm docker:db`)
+# Full stack   → postgres + api + web     : docker compose --profile full up -d
+# Docs         → README.md «Run modes» C
+# ----------------------------------------------------------------------------
+
+x-api-env: &api-env
+  DATABASE_URL: ${DATABASE_URL:-postgresql://kia_academy:kia_academy@postgres:5432/kia_academy?schema=public}
+  PORT: ${PORT:-3001}
+  CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+  APP_URL: ${APP_URL:-http://localhost:3000}
+  NODE_ENV: ${NODE_ENV:-production}
+  # No insecure JWT fallbacks — required via .env.docker / environment (Joi-enforced).
+  JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env.docker (min 32 chars)}
+  JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
+  JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?Set JWT_REFRESH_SECRET in .env.docker (min 32 chars)}
+  JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+  SEED_DATABASE: ${SEED_DATABASE:-false}
+  TRUST_PROXY: ${TRUST_PROXY:-true}
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  DB_USER: ${POSTGRES_USER:-kia_academy}
+  STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+  STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+  SMTP_HOST: ${SMTP_HOST:-}
+  SMTP_PORT: ${SMTP_PORT:-}
+  SMTP_USER: ${SMTP_USER:-}
+  SMTP_PASS: ${SMTP_PASS:-}
+  SMTP_FROM: ${SMTP_FROM:-}
+
+services:
+  # ---------------------------------------------------------- database ------
+  postgres:
+    image: postgres:16-alpine
+    container_name: kia-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-kia_academy}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kia_academy}
+      POSTGRES_DB: ${POSTGRES_DB:-kia_academy}
+    # Loopback binding by default — never expose Postgres on public interfaces.
+    ports:
+      - "${POSTGRES_PORT:-127.0.0.1:5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kia_academy} -d ${POSTGRES_DB:-kia_academy}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    stop_grace_period: 30s
+
+  # --------------------------------------------------------------- api ------
+  api:
+    profiles: ["full"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: api
+    image: kia-academy-api:local
+    container_name: kia-api
+    restart: unless-stopped
+    init: true                       # proper PID-1 signal handling & zombie reaping
+    security_opt:
+      - no-new-privileges:true       # hardening: process tree cannot escalate
+    env_file:
+      - path: .env.docker
+        required: false
+    environment:
+      <<: *api-env
+    ports:
+      - "${API_PORT:-3001}:3001"
+    volumes:
+      - api-uploads:/app/apps/api/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    stop_grace_period: 20s
+
+  # --------------------------------------------------------------- web ------
+  web:
+    profiles: ["full"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: web
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+        API_PROXY_TARGET: ${API_PROXY_TARGET:-http://api:3001}
+    image: kia-academy-web:local
+    container_name: kia-web
+    restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      PORT: ${WEB_PORT:-3000}
+      HOSTNAME: 0.0.0.0
+      API_PROXY_TARGET: ${API_PROXY_TARGET:-http://api:3001}
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    stop_grace_period: 20s
+
+volumes:
+  pgdata:
+  api-uploads:
