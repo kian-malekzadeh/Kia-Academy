@@ -16,7 +16,7 @@
   "scripts": {
     "dev": "concurrently -n web,api -c blue,green \"pnpm --filter @kia-academy/web dev\" \"pnpm --filter @kia-academy/api dev\"",
     "build": "pnpm --filter @kia-academy/shared build && pnpm --filter @kia-academy/api build && pnpm --filter @kia-academy/web build",
-    "build:pages": "pnpm --filter @kia-academy/shared build && GITHUB_PAGES=true NEXT_BASE_PATH=/${PAGES_REPO_NAME:-Kia-Academy} NEXT_PUBLIC_APP_URL=https://kian-malekzadeh.github.io/${PAGES_REPO_NAME:-Kia-Academy} NEXT_PUBLIC_DEMO_MODE=true pnpm --filter @kia-academy/web build",
+        "build:pages": "pnpm --filter @kia-academy/shared build && export GITHUB_PAGES=true && export NEXT_BASE_PATH=/${PAGES_REPO_NAME:-Kia-Academy} && export NEXT_PUBLIC_APP_URL=https://kian-malekzadeh.github.io/${PAGES_REPO_NAME:-Kia-Academy} && export NEXT_PUBLIC_DEMO_MODE=true && pnpm --filter @kia-academy/web build",
     "start": "concurrently -n web,api -c blue,green \"pnpm --filter @kia-academy/web start\" \"pnpm --filter @kia-academy/api start:prod\"",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",

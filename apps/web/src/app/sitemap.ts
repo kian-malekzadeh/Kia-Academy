@@ -2,6 +2,8 @@ import type { MetadataRoute } from 'next';
 import { courseCatalog } from '@/lib/courseCatalog';
 import { absoluteUrl, PUBLIC_SITEMAP_PATHS } from '@/lib/seo';
 
+export const dynamic = 'force-static';
+
 /**
  * Sitemap generated from real public routes + course catalog (db.json / shared catalog).
  * Private app routes are intentionally omitted.

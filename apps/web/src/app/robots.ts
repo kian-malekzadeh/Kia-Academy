@@ -1,6 +1,8 @@
 import type { MetadataRoute } from 'next';
 import { absoluteUrl, PUBLIC_SITEMAP_PATHS } from '@/lib/seo';
 
+export const dynamic = 'force-static';
+
 /**
  * Crawl policy derived from real public vs private app routes.
  * Private learner/admin/auth surfaces are disallowed and also noindex via layouts.
