@@ -8,6 +8,8 @@ describe('PaymentsService', () => {
       findUnique: jest.fn(),
       findUniqueOrThrow: jest.fn(),
       update: jest.fn(),
+      // Atomic single-winner completion claim (PENDING→COMPLETED).
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       findMany: jest.fn(),
       findFirst: jest.fn(),
     },
@@ -16,6 +18,8 @@ describe('PaymentsService', () => {
       findUnique: jest.fn(),
       findUniqueOrThrow: jest.fn(),
       update: jest.fn(),
+      // Conditional terminal-state updates never clobber newer states.
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       findMany: jest.fn(),
     },
     invoice: {
@@ -362,6 +366,22 @@ describe('PaymentsService', () => {
       id: 'c1',
       slug: 'js-basics',
     });
+    // Atomic completion claim wins; post-claim re-read returns COMPLETED state.
+    prisma.payment.updateMany.mockResolvedValue({ count: 1 });
+    prisma.payment.findUniqueOrThrow.mockResolvedValue({
+      id: 'pay-1',
+      userId: 'user-1',
+      productType: 'COURSE',
+      productRef: 'js-basics',
+      amountCents: 490_000,
+      currency: 'irr',
+      status: 'COMPLETED',
+      orderId: 'ord-1',
+      provider: 'dev',
+      gatewayRef: null,
+      stripeId: null,
+      metadata: null,
+    });
 
     const result = await service.handlePublicCallback({
       paymentId: 'pay-1',
@@ -410,7 +430,14 @@ describe('PaymentsService', () => {
     });
 
     expect(result.success).toBe(false);
-    expect(prisma.order.update).toHaveBeenCalledWith(
+    // Failure path must be conditional so a stale NOK callback can never
+    // clobber an already-COMPLETED payment / PAID order.
+    expect(prisma.payment.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: 'FAILED' }),
+      }),
+    );
+    expect(prisma.order.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: { status: 'FAILED' },
       }),

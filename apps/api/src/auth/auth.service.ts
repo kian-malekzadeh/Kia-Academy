@@ -26,7 +26,7 @@ import {
   sanitizeProfileText,
 } from '@kia-academy/shared';
 import * as bcrypt from 'bcrypt';
-import { createHash, randomBytes, randomInt } from 'crypto';
+import { createHash, randomInt, randomUUID } from 'crypto';
 import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { EmailService } from '../email/email.service';
@@ -377,21 +377,27 @@ export class AuthService {
     user: AuthUser,
     refreshToken: string,
   ): Promise<AuthResponse & { refreshToken: string }> {
-    const stored = await this.prisma.refreshToken.findFirst({
-      where: { userId: user.id, token: refreshToken },
+    // Atomic single-use claim: exactly ONE concurrent caller can delete the row.
+    // A findFirst→delete pair would let two parallel refreshes both succeed,
+    // defeating rotation-based theft detection.
+    const claimed = await this.prisma.refreshToken.deleteMany({
+      where: {
+        userId: user.id,
+        token: this.hashRefreshToken(refreshToken),
+        expiresAt: { gt: new Date() },
+      },
     });
-    if (!stored || stored.expiresAt < new Date()) {
+    if (claimed.count === 0) {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    await this.prisma.refreshToken.delete({ where: { id: stored.id } });
     return this.issueAuthResponse(user);
   }
 
   async logout(userId: string, refreshToken?: string): Promise<void> {
     if (refreshToken) {
       await this.prisma.refreshToken.deleteMany({
-        where: { userId, token: refreshToken },
+        where: { userId, token: this.hashRefreshToken(refreshToken) },
       });
       return;
     }
@@ -410,7 +416,7 @@ export class AuthService {
     refreshToken: string,
   ): Promise<AuthUser | null> {
     const stored = await this.prisma.refreshToken.findFirst({
-      where: { id: tokenId, userId, token: refreshToken },
+      where: { id: tokenId, userId, token: this.hashRefreshToken(refreshToken) },
       include: { user: true },
     });
 
@@ -472,6 +478,11 @@ export class AuthService {
     return createHash('sha256').update(`${phone}:${code}`).digest('hex');
   }
 
+  /** Refresh tokens are high-value credentials — persist only their digest. */
+  private hashRefreshToken(token: string): string {
+    return createHash('sha256').update(token).digest('hex');
+  }
+
   private async issueAuthResponse(
     user: AuthUser,
   ): Promise<AuthResponse & { refreshToken: string }> {
@@ -486,9 +497,23 @@ export class AuthService {
     const accessExpiresIn = this.configService.get<string>('JWT_EXPIRES_IN', '15m');
     const refreshExpiresIn = this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '7d');
 
+    // Single write: derive the id first so the signed JWT can embed it and the
+    // stored token IS the JWT (no pointless provisional value / second update).
+    const tokenId = randomUUID();
+    const refreshToken = await this.jwtService.signAsync(
+      { sub: user.id, tokenId },
+      {
+        secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
+        expiresIn: parseExpiresInSeconds(refreshExpiresIn),
+      },
+    );
     const refreshRecord = await this.prisma.refreshToken.create({
       data: {
-        token: randomBytes(48).toString('hex'),
+        id: tokenId,
+        // Store only a SHA-256 digest of the JWT: a database leak must never
+        // yield usable refresh tokens. Deploy note: tokens written by older
+        // versions fail this lookup once and force a fresh OTP login.
+        token: this.hashRefreshToken(refreshToken),
         userId: user.id,
         expiresAt: addDurationToDate(refreshExpiresIn),
       },
@@ -505,19 +530,6 @@ export class AuthService {
         expiresIn: parseExpiresInSeconds(accessExpiresIn),
       },
     );
-
-    const refreshToken = await this.jwtService.signAsync(
-      { sub: user.id, tokenId: refreshRecord.id },
-      {
-        secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
-        expiresIn: parseExpiresInSeconds(refreshExpiresIn),
-      },
-    );
-
-    await this.prisma.refreshToken.update({
-      where: { id: refreshRecord.id },
-      data: { token: refreshToken },
-    });
 
     return {
       accessToken,

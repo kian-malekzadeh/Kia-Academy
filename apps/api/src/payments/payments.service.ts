@@ -45,6 +45,35 @@ type LineDraft = {
   courseId?: string | null;
 };
 
+type InvoiceBuyerLike = {
+  name: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  email: string | null;
+  phone: string | null;
+};
+
+type InvoiceOrderItemLike = {
+  id: string;
+  productType: 'READINESS_TEST' | 'ROADMAP_BUNDLE' | 'COURSE';
+  productRef: string;
+  title: string;
+  thumbnail?: string | null;
+  instructor?: string | null;
+  unitPriceCents: number;
+  discountCents: number;
+  finalPriceCents: number;
+  quantity: number;
+};
+
+type InvoiceOrderLike = {
+  currency: string;
+  subtotalCents: number;
+  discountCents: number;
+  totalCents: number;
+  items: InvoiceOrderItemLike[];
+};
+
 @Injectable()
 export class PaymentsService {
   constructor(
@@ -246,8 +275,10 @@ export class PaymentsService {
     );
 
     if (!verify.success) {
-      await this.prisma.payment.update({
-        where: { id: payment.id },
+      // Never clobber a COMPLETED (or newer terminal) state — a stale failure
+      // callback arriving after a successful one must not flip money-state.
+      await this.prisma.payment.updateMany({
+        where: { id: payment.id, status: { not: 'COMPLETED' } },
         data: {
           status: 'FAILED',
           gatewayRef: verify.gatewayRef ?? payment.gatewayRef,
@@ -258,8 +289,8 @@ export class PaymentsService {
         },
       });
       if (payment.orderId) {
-        await this.prisma.order.update({
-          where: { id: payment.orderId },
+        await this.prisma.order.updateMany({
+          where: { id: payment.orderId, status: { not: 'PAID' } },
           data: { status: 'FAILED' },
         });
       }
@@ -655,23 +686,29 @@ export class PaymentsService {
       return this.toResponse(payment);
     }
 
-    const completed = await this.prisma.payment.update({
-      where: { id: paymentId },
+    // Atomic single-winner transition. Concurrent triggers (gateway redirect
+    // callback + client verify POST + Stripe webhook) race here; only the call
+    // that flips PENDING→COMPLETED may run side effects exactly once.
+    const claimed = await this.prisma.payment.updateMany({
+      where: { id: paymentId, status: { not: 'COMPLETED' } },
       data: {
         status: 'COMPLETED',
-        gatewayRef: opts.gatewayRef ?? payment.gatewayRef,
+        ...(opts.gatewayRef ? { gatewayRef: opts.gatewayRef } : {}),
       },
     });
+    if (claimed.count === 0) {
+      // Lost the race — payment was completed concurrently; return idempotently.
+      const current = await this.prisma.payment.findUniqueOrThrow({
+        where: { id: paymentId },
+      });
+      return this.toResponse(current);
+    }
+    const completed =
+      (await this.prisma.payment.findUnique({ where: { id: paymentId } })) ?? payment;
 
     await this.grantEntitlements(completed);
 
     if (payment.orderId) {
-      const invoiceNumber = await this.nextInvoiceNumber();
-      await this.prisma.order.update({
-        where: { id: payment.orderId },
-        data: { status: 'PAID', invoiceNumber },
-      });
-
       const order = await this.prisma.order.findUniqueOrThrow({
         where: { id: payment.orderId },
         include: { items: true },
@@ -681,24 +718,7 @@ export class PaymentsService {
         where: { orderId: order.id },
       });
       if (!existingInvoice) {
-        await this.prisma.invoice.create({
-          data: {
-            orderId: order.id,
-            invoiceNumber,
-            buyerName: payment.user.name || [payment.user.firstName, payment.user.lastName]
-              .filter(Boolean)
-              .join(' ') || 'Learner',
-            buyerEmail: payment.user.email,
-            buyerPhone: payment.user.phone,
-            currency: order.currency,
-            subtotalCents: order.subtotalCents,
-            discountCents: order.discountCents,
-            totalCents: order.totalCents,
-            lineItems: JSON.stringify(
-              order.items.map((item) => this.toOrderItemResponse(item)),
-            ),
-          },
-        });
+        await this.markOrderPaidAndCreateInvoice(payment.orderId, order, payment);
       }
 
       if (order.source === 'CART') {
@@ -872,6 +892,51 @@ export class PaymentsService {
       where: { invoiceNumber: { startsWith: `INV-${year}-` } },
     });
     return `INV-${year}-${String(count + 1).padStart(5, '0')}`;
+  }
+
+  /**
+   * Marks the order PAID and creates its invoice atomically-enough: two
+   * concurrent completions of different payments can draw the same count-based
+   * invoice number — regenerate and retry once per unique-violation (P2002).
+   */
+  private async markOrderPaidAndCreateInvoice(
+    orderId: string,
+    order: InvoiceOrderLike,
+    buyer: { user: InvoiceBuyerLike },
+  ): Promise<void> {
+    let lastError: unknown = new Error('Invoice creation did not execute');
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const invoiceNumber = await this.nextInvoiceNumber();
+      try {
+        await this.prisma.order.update({
+          where: { id: orderId },
+          data: { status: 'PAID', invoiceNumber },
+        });
+        await this.prisma.invoice.create({
+          data: {
+            orderId,
+            invoiceNumber,
+            buyerName:
+              buyer.user.name ||
+              [buyer.user.firstName, buyer.user.lastName].filter(Boolean).join(' ') ||
+              'Learner',
+            buyerEmail: buyer.user.email,
+            buyerPhone: buyer.user.phone,
+            currency: order.currency,
+            subtotalCents: order.subtotalCents,
+            discountCents: order.discountCents,
+            totalCents: order.totalCents,
+            lineItems: JSON.stringify(order.items.map((item) => this.toOrderItemResponse(item))),
+          },
+        });
+        return;
+      } catch (err) {
+        lastError = err;
+        if ((err as { code?: string } | null)?.code === 'P2002') continue;
+        throw err;
+      }
+    }
+    throw lastError;
   }
 
   private async grantEntitlements(payment: {
