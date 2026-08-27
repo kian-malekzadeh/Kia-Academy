@@ -1,0 +1,297 @@
+/** Site-wide settings editable from the admin panel. */
+
+export interface SiteGeneralSettings {
+  siteName: string;
+  tagline: string;
+  heroMinutes: number;
+  heroRoadmapsCount: number;
+  heroMatchPercent: number;
+  supportEmail: string;
+}
+
+export interface SitePricingSettings {
+  readinessTestCents: number;
+  courseCents: number;
+  /** Per-module prices in Iranian Rials (IRR). */
+  modulePrices: number[];
+  /** Bundle discount as percent, e.g. 20 = 20% off. */
+  bundleDiscountPercent: number;
+}
+
+export interface SiteTrackSettings {
+  key: string;
+  name: string;
+  icon: string;
+  description: string;
+  modules: string[];
+}
+
+export interface SiteReadinessSettings {
+  passThreshold: number;
+  passTitle: string;
+  passMessage: string;
+  failTitle: string;
+  failMessage: string;
+}
+
+export interface SiteBootcampSettings {
+  unlockScoreThreshold: number;
+  unlockCourseSlug: string;
+  defaultRank: number;
+  defaultPoints: number;
+}
+
+/** Third-party / gateway payment configuration (super-admin editable). */
+export type PaymentProviderId = 'dev' | 'zarinpal' | 'idpay' | 'stripe';
+
+/** Display / gateway preference. Ledger amounts remain stored in IRR. */
+export type PaymentCurrencyCode = 'irr' | 'irt';
+
+export interface SitePaymentSettings {
+  /** Master switch — when false, checkout is rejected. */
+  enabled: boolean;
+  /** Active checkout provider. `dev` completes in-app without a gateway. */
+  provider: PaymentProviderId;
+  /** Catalog / display currency. Amounts are always stored in IRR. */
+  currency: PaymentCurrencyCode;
+  /** Merchant / terminal id for Zarinpal, IDPay, etc. */
+  merchantId: string;
+  /** Optional API key / access token for the provider. */
+  apiKey: string;
+  /** Use provider sandbox / test mode when supported. */
+  sandbox: boolean;
+  /** Public label shown on the payment review page. */
+  displayName: string;
+  /** Optional public description for the active gateway. */
+  description: string;
+  /** Absolute or path callback URL (gateway verify return). Empty → APP_URL default. */
+  callbackUrl: string;
+  /** Absolute or path success redirect. Empty → /checkout/success. */
+  successUrl: string;
+  /** Absolute or path failure redirect. Empty → /checkout/cancel. */
+  failureUrl: string;
+}
+
+/**
+ * OTP / SMS provider configuration (super-admin editable).
+ * Kavenegar verify/lookup needs apiKey + approved template name; sender is optional.
+ */
+export type SmsProviderId = 'dev' | 'kavenegar';
+
+export interface SiteSmsSettings {
+  /** Master switch — when false, OTP SMS is not sent (dev expose may still apply). */
+  enabled: boolean;
+  /** Active SMS provider. `dev` logs only (no network send). */
+  provider: SmsProviderId;
+  /** Provider API key (Kavenegar API-KEY). Never expose publicly. */
+  apiKey: string;
+  /**
+   * Optional sender line / number. Not required for Kavenegar verify/lookup
+   * (system line is used); kept for providers that need an explicit sender.
+   */
+  sender: string;
+  /**
+   * Kavenegar verify/lookup template name (must be approved in the panel).
+   * Template should include `%token%` for the OTP code.
+   */
+  template: string;
+}
+
+/**
+ * Enamad (نماد اعتماد الکترونیکی) trust-seal configuration.
+ * Badge is built from id + code — never inject arbitrary HTML from admin.
+ */
+export interface SiteEnamadSettings {
+  enabled: boolean;
+  /** `id` query param from the Enamad panel snippet. */
+  codeId: string;
+  /** `Code` query param from the Enamad panel snippet. */
+  code: string;
+}
+
+/** Granular permission flags for a single admin panel section. */
+export interface AdminSectionPermission {
+  view: boolean;
+  manage: boolean;
+  edit: boolean;
+}
+
+export type AdminAccessSection =
+  | 'stats'
+  | 'settings'
+  | 'courses'
+  | 'challenges'
+  | 'users'
+  | 'payments'
+  | 'tests';
+
+/** What regular ADMIN users may access. SUPER_ADMIN always has full access. */
+export type SiteAdminAccessSettings = Record<AdminAccessSection, AdminSectionPermission>;
+
+export function createSectionPermission(
+  view = false,
+  manage = false,
+  edit = false,
+): AdminSectionPermission {
+  return { view, manage, edit };
+}
+
+/** Normalize legacy boolean flags or partial objects from persisted settings. */
+export function normalizeAdminSectionPermission(value: unknown): AdminSectionPermission {
+  if (typeof value === 'boolean') {
+    return createSectionPermission(value, value, value);
+  }
+  if (value && typeof value === 'object') {
+    const v = value as Partial<AdminSectionPermission>;
+    return {
+      view: Boolean(v.view),
+      manage: Boolean(v.manage),
+      edit: Boolean(v.edit),
+    };
+  }
+  return createSectionPermission(false, false, false);
+}
+
+export function normalizeAdminAccess(raw: unknown): SiteAdminAccessSettings {
+  const source = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  return {
+    stats: normalizeAdminSectionPermission(source.stats),
+    settings: normalizeAdminSectionPermission(source.settings),
+    courses: normalizeAdminSectionPermission(source.courses),
+    challenges: normalizeAdminSectionPermission(source.challenges),
+    users: normalizeAdminSectionPermission(source.users),
+    payments: normalizeAdminSectionPermission(source.payments),
+    tests: normalizeAdminSectionPermission(source.tests),
+  };
+}
+
+export function normalizePaymentSettings(raw: unknown): SitePaymentSettings {
+  const source = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  const providerRaw = String(source.provider ?? 'dev');
+  const provider: PaymentProviderId =
+    providerRaw === 'zarinpal' ||
+    providerRaw === 'idpay' ||
+    providerRaw === 'stripe' ||
+    providerRaw === 'dev'
+      ? providerRaw
+      : 'dev';
+  const currencyRaw = String(source.currency ?? 'irr').toLowerCase();
+  const currency: PaymentCurrencyCode =
+    currencyRaw === 'irt' || currencyRaw === 'toman' ? 'irt' : 'irr';
+  return {
+    enabled: source.enabled !== false,
+    provider,
+    currency,
+    merchantId: String(source.merchantId ?? ''),
+    apiKey: String(source.apiKey ?? ''),
+    sandbox: source.sandbox !== false,
+    displayName: String(source.displayName ?? ''),
+    description: String(source.description ?? ''),
+    callbackUrl: String(source.callbackUrl ?? ''),
+    successUrl: String(source.successUrl ?? ''),
+    failureUrl: String(source.failureUrl ?? ''),
+  };
+}
+
+export function normalizeSmsSettings(raw: unknown): SiteSmsSettings {
+  const source = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  const providerRaw = String(source.provider ?? 'dev');
+  const provider: SmsProviderId = providerRaw === 'kavenegar' ? 'kavenegar' : 'dev';
+  return {
+    enabled: source.enabled === true,
+    provider,
+    apiKey: String(source.apiKey ?? ''),
+    sender: String(source.sender ?? ''),
+    template: String(source.template ?? ''),
+  };
+}
+
+export function normalizeEnamadSettings(raw: unknown): SiteEnamadSettings {
+  const source = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  return {
+    enabled: source.enabled === true,
+    codeId: String(source.codeId ?? '').trim(),
+    code: String(source.code ?? '').trim(),
+  };
+}
+
+/** Safe Enamad trustseal URLs when id + code are configured. */
+export function buildEnamadBadgeUrls(settings: SiteEnamadSettings): {
+  href: string;
+  imgSrc: string;
+} | null {
+  const codeId = settings.codeId.trim();
+  const code = settings.code.trim();
+  if (!settings.enabled || !codeId || !code) return null;
+  if (!/^[A-Za-z0-9_-]+$/.test(codeId) || !/^[A-Za-z0-9_-]+$/.test(code)) return null;
+  const qs = `id=${encodeURIComponent(codeId)}&Code=${encodeURIComponent(code)}`;
+  return {
+    href: `https://trustseal.enamad.ir/?${qs}`,
+    imgSrc: `https://trustseal.enamad.ir/logo.aspx?${qs}`,
+  };
+}
+
+export function adminSectionAllowed(
+  access: SiteAdminAccessSettings,
+  section: AdminAccessSection,
+  level: keyof AdminSectionPermission = 'view',
+): boolean {
+  return Boolean(access[section]?.[level]);
+}
+
+/** Resolve effective permissions for a moderator (ADMIN) account. */
+export function resolveModeratorAdminAccess(
+  userAccess: unknown,
+  siteTemplate: SiteAdminAccessSettings,
+): SiteAdminAccessSettings {
+  if (userAccess != null && typeof userAccess === 'object') {
+    return normalizeAdminAccess(userAccess);
+  }
+  return normalizeAdminAccess(siteTemplate);
+}
+
+export interface SiteSettings {
+  general: SiteGeneralSettings;
+  pricing: SitePricingSettings;
+  tracks: SiteTrackSettings[];
+  readiness: SiteReadinessSettings;
+  bootcamp: SiteBootcampSettings;
+  payment: SitePaymentSettings;
+  sms: SiteSmsSettings;
+  enamad: SiteEnamadSettings;
+  adminAccess: SiteAdminAccessSettings;
+}
+
+/**
+ * Strip secrets and admin policy from settings exposed on public GET /settings.
+ * Merchant/API keys must never leave the admin API.
+ */
+export function toPublicSiteSettings(settings: SiteSettings): SiteSettings {
+  return {
+    ...settings,
+    payment: {
+      ...settings.payment,
+      merchantId: '',
+      apiKey: '',
+    },
+    sms: {
+      ...settings.sms,
+      apiKey: '',
+    },
+    adminAccess: normalizeAdminAccess({}),
+  };
+}
+
+export type SiteSettingsSection = keyof SiteSettings;
+
+export interface UpdateSiteSettingsDto {
+  general?: Partial<SiteGeneralSettings>;
+  pricing?: Partial<SitePricingSettings>;
+  tracks?: SiteTrackSettings[];
+  readiness?: Partial<SiteReadinessSettings>;
+  bootcamp?: Partial<SiteBootcampSettings>;
+  payment?: Partial<SitePaymentSettings>;
+  sms?: Partial<SiteSmsSettings>;
+  enamad?: Partial<SiteEnamadSettings>;
+  adminAccess?: Partial<SiteAdminAccessSettings>;
+}

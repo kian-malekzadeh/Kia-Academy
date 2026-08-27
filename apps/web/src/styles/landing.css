@@ -1,0 +1,597 @@
+/* =============================================================================
+   Guest landing — the brand moment. Aurora hero + two doors + journey rail.
+   ========================================================================== */
+
+.landing {
+  position: relative;
+  padding-bottom: var(--space-section);
+}
+
+/* --- first viewport: hero + doors --------------------------------------- */
+.landing-intro {
+  position: relative;
+  z-index: var(--z-raised);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: stretch;
+  gap: var(--space-8);
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding-block: var(--space-8);
+  box-sizing: border-box;
+}
+
+/* --- hero ---------------------------------------------------------------- */
+.landing-hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.landing-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-family: var(--font-display);
+  font-size: clamp(1.85rem, 4.2vw, 2.75rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  color: var(--text);
+}
+
+[dir='rtl'] .landing-brand {
+  font-family: var(--font-fa);
+  letter-spacing: 0;
+  line-height: 1.35;
+}
+
+.landing-brand-mark {
+  display: block;
+  height: clamp(2.25rem, 4.5vw, 3rem);
+  width: auto;
+  aspect-ratio: 497.37 / 512;
+  color: var(--brand-500);
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+.landing-title {
+  margin-top: var(--space-6);
+  max-width: 25ch;
+  font-family: var(--font-pelak-stack);
+  font-size: var(--fs-display);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+  color: var(--text);
+}
+
+/* Beat the global RTL h1 → Yekan rule so the hero stays on Pelak. */
+[dir='rtl'] .landing-title,
+[lang='fa'] .landing-title {
+  font-family: var(--font-pelak-stack);
+  line-height: 1.4;
+  letter-spacing: 0;
+}
+
+.landing-body {
+  margin-top: var(--space-5);
+  max-width: 52ch;
+  font-size: var(--fs-body-lg);
+  color: var(--text-dim);
+}
+
+/* --- trust strip --------------------------------------------------------- */
+.landing-trust {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: var(--space-8);
+  padding: var(--space-2);
+  background: var(--bg-glass);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.landing-trust-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-md);
+}
+
+.landing-trust-item + .landing-trust-item {
+  border-inline-start: 1px solid var(--border-soft);
+}
+
+.landing-trust-item dt {
+  order: 2;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  color: var(--text-faint);
+}
+
+.landing-trust-item dd {
+  order: 1;
+  font-size: var(--fs-h3);
+  font-weight: 800;
+  color: var(--text);
+}
+
+/* --- the two doors ------------------------------------------------------- */
+.landing-doors {
+  position: relative;
+  z-index: var(--z-raised);
+  display: grid;
+  /* minmax(0, 1fr) — a 12.5rem floor overflowed narrow containers before the
+     720px single-column breakpoint. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--bento-gap);
+  width: 100%;
+  max-width: 36rem;
+  margin-inline: auto;
+  min-width: 0;
+}
+
+.landing-courses-link {
+  position: relative;
+  z-index: var(--z-raised);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: max-content;
+  max-width: 100%;
+  margin: var(--space-5) auto 0;
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  text-decoration: none;
+  transition: color var(--dur-base) var(--ease-out);
+}
+
+.landing-courses-link:hover {
+  color: var(--brand);
+}
+
+.door {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 10.5rem;
+  padding: var(--space-5) var(--space-6);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out),
+    transform var(--dur-base) var(--ease-out);
+}
+
+.door:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+}
+
+.door--primary {
+  border-color: var(--brand-hairline);
+  background:
+    linear-gradient(160deg, var(--brand-tint) 0%, transparent 58%),
+    var(--bg-card);
+}
+
+.door--primary:hover {
+  border-color: var(--brand-500);
+}
+
+.door--material {
+  border-color: rgba(255, 200, 100, 0.34);
+  background:
+    linear-gradient(160deg, var(--value-tint) 0%, transparent 58%),
+    var(--bg-card);
+}
+
+.door--material:hover {
+  border-color: var(--amber-400);
+}
+
+.door-top {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--space-3);
+}
+
+.door-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+}
+
+.door-icon--brand {
+  background: var(--brand-fill);
+  color: var(--on-fill);
+  box-shadow: var(--glow-brand);
+}
+
+.door-icon--amber {
+  background: var(--value-fill);
+  color: var(--value-on-fill);
+  box-shadow: var(--glow-amber);
+}
+
+.door-title {
+  font-size: var(--fs-h2);
+  font-weight: 800;
+  color: var(--text);
+}
+
+.door-desc {
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+  flex: 1 1 auto;
+}
+
+.door-action {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--brand);
+}
+
+.door--material .door-action {
+  color: var(--value);
+}
+
+.door:hover .door-action .nav-arrow {
+  transform: translateX(3px);
+}
+
+[dir='rtl'] .door:hover .door-action .nav-arrow {
+  transform: scaleX(-1) translateX(3px);
+}
+
+.door-action .nav-arrow {
+  transition: transform var(--dur-base) var(--ease-out);
+}
+
+/* --- journey rail -------------------------------------------------------- */
+.landing-journey {
+  position: relative;
+  z-index: var(--z-raised);
+  padding-top: var(--space-section);
+}
+
+/* Desktop: strip horizontal container padding on journey + features;
+   mobile keeps standard .container inline padding. */
+@media (min-width: 721px) {
+  section.landing-journey.container,
+  section.features-section.container {
+    padding-inline: 0;
+  }
+
+  .landing-intro.container,
+  section.landing-close.container-fluid,
+  footer.landing-guest-footer.container {
+    padding-inline: var(--space-6);
+  }
+}
+
+.journey-rail {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--bento-gap);
+  list-style: none;
+  counter-reset: journey;
+}
+
+.journey-step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-4);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+  transition:
+    border-color var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out),
+    transform var(--dur-base) var(--ease-out);
+}
+
+.journey-step:hover {
+  border-color: var(--brand-hairline);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+/* Connector between steps — hidden on the last one and on small screens. */
+.journey-step::after {
+  content: '';
+  position: absolute;
+  top: 40px;
+  inset-inline-end: calc(var(--bento-gap) * -1 - 1px);
+  width: var(--bento-gap);
+  height: 2px;
+  background: var(--border);
+}
+
+.journey-step:last-child::after {
+  display: none;
+}
+
+.journey-index {
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  color: var(--text-faint);
+}
+
+.journey-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--brand-tint);
+  border: 1px solid var(--brand-hairline);
+  color: var(--brand);
+}
+
+.journey-step:nth-child(2) .journey-icon,
+.journey-step:nth-child(5) .journey-icon {
+  background: var(--progress-tint);
+  border-color: rgba(70, 179, 133, 0.32);
+  color: var(--progress);
+}
+
+.journey-step:nth-child(3) .journey-icon {
+  background: var(--value-tint);
+  border-color: rgba(255, 200, 100, 0.4);
+  color: var(--value);
+}
+
+.journey-step h3 {
+  font-size: var(--fs-h3);
+  font-weight: 700;
+}
+
+.journey-step p {
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+}
+
+/* --- closing panel ------------------------------------------------------- */
+.landing-close {
+  position: relative;
+  z-index: var(--z-raised);
+  padding-top: var(--space-section);
+}
+
+.landing-close-panel {
+  position: relative;
+  border: 1px solid rgba(154, 164, 206, 0.2);
+  border-radius: var(--radius-xl);
+  padding: clamp(var(--space-8), 6vw, var(--space-14));
+  text-align: center;
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+}
+
+.landing-close-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 70% at 82% 0%, rgba(100, 100, 255, 0.32), transparent 62%),
+    radial-gradient(ellipse 50% 60% at 12% 100%, rgba(255, 200, 100, 0.18), transparent 62%);
+  pointer-events: none;
+}
+
+.landing-close-panel > * {
+  position: relative;
+}
+
+.landing-close-panel h2 {
+  font-size: var(--fs-h1);
+  font-weight: 800;
+  max-width: 26ch;
+  margin: 0 auto;
+  color: var(--ink-0);
+}
+
+.landing-close-panel p {
+  margin: var(--space-4) auto var(--space-8);
+  max-width: 56ch;
+  color: var(--ink-300);
+}
+
+.landing-close-panel .hero-actions {
+  justify-content: center;
+}
+
+.landing-close-ghost {
+  min-height: var(--control-h-lg);
+  padding-inline: var(--space-6);
+  color: var(--ink-100);
+  border-color: rgba(255, 255, 255, 0.24);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-body);
+}
+
+.landing-close-ghost:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--ink-0);
+}
+
+/* --- guest footer -------------------------------------------------------- */
+.landing-guest-footer {
+  position: relative;
+  z-index: var(--z-raised);
+  margin-top: var(--space-section);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+}
+
+.landing-guest-brand {
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+.landing-guest-footer nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-5);
+}
+
+.landing-guest-footer a {
+  color: var(--text-dim);
+  text-decoration: none;
+  transition: color var(--dur-base) var(--ease-out);
+}
+
+.landing-guest-footer a:hover {
+  color: var(--brand);
+}
+
+.landing-guest-footer .enamad-badge {
+  margin-inline-start: auto;
+}
+
+.landing-guest-footer .enamad-badge img {
+  max-width: 72px;
+}
+
+/* --- responsive ---------------------------------------------------------- */
+@media (max-width: 1024px) {
+  .journey-rail {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .journey-step::after {
+    display: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .landing-doors {
+    grid-template-columns: 1fr;
+    max-width: 22rem;
+  }
+
+  .landing-trust {
+    display: none;
+  }
+
+  .journey-rail {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-guest-footer {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .landing-guest-footer nav {
+    justify-content: center;
+  }
+}
+
+/* =============================================================================
+   Shared marketing hero (used by authenticated marketing-ish pages)
+   ========================================================================== */
+
+.hero {
+  padding: var(--space-14) 0 var(--space-10);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.hero h1 {
+  font-size: var(--fs-display);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+  max-width: 24ch;
+  margin-bottom: var(--space-5);
+}
+
+[dir='rtl'] .hero h1 {
+  line-height: 1.4;
+  letter-spacing: 0;
+}
+
+.hero h1 span {
+  color: var(--brand);
+}
+
+.hero p {
+  font-size: var(--fs-body-lg);
+  color: var(--text-dim);
+  max-width: 56ch;
+  margin-bottom: var(--space-8);
+}
+
+.hero-note {
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+  margin-top: var(--space-4);
+}
+
+.proof-row {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-10);
+  margin-top: var(--space-14);
+  flex-wrap: wrap;
+}
+
+.proof-item {
+  text-align: center;
+}
+
+.proof-item b {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 1.625rem;
+  font-weight: 800;
+  color: var(--brand);
+}
+
+.proof-item span {
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+}

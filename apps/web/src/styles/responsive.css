@@ -1,0 +1,544 @@
+/* =============================================================================
+   Responsive overrides
+   Breakpoints: 1024 / 900 / 768 / 480 / 360
+   ========================================================================== */
+
+/* --- tablet: collapse the top nav into a sheet ---------------------------- */
+/* Higher specificity (.topbar .top-nav) so these win over auth.css .top-nav
+   display:flex — responsive.css is imported before auth.css in globals.css. */
+@media (max-width: 900px) {
+  .mobile-nav-toggle {
+    display: inline-flex;
+  }
+
+  /* Physical LTR grid so burger stays on the visual right in RTL locales too:
+     [user] [logo] [burger] */
+  .topbar {
+    position: sticky;
+    flex-wrap: nowrap;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: var(--space-2);
+    direction: ltr;
+    /* Keep logo / chip / burger off the pill edges */
+    padding-inline: var(--space-4);
+    box-sizing: border-box;
+    /* Shared midline for user chip / logo / burger */
+    min-height: 56px;
+  }
+
+  /* Flatten wrappers so logo/burger/nav still participate in the topbar grid */
+  .topbar-primary {
+    display: contents;
+  }
+
+  .topbar .top-right {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
+    align-self: center;
+    direction: inherit;
+    min-width: 0;
+    max-width: 100%;
+    display: flex;
+    align-items: center;
+    height: 40px;
+  }
+
+  [dir='rtl'] .topbar .top-right {
+    direction: rtl;
+  }
+
+  .topbar .logo {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: center;
+    align-self: center;
+    min-width: 0;
+    max-width: 100%;
+    height: 40px;
+    padding-block: 0;
+    padding-inline: var(--space-2);
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  [dir='rtl'] .topbar .logo {
+    direction: rtl;
+  }
+
+  .topbar .mobile-nav-toggle {
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: end;
+    align-self: center;
+  }
+
+  .topbar .user-chip {
+    max-width: 100%;
+    overflow: hidden;
+    height: 40px;
+    min-height: 40px;
+    padding-block: 0;
+    box-sizing: border-box;
+  }
+
+  .topbar .user-chip-name {
+    line-height: 1;
+  }
+
+  .topbar .logo-text {
+    line-height: 1;
+  }
+
+  .topbar .top-nav {
+    display: none;
+    position: absolute;
+    top: calc(100% + var(--space-2));
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    padding: var(--space-3);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    z-index: var(--z-dropdown);
+    grid-column: 1 / -1;
+  }
+
+  [dir='rtl'] .topbar .top-nav {
+    direction: rtl;
+  }
+
+  .topbar .top-nav.top-nav--open {
+    display: flex;
+    animation: fadeUp var(--dur-fast) var(--ease-out) both;
+  }
+
+  .topbar .top-nav-link {
+    display: flex;
+    width: 100%;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    border-radius: var(--radius-sm);
+    text-align: start;
+  }
+
+  /* Language + theme live inside the mobile sheet; hide desktop copies */
+  .top-right-tools {
+    display: none;
+  }
+
+  .top-nav-tools {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--border-soft);
+  }
+
+  .top-nav-tools .theme-toggle,
+  .top-nav-tools .lang-toggle,
+  .topbar .top-nav-tools button.lang-toggle {
+    display: inline-flex;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--space-2);
+    padding-inline: var(--space-3);
+    min-height: 44px;
+  }
+
+  .top-nav-tools .theme-toggle-label,
+  .top-nav-tools .lang-label,
+  .top-nav-tools .lang-code {
+    display: inline-flex;
+  }
+
+  .top-nav-tools .lang-menu {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    inset-inline: 0;
+  }
+}
+
+@media (min-width: 901px) {
+  .mobile-nav-toggle {
+    display: none;
+  }
+
+  .top-nav-tools {
+    display: none;
+  }
+
+  .top-right-tools {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+}
+
+/* --- small tablet / large phone ------------------------------------------- */
+@media (max-width: 768px) {
+  .topbar {
+    width: calc(100% - 24px);
+    padding: var(--space-2) var(--space-4);
+    gap: var(--space-2);
+  }
+
+  .hero {
+    padding: var(--space-10) 0 var(--space-8);
+  }
+
+  .proof-row {
+    gap: var(--space-8);
+    margin-top: var(--space-10);
+  }
+
+  .wizard-shell,
+  .test-shell,
+  .gate,
+  .results {
+    padding-bottom: var(--space-14);
+  }
+
+  .wizard-nav,
+  .test-nav {
+    flex-direction: column-reverse;
+    gap: var(--space-3);
+    align-items: stretch;
+  }
+
+  .wizard-nav .btn-next,
+  .test-nav .btn-next,
+  .wizard-nav .btn-ghost,
+  .test-nav .btn-ghost {
+    width: 100%;
+    text-align: center;
+  }
+
+  .gate-footer,
+  .unlock-cta,
+  .teaser {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+    gap: var(--space-4);
+  }
+
+  .gate-footer .cta-primary,
+  .unlock-cta .cta-primary,
+  .teaser-btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .teaser-left {
+    justify-content: center;
+  }
+
+  .dash-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .rank-card {
+    width: 100%;
+    min-width: unset;
+  }
+
+  .ch-top {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-3);
+  }
+
+  .modal {
+    /* Overlay already pads the viewport — avoid 100vw (scrollbar gutter). */
+    width: 100%;
+    max-width: min(420px, 100%);
+    padding: var(--space-6) var(--space-5);
+    box-sizing: border-box;
+  }
+
+  .flow-slot {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .flow-pool {
+    justify-content: center;
+  }
+
+  .results-grid svg {
+    max-height: 280px;
+  }
+
+  .score-label {
+    width: 110px;
+    font-size: var(--fs-micro);
+  }
+
+  .profile-strip {
+    gap: var(--space-2);
+  }
+
+  .profile-chip {
+    flex: 1 1 calc(50% - 8px);
+    min-width: 140px;
+  }
+
+  .purchase-head h3 {
+    font-size: var(--fs-h3);
+  }
+
+  .code-editor {
+    min-height: 200px;
+    font-size: var(--fs-xs);
+  }
+
+  .explorer {
+    justify-content: center;
+  }
+
+  .folder-row {
+    flex-direction: column;
+  }
+
+  .folder-drop {
+    min-width: unset;
+    width: 100%;
+  }
+}
+
+/* --- phone ---------------------------------------------------------------- */
+@media (max-width: 480px) {
+  .topbar {
+    width: calc(100% - 20px);
+    padding: var(--space-2) var(--space-4);
+  }
+
+  .logo {
+    font-size: 1rem;
+  }
+
+  /* Compact icon-only controls only in the top-right strip (desktop tools;
+     on mobile those are hidden — kept for intermediate layouts / user chip). */
+  .top-right-tools .theme-toggle,
+  .top-right-tools .topbar button.lang-toggle,
+  .topbar .top-right-tools button.lang-toggle {
+    width: 40px;
+    min-width: 40px;
+    max-width: 40px;
+    padding: 0;
+    justify-content: center;
+    min-height: 40px;
+    overflow: hidden;
+  }
+
+  .top-right-tools .theme-toggle-label,
+  .top-right-tools .lang-label,
+  .top-right-tools .lang-code,
+  .user-chip-name {
+    display: none;
+  }
+
+  .top-right-tools .lang-toggle svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+  }
+
+  .top-right-tools .theme-toggle-icon,
+  .top-nav-tools .theme-toggle-icon {
+    font-size: 1.375rem;
+    line-height: 1;
+  }
+
+  /* Sheet tools stay full-width with visible labels on phone */
+  .top-nav-tools .theme-toggle,
+  .top-nav-tools .lang-toggle,
+  .topbar .top-nav-tools button.lang-toggle {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    padding-inline: var(--space-3);
+    justify-content: flex-start;
+    min-height: 44px;
+    overflow: visible;
+  }
+
+  .top-nav-tools .theme-toggle-label,
+  .top-nav-tools .lang-label,
+  .top-nav-tools .lang-code {
+    display: inline-flex;
+  }
+
+  .top-nav-tools .lang-menu {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  .lang-menu button {
+    box-sizing: border-box;
+    min-width: 0;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .lang-menu button .lang-code {
+    display: inline-flex;
+    flex: 0 0 auto;
+  }
+
+  .lang-menu button span:not(.lang-code) {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .user-chip {
+    min-height: 40px;
+    padding-inline: 4px var(--space-2);
+  }
+
+  /* Touch targets: WCAG 2.5.5 asks for 44px; 48px is comfortable. */
+  .tag,
+  .opt-card,
+  .tile,
+  .challenge-card,
+  .btn,
+  .btn-next,
+  .cta-primary,
+  .cta-secondary,
+  .submit-btn,
+  .btn-fill-full,
+  .btn-outline-full {
+    min-height: 48px;
+  }
+
+  .cta-primary,
+  .cta-secondary {
+    width: 100%;
+    margin-inline-start: 0;
+  }
+
+  .p-card {
+    padding: var(--space-6) var(--space-5);
+  }
+
+  .price-final {
+    font-size: 1.625rem;
+  }
+
+  .node-label {
+    font-size: var(--fs-micro);
+  }
+
+  .node-circle {
+    width: 44px;
+    height: 44px;
+    font-size: 1rem;
+  }
+
+  .file-item {
+    min-width: 110px;
+    padding: var(--space-3) var(--space-2);
+  }
+
+  .r-item {
+    padding: var(--space-4);
+    font-size: var(--fs-xs);
+  }
+
+  .flow-block {
+    padding: var(--space-3) var(--space-4);
+    font-size: var(--fs-micro);
+  }
+
+  .timer-box {
+    width: 100%;
+    text-align: center;
+  }
+
+  .score-preview {
+    flex-direction: column;
+    gap: var(--space-2);
+    text-align: center;
+  }
+
+  .proof-row {
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+}
+
+@media (max-width: 360px) {
+  .logo-text {
+    display: none;
+  }
+
+  .topbar {
+    width: calc(100% - 16px);
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .container,
+  .container-fluid,
+  .app {
+    padding-inline: var(--space-4);
+  }
+}
+
+/* --- coarse pointer ------------------------------------------------------- */
+@media (hover: none) and (pointer: coarse) {
+  .opt-card:hover,
+  .tile:hover,
+  .challenge-card:hover,
+  .file-item:hover,
+  .cta-primary:hover,
+  .btn:hover,
+  .btn-next:hover,
+  .door:hover,
+  .journey-step:hover,
+  .submit-btn:hover {
+    transform: none;
+  }
+
+  .opt-card:active,
+  .tile:active,
+  .challenge-card:active,
+  .tag:active {
+    border-color: var(--brand-500);
+    background: var(--brand-tint);
+  }
+
+  input[type='range'] {
+    height: 24px;
+  }
+
+  input[type='range']::-webkit-slider-thumb {
+    width: 24px;
+    height: 24px;
+    margin-top: -8px;
+  }
+}

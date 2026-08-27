@@ -1,0 +1,235 @@
+/* =============================================================================
+   Learner test board + Mini-IPIP personality player
+   ========================================================================== */
+
+.test-board {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  max-width: 640px;
+  margin-inline: auto;
+  padding-block: var(--space-2) var(--space-6);
+}
+
+.test-board-head h1 {
+  font-family: var(--font-display);
+  font-size: var(--fs-h1);
+  font-weight: 800;
+  margin: var(--space-2) 0 var(--space-3);
+}
+
+[dir='rtl'] .test-board-head h1 {
+  font-family: var(--font-fa);
+}
+
+.test-board-sub {
+  color: var(--text-dim);
+  max-width: 48ch;
+}
+
+.test-board-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.test-board-item {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: start;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-xs);
+}
+
+.test-board-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: var(--brand-tint);
+  color: var(--brand);
+  font-size: var(--fs-xs);
+  font-weight: 800;
+}
+
+.test-board-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border-soft);
+  color: var(--text-dim);
+}
+
+.test-board-copy h2 {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  margin: 0 0 var(--space-1);
+}
+
+.test-board-copy p {
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  line-height: 1.55;
+}
+
+.test-board-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.test-board-actions .btn-next {
+  width: 100%;
+}
+
+.test-board-note {
+  margin: 0;
+  text-align: center;
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+}
+
+/* --- personality player --------------------------------------------------- */
+
+.personality-test {
+  max-width: 640px;
+  margin-inline: auto;
+}
+
+.personality-test-head {
+  margin: var(--space-4) 0 var(--space-5);
+}
+
+.personality-test-head h2 {
+  font-family: var(--font-display);
+  font-size: var(--fs-h2);
+  font-weight: 800;
+  margin: 0 0 var(--space-2);
+}
+
+[dir='rtl'] .personality-test-head h2 {
+  font-family: var(--font-fa);
+}
+
+.personality-test-head p {
+  margin: 0;
+  color: var(--text-dim);
+  max-width: 52ch;
+}
+
+.personality-item {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  padding: var(--space-5);
+  margin: 0;
+  min-width: 0;
+}
+
+.personality-stem {
+  float: none;
+  width: 100%;
+  padding: 0;
+  margin: 0 0 var(--space-4);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.personality-likert {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.personality-likert-opt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  min-height: 72px;
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-sunken);
+  color: var(--text-dim);
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    border-color var(--dur-base) var(--ease-out),
+    background var(--dur-base) var(--ease-out),
+    color var(--dur-base) var(--ease-out);
+}
+
+.personality-likert-opt:hover {
+  border-color: var(--brand-hairline);
+  color: var(--text);
+}
+
+.personality-likert-opt.is-selected {
+  border-color: var(--brand);
+  background: var(--brand-tint);
+  color: var(--brand);
+}
+
+.personality-likert-num {
+  font-size: 1.125rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.personality-likert-label {
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.25;
+}
+
+.personality-meta {
+  margin: var(--space-3) 0 0;
+  font-size: var(--fs-xs);
+}
+
+@media (max-width: 640px) {
+  .test-board-item {
+    grid-template-columns: auto 1fr;
+    padding: var(--space-4);
+  }
+
+  .test-board-icon {
+    display: none;
+  }
+
+  .personality-likert {
+    grid-template-columns: 1fr;
+  }
+
+  .personality-likert-opt {
+    flex-direction: row;
+    justify-content: flex-start;
+    min-height: 48px;
+    padding-inline: var(--space-3);
+    gap: var(--space-3);
+  }
+
+  .personality-likert-label {
+    text-align: start;
+  }
+}

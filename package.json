@@ -1,0 +1,51 @@
+{
+  "name": "kia-academy",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "pnpm@11.19.0",
+  "description": "Kia Academy — Adaptive Learning Platform",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kian-malekzadeh/Kia-Academy.git"
+  },
+  "homepage": "https://github.com/kian-malekzadeh/Kia-Academy#readme",
+  "bugs": {
+    "url": "https://github.com/kian-malekzadeh/Kia-Academy/issues"
+  },
+  "scripts": {
+    "dev": "concurrently -n web,api -c blue,green \"pnpm --filter @kia-academy/web dev\" \"pnpm --filter @kia-academy/api dev\"",
+    "build": "pnpm --filter @kia-academy/shared build && pnpm --filter @kia-academy/api build && pnpm --filter @kia-academy/web build",
+    "build:pages": "pnpm --filter @kia-academy/shared build && GITHUB_PAGES=true NEXT_BASE_PATH=/${PAGES_REPO_NAME:-Kia-Academy} NEXT_PUBLIC_APP_URL=https://kian-malekzadeh.github.io/${PAGES_REPO_NAME:-Kia-Academy} NEXT_PUBLIC_DEMO_MODE=true pnpm --filter @kia-academy/web build",
+    "start": "concurrently -n web,api -c blue,green \"pnpm --filter @kia-academy/web start\" \"pnpm --filter @kia-academy/api start:prod\"",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "format": "prettier --write \"**/*.{ts,tsx,js,mjs,json,md,css}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,mjs,json,md,css}\"",
+    "test": "pnpm -r test",
+    "test:e2e": "pnpm --filter @kia-academy/web test:e2e",
+    "db:generate": "pnpm --filter @kia-academy/api prisma:generate",
+    "db:migrate": "pnpm --filter @kia-academy/api prisma:migrate",
+    "db:migrate:deploy": "pnpm --filter @kia-academy/api prisma:migrate:deploy",
+    "db:seed": "pnpm --filter @kia-academy/api prisma:seed",
+    "docker:db": "docker compose up -d postgres",
+    "docker:db:down": "docker compose down",
+    "docker:db:reset": "docker compose down -v && docker compose up -d postgres",
+    "docker:build": "docker compose --profile full build",
+    "docker:up": "docker compose --profile full up -d",
+    "docker:down": "docker compose --profile full down",
+    "docker:logs": "docker compose --profile full logs -f",
+    "docker:setup": "node -e \"const fs=require('fs'); if(!fs.existsSync('.env.docker')){fs.copyFileSync('.env.docker.example','.env.docker'); console.log('Created .env.docker');} else {console.log('.env.docker already exists');}\"",
+    "postinstall": "pnpm db:generate"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "concurrently": "^10.0.4",
+    "eslint": "^10.8.0",
+    "prettier": "^3.9.6",
+    "typescript-eslint": "^8.65.0"
+  }
+}

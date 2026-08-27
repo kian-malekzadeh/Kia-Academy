@@ -1,0 +1,230 @@
+/* =============================================================================
+   Site footer
+   ========================================================================== */
+
+.site-footer {
+  flex-shrink: 0;
+  margin-top: var(--space-section);
+  border-top: 1px solid var(--border);
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  position: relative;
+  z-index: var(--z-raised);
+  /* UI body font — never JetBrains Mono (latin-only next/font → blank Persian glyphs). */
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+[dir='rtl'] .site-footer {
+  font-family: var(--font-fa);
+  font-feature-settings: 'ss01' 1;
+  line-height: 1.85;
+}
+
+.site-footer :is(p, a, span, h2, .footer-logo, .footer-status) {
+  font-family: inherit;
+}
+
+.footer-inner {
+  padding-top: var(--space-14);
+  padding-bottom: var(--space-6);
+}
+
+.footer-main {
+  display: grid;
+  grid-template-columns: minmax(min(240px, 100%), 1.8fr) repeat(3, minmax(min(130px, 100%), 1fr));
+  gap: var(--space-10);
+  padding-bottom: var(--space-10);
+}
+
+.footer-brand {
+  max-width: 320px;
+}
+
+.footer-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 1.1875rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+}
+
+[dir='rtl'] .footer-logo {
+  font-family: var(--font-fa);
+}
+
+.footer-logo:hover {
+  color: var(--brand);
+}
+
+.footer-logo-mark {
+  display: block;
+  height: 26px;
+  width: auto;
+  aspect-ratio: 497.37 / 512;
+  flex: 0 0 auto;
+  color: var(--brand-500);
+  overflow: visible;
+}
+
+.footer-brand p {
+  max-width: 300px;
+  margin-top: var(--space-4);
+  color: var(--text-dim);
+}
+
+.footer-tagline {
+  display: inline-block;
+  margin-top: var(--space-4);
+  color: var(--brand);
+  font-family: inherit;
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.footer-nav-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.footer-nav-group h2 {
+  margin-bottom: 2px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.footer-nav-group a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-dim);
+  text-decoration: none;
+  transition:
+    color var(--dur-base) var(--ease-out),
+    transform var(--dur-base) var(--ease-out);
+}
+
+.footer-nav-group a:hover {
+  color: var(--brand);
+  transform: translateX(2px);
+}
+
+[dir='rtl'] .footer-nav-group a:hover {
+  transform: translateX(-2px);
+}
+
+.footer-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-5);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border-soft);
+  color: var(--text-faint);
+}
+
+.footer-bottom-end {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.enamad-badge {
+  display: inline-flex;
+  line-height: 0;
+  flex-shrink: 0;
+}
+
+.enamad-badge img {
+  display: block;
+}
+
+.footer-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: inherit;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  color: var(--progress);
+}
+
+.footer-status i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--progress-fill);
+  box-shadow: 0 0 0 4px var(--progress-tint);
+}
+
+@media (max-width: 800px) {
+  .footer-main {
+    grid-template-columns: 1.5fr 1fr 1fr;
+    gap: var(--space-8) var(--space-6);
+  }
+
+  .footer-brand {
+    grid-column: 1 / -1;
+    max-width: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .footer-inner {
+    text-align: center;
+  }
+
+  .footer-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: none;
+    width: 100%;
+  }
+
+  .footer-brand p {
+    max-width: none;
+    width: 100%;
+    margin-inline: 0;
+  }
+
+  .footer-nav-group {
+    align-items: center;
+  }
+
+  .footer-bottom {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .footer-bottom-end {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 560px) {
+  .footer-main {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-8) var(--space-5);
+  }
+
+  .footer-brand {
+    grid-column: 1 / -1;
+  }
+}

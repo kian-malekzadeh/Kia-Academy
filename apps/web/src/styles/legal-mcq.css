@@ -1,0 +1,115 @@
+/* =============================================================================
+   MCQ (English readiness) + small shared utilities
+   RULE: correctness is never shown during the live readiness test.
+   ========================================================================== */
+
+.mcq-progress {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  color: var(--text-faint);
+  margin-bottom: var(--space-3);
+}
+
+.mcq-prompt {
+  font-size: var(--fs-body-lg);
+  font-weight: 600;
+  margin-bottom: var(--space-4);
+  line-height: 1.65;
+}
+
+.mcq-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.mcq-option {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  text-align: start;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  color: var(--text);
+  cursor: pointer;
+  transition:
+    border-color var(--dur-base) var(--ease-out),
+    background var(--dur-base) var(--ease-out);
+}
+
+.mcq-option:hover {
+  border-color: var(--brand-hairline);
+}
+
+/* Selected — neutral brand tint only, never mint/danger. */
+.mcq-option.selected {
+  border-color: var(--brand-500);
+  background: var(--brand-tint);
+}
+
+.mcq-letter {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--text-faint);
+  min-width: 18px;
+}
+
+.mcq-option.selected .mcq-letter {
+  color: var(--brand);
+}
+
+.mcq-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-soft);
+}
+
+.mcq-nav-advance {
+  margin-inline-start: auto;
+  min-width: min(100%, 220px);
+}
+
+.reward-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-3);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--brand);
+  text-decoration: none;
+}
+
+.reward-link:hover {
+  text-decoration: underline;
+}
+
+a.course-row {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: background var(--dur-base) var(--ease-out);
+}
+
+a.course-row:hover {
+  background: var(--bg-sunken);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin {
+  animation: spin 0.8s linear infinite;
+}
