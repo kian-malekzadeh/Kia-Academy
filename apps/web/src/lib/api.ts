@@ -72,6 +72,12 @@ import type {
   ProfileDetails,
   UpdateProfileDto,
   BootcampState,
+  AdminCourseExam,
+  CourseExamSummary,
+  CourseExamAttemptSession,
+  CourseExamSubmitResult,
+  CourseExamQuestion,
+  CourseExamAttemptSummary,
 } from '@kia-academy/shared';
 import { clearTokens, getAccessToken, setAccessToken } from '@/lib/auth';
 import { ApiError } from '@/lib/apiError';
@@ -638,6 +644,100 @@ const liveApi = {
       method: 'DELETE',
     });
   },
+
+  // ---- Course reordering (admin) ----
+  adminReorderCourses(slugs: string[]): Promise<{ ok: true }> {
+    return request<{ ok: true }>('/admin/courses/reorder', {
+      method: 'PATCH',
+      body: JSON.stringify({ slugs }),
+    });
+  },
+
+  adminReorderLessons(courseSlug: string, slugs: string[]): Promise<{ ok: true }> {
+    return request<{ ok: true }>(`/admin/courses/${courseSlug}/lessons/reorder`, {
+      method: 'PATCH',
+      body: JSON.stringify({ slugs }),
+    });
+  },
+
+  // ---- Course exams (admin) ----
+  adminListCourseExams(courseSlug: string): Promise<AdminCourseExam[]> {
+    return request<AdminCourseExam[]>(`/admin/courses/${courseSlug}/exams`);
+  },
+
+  adminCreateCourseExam(courseSlug: string, dto: {
+    title: string;
+    description?: string;
+    passScore?: number;
+    durationMin?: number;
+    published?: boolean;
+    questions: CourseExamQuestion[];
+  }): Promise<AdminCourseExam> {
+    return request<AdminCourseExam>(`/admin/courses/${courseSlug}/exams`, {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    });
+  },
+
+  adminUpdateCourseExam(courseSlug: string, examId: string, dto: {
+    title?: string;
+    description?: string;
+    passScore?: number;
+    durationMin?: number;
+    published?: boolean;
+    questions?: CourseExamQuestion[];
+  }): Promise<AdminCourseExam> {
+    return request<AdminCourseExam>(`/admin/courses/${courseSlug}/exams/${examId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(dto),
+    });
+  },
+
+  adminDeleteCourseExam(courseSlug: string, examId: string): Promise<{ deleted: true }> {
+    return request<{ deleted: true }>(`/admin/courses/${courseSlug}/exams/${examId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // ---- Course exams (learner) ----
+  listMyCourseExams(): Promise<CourseExamSummary[]> {
+    return request<CourseExamSummary[]>('/courses/exams/mine');
+  },
+
+  listCourseExamsForLearner(courseSlug: string): Promise<CourseExamSummary[]> {
+    return request<CourseExamSummary[]>(`/courses/${courseSlug}/exams`);
+  },
+
+  listCourseExamAttempts(examId: string): Promise<CourseExamAttemptSummary[]> {
+    return request<CourseExamAttemptSummary[]>(`/courses/exams/${examId}/attempts`);
+  },
+
+  startCourseExam(examId: string): Promise<CourseExamAttemptSession> {
+    return request<CourseExamAttemptSession>(`/courses/exams/${examId}/start`, {
+      method: 'POST',
+    });
+  },
+
+  saveCourseExamAnswers(examId: string, attemptId: string, answers: Record<string, unknown>): Promise<{ ok: true }> {
+    return request<{ ok: true }>(
+      `/courses/exams/${examId}/attempts/${attemptId}/answers`,
+      { method: 'PATCH', body: JSON.stringify({ answers }) },
+    );
+  },
+
+  submitCourseExam(examId: string, attemptId: string, answers: Record<string, unknown>): Promise<CourseExamSubmitResult> {
+    return request<CourseExamSubmitResult>(
+      `/courses/exams/${examId}/attempts/${attemptId}/submit`,
+      { method: 'POST', body: JSON.stringify({ answers }) },
+    );
+  },
+
+  getCourseExamAttemptResult(examId: string, attemptId: string): Promise<CourseExamSubmitResult> {
+    return request<CourseExamSubmitResult>(
+      `/courses/exams/${examId}/attempts/${attemptId}`,
+    );
+  },
+
 
   adminListChallenges(): Promise<AdminChallenge[]> {
     return request<AdminChallenge[]>('/admin/challenges');

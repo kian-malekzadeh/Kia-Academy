@@ -596,6 +596,7 @@ export const en = {
       continue: 'Continue',
       review: 'Review',
       start: 'Start',
+      enter: 'Enter course',
       loadError: 'Could not load courses.',
       status: {
         learning: 'In progress',
@@ -1074,6 +1075,7 @@ export const en = {
     loadError: 'Failed to load courses.',
     enrollError: 'Enrollment failed.',
     continue: 'Continue',
+    enter: 'Enter course',
     enroll: 'Enroll',
     empty: 'No courses yet. Complete your assessment to unlock your roadmap.',
     emptyAssessmentLink: 'assessment',

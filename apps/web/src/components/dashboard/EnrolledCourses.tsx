@@ -77,11 +77,6 @@ export function EnrolledCourses() {
     completed: t('dashboard.courses.status.completed'),
     notStarted: t('dashboard.courses.status.notStarted'),
   };
-  const btnLabel = {
-    learning: t('dashboard.courses.continue'),
-    completed: t('dashboard.courses.review'),
-    notStarted: t('dashboard.courses.start'),
-  };
 
   return (
     <CardShell
@@ -130,14 +125,16 @@ export function EnrolledCourses() {
                     </span>
                   </div>
                   <ProgressBar value={course.progressPct} color="var(--dash-course-fill)" height={5} />
-                  {course.firstLessonSlug ? (
-                    <Link
-                      href={`/learn/${course.slug}/${course.firstLessonSlug}`}
-                      className="dash-btn-primary dash-btn-block dash-course-card__cta"
-                    >
-                      <Play size={10} aria-hidden="true" /> {btnLabel[status]}
-                    </Link>
-                  ) : null}
+                  <Link
+                    href={
+                      course.firstLessonSlug
+                        ? `/learn/${course.slug}/${course.firstLessonSlug}`
+                        : `/courses/${course.slug}`
+                    }
+                    className="dash-btn-primary dash-btn-block dash-course-card__cta"
+                  >
+                    <Play size={10} aria-hidden="true" /> {t('dashboard.courses.enter')}
+                  </Link>
                 </div>
               </article>
             );

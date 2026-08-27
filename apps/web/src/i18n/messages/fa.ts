@@ -596,6 +596,7 @@ export const fa = {
       continue: 'ادامه',
       review: 'مرور',
       start: 'شروع',
+      enter: 'ورود به دوره',
       loadError: 'بارگذاری دوره‌ها ناموفق بود.',
       status: {
         learning: 'در حال یادگیری',
@@ -1073,6 +1074,7 @@ export const fa = {
     loadError: 'بارگذاری دوره‌ها ناموفق بود.',
     enrollError: 'ثبت‌نام ناموفق بود.',
     continue: 'ادامه',
+    enter: 'ورود به دوره',
     enroll: 'ثبت‌نام',
     empty: 'هنوز دوره‌ای نیست. برای باز کردن نقشه راه، ارزیابی را کامل کن.',
     emptyAssessmentLink: 'ارزیابی',

@@ -9,6 +9,7 @@ import type {
   CheckoutDto,
   ContactFormDto,
   ContactFormResponse,
+  CourseExamQuestion,
   CourseSummary,
   CreateChallengeDto,
   CreateCourseDto,
@@ -275,6 +276,33 @@ Use STAR (Situation, Task, Action, Result) to answer behavioral questions.
 }
 
 let courses = defaultCourses();
+interface DemoCourseExam {
+  id: string;
+  courseId: string;
+  title: string;
+  description: string;
+  passScore: number;
+  durationMin: number;
+  published: boolean;
+  sortOrder: number;
+  questions: CourseExamQuestion[];
+}
+interface DemoCourseExamAttempt {
+  id: string;
+  examId: string;
+  status: 'IN_PROGRESS' | 'SUBMITTED' | 'EXPIRED';
+  startedAt: string;
+  submittedAt: string | null;
+  answers: Record<string, unknown>;
+  score: number | null;
+  passed: boolean | null;
+}
+const demoExams: DemoCourseExam[] = [];
+const demoExamAttempts: DemoCourseExamAttempt[] = [];
+function demoCourseTitle(slug: string): string {
+  const found = courses.find((c) => c.slug === slug);
+  return found?.title ?? slug;
+}
 let challenges: AdminChallenge[] = [
   {
     id: 'challenge-fizzbuzz',
@@ -392,6 +420,7 @@ function toCourseSummary(course: DemoCourse): CourseSummary {
     lessonCount: course.lessons.length,
     enrolled,
     progressPct,
+    firstLessonSlug: course.lessons[0]?.slug ?? null,
   };
 }
 

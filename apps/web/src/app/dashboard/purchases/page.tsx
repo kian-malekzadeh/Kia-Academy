@@ -102,14 +102,16 @@ export default function PurchasesPage() {
                   <span>{t('common.percentComplete', { pct: course.progressPct })}</span>
                 </div>
                 <div className="panel-row__actions">
-                  {course.firstLessonSlug ? (
-                    <Link
-                      href={`/learn/${course.slug}/${course.firstLessonSlug}`}
-                      className="btn btn--primary"
-                    >
-                      {t('courses.continue')}
-                    </Link>
-                  ) : null}
+                  <Link
+                    href={
+                      course.firstLessonSlug
+                        ? `/learn/${course.slug}/${course.firstLessonSlug}`
+                        : `/courses/${course.slug}`
+                    }
+                    className="btn btn--primary"
+                  >
+                    {t('courses.enter')}
+                  </Link>
                 </div>
               </div>
             ))}

@@ -95,14 +95,17 @@ export default function MyCoursesPage() {
                   <span>{t('common.lessonsCount', { count: course.lessonCount })}</span>
                 </div>
                 <div className="catalog-actions">
-                  {course.firstLessonSlug ? (
-                    <Link
-                      className="btn btn--primary"
-                      href={`/learn/${course.slug}/${course.firstLessonSlug}`}
-                    >
-                      {t('courses.continue')}
-                    </Link>
-                  ) : null}
+                  <Link
+                    className="btn btn--primary"
+                    href={
+                      course.firstLessonSlug
+                        ? `/learn/${course.slug}/${course.firstLessonSlug}`
+                        : `/courses/${course.slug}`
+                    }
+                  >
+                    <BookOpen size={14} aria-hidden="true" />
+                    {t('courses.enter')}
+                  </Link>
                   <Link
                     className="btn btn--secondary"
                     href={`/dashboard/tickets/new?course=${encodeURIComponent(course.slug)}`}
