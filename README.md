@@ -45,7 +45,7 @@ role-scoped admin panel.
 | 👛 **Learner panel** | Wallet, orders/invoices, exams, courses, bootcamp rank, todos, tickets, messages, profile |
 | 🛡️ **Admin governance** | `SUPER_ADMIN` vs matrix-limited `ADMIN` permissions, editable test banks, site settings catalog |
 | 🔍 **SEO-ready** | Dynamic sitemap/robots, JSON-LD, canonical URLs, OG/Twitter cards, noindex on private routes |
-| 🔒 **Hardened by design** | Helmet+CSP headers, JWT access/refresh split secrets, bcrypt cost 12, rate limiting, upload allow-lists |
+| 🔒 **Hardened by design** | Helmet+CSP headers, short-lived split JWT secrets, hardened password hashing, rate limiting, upload allow-lists |
 
 ## 🎯 Learner Journey
 
@@ -122,17 +122,14 @@ cp apps/web/.env.example apps/web/.env.local    # leave NEXT_PUBLIC_DEMO_MODE un
 pnpm docker:db                        # or run your own Postgres 16
 pnpm --filter @kia-academy/shared build
 pnpm db:migrate                       # applies init_baseline migration
-pnpm db:seed                          # admin/learner demo accounts + catalog + banks
+pnpm db:seed                          # catalog + banks + starter users
 
 pnpm dev                              # web :3000 · api :3001 · health /api/health
 ```
 
-**Seeded dev accounts** (⚠️ development only — never use these passwords in production):
-
-| Role | Email | Password |
-| --- | --- | --- |
-| SUPER_ADMIN | `admin@kia.academy` | `KiaAcademy123!` |
-| LEARNER | `alex@kia.academy` | `KiaAcademy123!` |
+> 🔐 Development seeding creates starter accounts (including admin & learner) for local
+> testing only. **No real credentials are ever committed** — production passwords are
+> generated at deploy time and rotated; see [`SECURITY.md`](SECURITY.md).
 
 > Playwright one-time setup for e2e:
 > `pnpm --filter @kia-academy/web exec playwright install chromium`
@@ -156,7 +153,7 @@ pnpm dev                              # web :3000 · api :3001 · health /api/he
 | `pnpm test` | Jest (api) + Vitest (shared) suites |
 | `pnpm test:e2e` | Playwright end-to-end flows |
 | `pnpm db:migrate` / `db:migrate:deploy` | Dev migrate / non-interactive apply |
-| `pnpm db:seed` | Idempotent upserts (users, courses, settings, banks) |
+| `pnpm db:seed` | Idempotent upserts (catalog, banks, settings, starter users)
 | `pnpm docker:*` | db/db:down/db:reset/setup/up/down/logs/build |
 
 ## 🔐 Environment Variables
@@ -183,8 +180,8 @@ Everything ships as templates — only `*.example` files are committed.
 
 | Control | Implementation |
 | --- | --- |
-| AuthN/AuthZ | Access JWT (~15m) + revocable refresh cookie (7d) with separate secret; bcrypt cost 12 |
-| Rate limiting | Global throttler 100 req/min; OTP request 5/min & verify 10/min enforced live |
+| AuthN/AuthZ | Short-lived access JWT + revocable refresh cookie, each with an independent rotating secret; bcrypt-hashed credentials |
+| Rate limiting | Enforced per-route limits on auth/OTP/global traffic to slow credential abuse |
 | Headers | Helmet (api) + full security headers incl. CSP/HSTS/XFO on Next responses |
 | Validation | class-validator whitelist + forbidNonWhitelisted; Joi env schema at boot |
 | Uploads | MIME allow-lists, size caps, safe-path helper, authenticated media URLs |
