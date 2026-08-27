@@ -1,7 +1,11 @@
 'use client';
 
-import type { CourseAttachmentDto, CourseSummary } from '@kia-academy/shared';
-import { BookOpen, Loader2, Paperclip, Ticket } from 'lucide-react';
+import type {
+  CourseAttachmentDto,
+  CourseExamSummary,
+  CourseSummary,
+} from '@kia-academy/shared';
+import { BookOpen, ClipboardList, Loader2, Paperclip, Ticket } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
@@ -18,6 +22,7 @@ export default function MyCoursesPage() {
   const [attachmentsBySlug, setAttachmentsBySlug] = useState<
     Record<string, CourseAttachmentDto[]>
   >({});
+  const [examsBySlug, setExamsBySlug] = useState<Record<string, CourseExamSummary[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -33,18 +38,27 @@ export default function MyCoursesPage() {
         const mine = await api.listMyCourses();
         if (cancelled) return;
         setCourses(mine);
-        const attachmentEntries = await Promise.all(
-          mine.map(async (course) => {
-            try {
-              const files = await api.listCourseAttachments(course.slug);
-              return [course.slug, files] as const;
-            } catch {
-              return [course.slug, []] as const;
-            }
-          }),
-        );
+        const [attachmentEntries, myExams] = await Promise.all([
+          Promise.all(
+            mine.map(async (course) => {
+              try {
+                const files = await api.listCourseAttachments(course.slug);
+                return [course.slug, files] as const;
+              } catch {
+                return [course.slug, []] as const;
+              }
+            }),
+          ),
+          api.listMyCourseExams().catch(() => []),
+        ]);
         if (!cancelled) {
           setAttachmentsBySlug(Object.fromEntries(attachmentEntries));
+          setExamsBySlug(
+            myExams.reduce<Record<string, CourseExamSummary[]>>((acc, exam) => {
+              (acc[exam.courseSlug] ??= []).push(exam);
+              return acc;
+            }, {}),
+          );
         }
       } catch (err) {
         if (!cancelled) {
@@ -114,6 +128,32 @@ export default function MyCoursesPage() {
                     {t('panel.courses.createTicket')}
                   </Link>
                 </div>
+                {(examsBySlug[course.slug]?.length ?? 0) > 0 ? (
+                  <div className="attachment-list">
+                    <span className="eyebrow">
+                      <ClipboardList size={12} className="inline-leading-icon" />
+                      {t('courses.exams')}
+                    </span>
+                    {examsBySlug[course.slug].map((exam) => (
+                      <Link
+                        key={exam.id}
+                        className="link-quiet"
+                        href={`/courses/${course.slug}/exams/${exam.id}`}
+                      >
+                        {exam.title}
+                        <span className="panel-muted">
+                          {' '}
+                          ·{' '}
+                          {exam.kind === 'MIDTERM'
+                            ? t('courses.examKindMidterm')
+                            : t('courses.examKindFinal')}{' '}
+                          · {t('courses.examQuestions', { count: exam.questionCount })} ·{' '}
+                          {t('courses.examDuration', { min: exam.durationMin })}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                ) : null}
                 <div className="attachment-list">
                   <span className="eyebrow">
                     <Paperclip size={12} className="inline-leading-icon" />
