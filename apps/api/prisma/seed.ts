@@ -251,6 +251,83 @@ Use STAR (Situation, Task, Action, Result) to answer behavioral questions.
       update: { payload: JSON.stringify(bank.payload) },
     });
   }
+  // ---- Sample course exam (attached to the first JS course when present) ----
+  const examCourse =
+    (await prisma.course.findFirst({ where: { slug: { contains: 'js' } } })) ??
+    (await prisma.course.findFirst());
+  const sampleExamTitle = 'آزمون جامع جاوااسکریپت';
+  if (examCourse && !(await prisma.courseExam.findFirst({ where: { title: sampleExamTitle } }))) {
+    await prisma.courseExam.create({
+      data: {
+        courseId: examCourse.id,
+        title: sampleExamTitle,
+        description: 'پوشش همهٔ ماژول‌های دوره: متغیرها، توابع، آرایه‌ها، رویدادها و DOM.',
+        passScore: 60,
+        durationMin: 10,
+        published: true,
+        sortOrder: 0,
+        questions: JSON.stringify([
+          {
+            id: 'q1', type: 'single_choice',
+            prompt: 'خروجی کد زیر چیست؟\n\nlet x = 5; { let x = 10; } console.log(x);',
+            options: [
+              { id: 'a', label: '۵' },
+              { id: 'b', label: '۱۰' },
+              { id: 'c', label: 'undefined' },
+              { id: 'd', label: 'خطای ReferenceError' },
+            ],
+            answer: 'a',
+          },
+          {
+            id: 'q2', type: 'single_choice',
+            prompt: 'کدام روش آرایه، یک آرایهٔ جدید برمی‌گرداند و آرایهٔ اصلی را تغییر نمی‌دهد؟',
+            options: [
+              { id: 'a', label: 'push' },
+              { id: 'b', label: 'map' },
+              { id: 'c', label: 'splice' },
+              { id: 'd', label: 'sort' },
+            ],
+            answer: 'b',
+          },
+          {
+            id: 'q3', type: 'multi_choice',
+            prompt: 'کدام گزینه‌ها مقادیر falsy در جاوااسکریپت هستند؟',
+            options: [
+              { id: 'a', label: '۰ (صفر)' },
+              { id: 'b', label: "'' (رشتهٔ خالی)" },
+              { id: 'c', label: '[] (آرایهٔ خالی)' },
+              { id: 'd', label: 'NaN' },
+            ],
+            answer: ['a', 'b', 'd'],
+          },
+          {
+            id: 'q4', type: 'single_choice',
+            prompt: 'تفاوت == و === در چیست؟',
+            options: [
+              { id: 'a', label: 'هیچ تفاوتی ندارند' },
+              { id: 'b', label: '== نوع‌ها را مقایسه می‌کند، === مقدار را' },
+              { id: 'c', label: '=== پیش از مقایسه تبدیل نوع انجام نمی‌دهد' },
+              { id: 'd', label: '== فقط برای اعداد است' },
+            ],
+            answer: 'c',
+          },
+          {
+            id: 'q5', type: 'multi_choice',
+            prompt: 'کدام‌ها روش‌های انتخاب عنصر در DOM هستند؟',
+            options: [
+              { id: 'a', label: 'document.querySelector' },
+              { id: 'b', label: 'document.createElement' },
+              { id: 'c', label: 'element.addEventListener' },
+              { id: 'd', label: 'document.getElementById' },
+            ],
+            answer: ['a', 'd'],
+          },
+        ]),
+      },
+    });
+    console.log('Seeded sample course exam');
+  }
+
   console.log('Seeded test banks: personality, assessment, readiness');
 }
 

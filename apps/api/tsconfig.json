@@ -5,12 +5,30 @@
     "removeComments": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
+    // Standard NestJS setting: makes CJS deps importable as default imports
+    // (required by newer @types that ship ES-module declarations).
+    "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "target": "ES2021",
     "sourceMap": true,
+    // Explicit TS6 migration requirement (aka.ms/ts6): pin output layout to src.
+    "rootDir": "./src",
     "outDir": "./dist",
     "incremental": true,
     "skipLibCheck": true,
+    // Explicit @types allowlist (mirrors installed packages 1:1) so Jest
+    // globals & framework augmentations resolve deterministically everywhere
+    // (CLI and editors), instead of relying on implicit @types discovery.
+    "types": [
+      "bcrypt",
+      "cookie-parser",
+      "express",
+      "jest",
+      "multer",
+      "nodemailer",
+      "node",
+      "passport-jwt"
+    ],
     "strictNullChecks": true,
     "noImplicitAny": true,
     "strictBindCallApply": true,

@@ -36,7 +36,7 @@
     "docker:down": "docker compose --profile full down",
     "docker:logs": "docker compose --profile full logs -f",
     "docker:setup": "node -e \"const fs=require('fs'); if(!fs.existsSync('.env.docker')){fs.copyFileSync('.env.docker.example','.env.docker'); console.log('Created .env.docker');} else {console.log('.env.docker already exists');}\"",
-    "postinstall": "pnpm db:generate"
+    "postinstall": "pnpm db:generate && pnpm --filter @kia-academy/shared build"
   },
   "engines": {
     "node": ">=22.13"
@@ -46,6 +46,7 @@
     "concurrently": "^10.0.4",
     "eslint": "^10.8.0",
     "prettier": "^3.9.6",
+    "typescript": "5.9.3",
     "typescript-eslint": "^8.65.0"
   }
 }

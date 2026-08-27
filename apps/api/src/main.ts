@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import * as cookieParser from 'cookie-parser';
+import cookieParser from 'cookie-parser';
 import { existsSync, mkdirSync } from 'fs';
 import helmet from 'helmet';
 import { join } from 'path';

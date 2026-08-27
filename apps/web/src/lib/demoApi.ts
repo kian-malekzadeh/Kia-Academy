@@ -9,7 +9,12 @@ import type {
   CheckoutDto,
   ContactFormDto,
   ContactFormResponse,
+  CourseExamAttemptSession,
+  CourseExamAttemptSummary,
   CourseExamQuestion,
+  CourseExamResponse,
+  CourseExamSubmitResult,
+  CourseExamSummary,
   CourseSummary,
   CreateChallengeDto,
   CreateCourseDto,
@@ -276,33 +281,6 @@ Use STAR (Situation, Task, Action, Result) to answer behavioral questions.
 }
 
 let courses = defaultCourses();
-interface DemoCourseExam {
-  id: string;
-  courseId: string;
-  title: string;
-  description: string;
-  passScore: number;
-  durationMin: number;
-  published: boolean;
-  sortOrder: number;
-  questions: CourseExamQuestion[];
-}
-interface DemoCourseExamAttempt {
-  id: string;
-  examId: string;
-  status: 'IN_PROGRESS' | 'SUBMITTED' | 'EXPIRED';
-  startedAt: string;
-  submittedAt: string | null;
-  answers: Record<string, unknown>;
-  score: number | null;
-  passed: boolean | null;
-}
-const demoExams: DemoCourseExam[] = [];
-const demoExamAttempts: DemoCourseExamAttempt[] = [];
-function demoCourseTitle(slug: string): string {
-  const found = courses.find((c) => c.slug === slug);
-  return found?.title ?? slug;
-}
 let challenges: AdminChallenge[] = [
   {
     id: 'challenge-fizzbuzz',
@@ -474,6 +452,266 @@ function buildDemoCart(state: DemoPersistedState): CartResponse {
 function authResponse(user: AuthUser): AuthResponse {
   writeSession(user);
   return { user, accessToken: 'demo-access-token', expiresIn: 3600 };
+}
+
+/* ------------------------------------------------------------------ *
+ * Course exams (demo parity with the real course-exams service).
+ * Persisted under a dedicated key so the existing demo state stays untouched.
+ * ------------------------------------------------------------------ */
+
+interface DemoStoredExam {
+  id: string;
+  courseId: string;
+  courseSlug: string;
+  courseTitle: string;
+  title: string;
+  description: string;
+  passScore: number;
+  durationMin: number;
+  sortOrder: number;
+  questions: CourseExamQuestion[];
+}
+
+interface DemoStoredAttempt {
+  attemptId: string;
+  examId: string;
+  status: 'IN_PROGRESS' | 'SUBMITTED' | 'EXPIRED';
+  startedAt: string;
+  submittedAt: string | null;
+  score: number | null;
+  passed: boolean | null;
+  answers: Record<string, CourseExamResponse>;
+}
+
+const EXAM_STORE_KEY = 'kia-demo-course-exams-v1';
+
+const DEMO_EXAMS: DemoStoredExam[] = [
+  {
+    id: 'demo-exam-js-01',
+    courseId: 'course-js-basics',
+    courseSlug: 'js-basics',
+    courseTitle: 'جاوااسکریپت پایه',
+    title: 'آزمون جامع جاوااسکریپت',
+    description: 'پوشش همهٔ ماژول‌های دوره: متغیرها، توابع، آرایه‌ها، رویدادها و DOM.',
+    passScore: 60,
+    durationMin: 10,
+    sortOrder: 0,
+    questions: [
+      {
+        id: 'q1', type: 'single_choice',
+        prompt: 'خروجی کد زیر چیست؟\n\nlet x = 5; { let x = 10; } console.log(x);',
+        options: [
+          { id: 'a', label: '۵' },
+          { id: 'b', label: '۱۰' },
+          { id: 'c', label: 'undefined' },
+          { id: 'd', label: 'خطای ReferenceError' },
+        ],
+        answer: 'a',
+      },
+      {
+        id: 'q2', type: 'single_choice',
+        prompt: 'کدام روش آرایه، یک آرایهٔ جدید برمی‌گرداند و آرایهٔ اصلی را تغییر نمی‌دهد؟',
+        options: [
+          { id: 'a', label: 'push' },
+          { id: 'b', label: 'map' },
+          { id: 'c', label: 'splice' },
+          { id: 'd', label: 'sort' },
+        ],
+        answer: 'b',
+      },
+      {
+        id: 'q3', type: 'multi_choice',
+        prompt: 'کدام گزینه‌ها مقادیر falsy در جاوااسکریپت هستند؟',
+        options: [
+          { id: 'a', label: '۰ (صفر)' },
+          { id: 'b', label: "'' (رشتهٔ خالی)" },
+          { id: 'c', label: '[] (آرایهٔ خالی)' },
+          { id: 'd', label: 'NaN' },
+        ],
+        answer: ['a', 'b', 'd'],
+      },
+      {
+        id: 'q4', type: 'single_choice',
+        prompt: 'تفاوت == و === در چیست؟',
+        options: [
+          { id: 'a', label: 'هیچ تفاوتی ندارند' },
+          { id: 'b', label: '== نوع‌ها را مقایسه می‌کند، === مقدار را' },
+          { id: 'c', label: '=== پیش از مقایسه تبدیل نوع انجام نمی‌دهد' },
+          { id: 'd', label: '== فقط برای اعداد است' },
+        ],
+        answer: 'c',
+      },
+      {
+        id: 'q5', type: 'multi_choice',
+        prompt: 'کدام‌ها روش‌های انتخاب عنصر در DOM هستند؟',
+        options: [
+          { id: 'a', label: 'document.querySelector' },
+          { id: 'b', label: 'document.createElement' },
+          { id: 'c', label: 'element.addEventListener' },
+          { id: 'd', label: 'document.getElementById' },
+        ],
+        answer: ['a', 'd'],
+      },
+    ],
+  },
+];
+
+/** Static route params for the export build (only demo exams exist there). */
+export function demoCourseExamStaticParams(): { slug: string; examId: string }[] {
+  return DEMO_EXAMS.map((e) => ({ slug: e.courseSlug, examId: e.id }));
+}
+
+function readExamStore(): { exams: DemoStoredExam[]; attempts: DemoStoredAttempt[] } {
+  try {
+    const raw = localStorage.getItem(EXAM_STORE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as { exams?: DemoStoredExam[]; attempts?: DemoStoredAttempt[] };
+      if (Array.isArray(parsed.exams) && Array.isArray(parsed.attempts)) {
+        return { exams: parsed.exams, attempts: parsed.attempts };
+      }
+    }
+  } catch {
+    /* fall through to defaults */
+  }
+  return { exams: structuredClone(DEMO_EXAMS), attempts: [] };
+}
+
+function writeExamStore(store: { exams: DemoStoredExam[]; attempts: DemoStoredAttempt[] }): void {
+  try {
+    localStorage.setItem(EXAM_STORE_KEY, JSON.stringify(store));
+  } catch {
+    /* storage full or unavailable — demo keeps working in-memory */
+  }
+}
+
+function updateDemoAttempt(attemptId: string, patch: Partial<DemoStoredAttempt>): void {
+  const store = readExamStore();
+  const attempt = store.attempts.find((a) => a.attemptId === attemptId);
+  if (!attempt) return;
+  Object.assign(attempt, patch);
+  writeExamStore(store);
+}
+
+function findDemoExam(examId: string): DemoStoredExam {
+  const exam = readExamStore().exams.find((e) => e.id === examId);
+  if (!exam) throw new ApiError('Course exam not found', 404);
+  return exam;
+}
+
+function demoExamSummaries(): CourseExamSummary[] {
+  return readExamStore()
+    .exams.slice()
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .map((e) => ({
+      id: e.id,
+      courseId: e.courseId,
+      courseSlug: e.courseSlug,
+      courseTitle: e.courseTitle,
+      title: e.title,
+      description: e.description,
+      passScore: e.passScore,
+      durationMin: e.durationMin,
+      published: true,
+      sortOrder: e.sortOrder,
+      questionCount: e.questions.length,
+    }));
+}
+
+function toPublicDemoQuestion(q: CourseExamQuestion): Omit<CourseExamQuestion, 'answer'> {
+  const { answer: _answer, ...rest } = q;
+  return rest;
+}
+
+function demoExamSession(
+  exam: DemoStoredExam,
+  attempt: DemoStoredAttempt,
+  status: 'IN_PROGRESS' | 'SUBMITTED' | 'EXPIRED',
+): CourseExamAttemptSession {
+  const endsAt = new Date(Date.parse(attempt.startedAt) + exam.durationMin * 60_000);
+  return {
+    attemptId: attempt.attemptId,
+    examId: exam.id,
+    examTitle: exam.title,
+    courseSlug: exam.courseSlug,
+    durationMin: exam.durationMin,
+    passScore: exam.passScore,
+    startedAt: attempt.startedAt,
+    endsAt: endsAt.toISOString(),
+    questions: exam.questions.map(toPublicDemoQuestion),
+    savedAnswers: attempt.answers,
+    status,
+  };
+}
+
+function isDemoAnswerCorrect(
+  q: CourseExamQuestion,
+  response: CourseExamResponse | undefined,
+): boolean {
+  if (!response || response.type !== q.type) return false;
+  if (q.type === 'single_choice') {
+    const answer = typeof q.answer === 'string' ? q.answer : q.answer[0];
+    return response.type === 'single_choice' && response.optionId === answer;
+  }
+  const sort = (arr: string[]) => [...arr].sort();
+  const expected = sort(Array.isArray(q.answer) ? q.answer : [q.answer]);
+  const got = response.type === 'multi_choice' ? sort(response.optionIds) : [];
+  return expected.length === got.length && expected.every((id, i) => id === got[i]);
+}
+
+function sanitizeDemoAnswers(input: Record<string, unknown>): Record<string, CourseExamResponse> {
+  const out: Record<string, CourseExamResponse> = {};
+  for (const [id, value] of Object.entries(input)) {
+    if (!value || typeof value !== 'object') continue;
+    const v = value as { type?: string };
+    if (v.type === 'single_choice') {
+      const optionId = (v as { optionId?: unknown }).optionId;
+      if (typeof optionId === 'string') out[id] = { type: 'single_choice', optionId };
+    } else if (v.type === 'multi_choice') {
+      const ids = (v as { optionIds?: unknown }).optionIds;
+      if (Array.isArray(ids) && ids.every((i) => typeof i === 'string')) {
+        out[id] = { type: 'multi_choice', optionIds: ids as string[] };
+      }
+    }
+  }
+  return out;
+}
+
+function scoreDemoAttempt(
+  exam: DemoStoredExam,
+  answers: Record<string, CourseExamResponse>,
+): Pick<CourseExamSubmitResult, 'score' | 'passed' | 'correctCount' | 'totalCount' | 'details'> {
+  let points = 0;
+  let total = 0;
+  let correct = 0;
+  const details = exam.questions.map((q) => {
+    const isCorrect = isDemoAnswerCorrect(q, answers[q.id]);
+    const qPoints = q.points ?? 1;
+    total += qPoints;
+    if (isCorrect) {
+      correct += 1;
+      points += qPoints;
+    }
+    return { questionId: q.id, correct: isCorrect, points: qPoints };
+  });
+  const score = total === 0 ? 0 : Math.round((points / total) * 100);
+  return { score, passed: score >= exam.passScore, correctCount: correct, totalCount: exam.questions.length, details };
+}
+
+function demoSubmitResult(exam: DemoStoredExam, attempt: DemoStoredAttempt): CourseExamSubmitResult {
+  const scored = scoreDemoAttempt(exam, attempt.answers);
+  return {
+    attemptId: attempt.attemptId,
+    examId: exam.id,
+    examTitle: exam.title,
+    courseSlug: exam.courseSlug,
+    score: attempt.score ?? scored.score,
+    passed: attempt.passed ?? scored.passed,
+    passScore: exam.passScore,
+    correctCount: scored.correctCount,
+    totalCount: scored.totalCount,
+    details: scored.details,
+    submittedAt: attempt.submittedAt ?? new Date().toISOString(),
+  };
 }
 
 export const demoApi = {
@@ -868,6 +1106,138 @@ export const demoApi = {
 
   async listCourses(): Promise<CourseSummary[]> {
     return delay(courses.filter((c) => c.published).map(toCourseSummary));
+  },
+
+  async listMyCourseExams(): Promise<CourseExamSummary[]> {
+    requireUser();
+    return demoExamSummaries();
+  },
+
+  async listCourseExamsForLearner(courseSlug: string): Promise<CourseExamSummary[]> {
+    requireUser();
+    return demoExamSummaries().filter((e) => e.courseSlug === courseSlug);
+  },
+
+  async listCourseExamAttempts(examId: string): Promise<CourseExamAttemptSummary[]> {
+    requireUser();
+    const store = readExamStore();
+    return store.attempts
+      .filter((a) => a.examId === examId)
+      .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+      .map((a) => ({
+        id: a.attemptId,
+        examId: a.examId,
+        status: a.status,
+        score: a.status === 'SUBMITTED' ? a.score : null,
+        passed: a.status === 'SUBMITTED' ? a.passed : null,
+        startedAt: a.startedAt,
+        submittedAt: a.submittedAt,
+      }));
+  },
+
+  async startCourseExam(examId: string): Promise<CourseExamAttemptSession> {
+    requireUser();
+    const exam = findDemoExam(examId);
+    const store = readExamStore();
+    const existing = store.attempts
+      .filter((a) => a.examId === examId && a.status !== 'SUBMITTED')
+      .sort((a, b) => b.startedAt.localeCompare(a.startedAt))[0];
+    if (existing) {
+      const endsAt = Date.parse(existing.startedAt) + exam.durationMin * 60_000;
+      let status = existing.status;
+      if (status === 'IN_PROGRESS' && Date.now() > endsAt) status = 'EXPIRED';
+      if (status !== existing.status) {
+        updateDemoAttempt(existing.attemptId, { status });
+        existing.status = status;
+      }
+      return demoExamSession(exam, existing, status);
+    }
+    const attempt: DemoStoredAttempt = {
+      attemptId: `demo-attempt-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      examId,
+      status: 'IN_PROGRESS',
+      startedAt: new Date().toISOString(),
+      submittedAt: null,
+      score: null,
+      passed: null,
+      answers: {},
+    };
+    store.attempts.push(attempt);
+    writeExamStore(store);
+    return demoExamSession(exam, attempt, 'IN_PROGRESS');
+  },
+
+  async saveCourseExamAnswers(
+    examId: string,
+    attemptId: string,
+    answers: Record<string, unknown>,
+  ): Promise<{ ok: true }> {
+    requireUser();
+    findDemoExam(examId);
+    const store = readExamStore();
+    const attempt = store.attempts.find((a) => a.attemptId === attemptId);
+    if (!attempt || attempt.examId !== examId) {
+      throw new ApiError('Course exam attempt not found', 404);
+    }
+    if (attempt.status === 'SUBMITTED') {
+      throw new ApiError('Attempt already submitted', 400);
+    }
+    if (attempt.status === 'EXPIRED') {
+      throw new ApiError('Attempt expired', 400);
+    }
+    const endsAt = Date.parse(attempt.startedAt) + findDemoExam(examId).durationMin * 60_000;
+    if (Date.now() > endsAt) {
+      updateDemoAttempt(attemptId, { status: 'EXPIRED' });
+      throw new ApiError('Attempt expired', 400);
+    }
+    attempt.answers = { ...attempt.answers, ...sanitizeDemoAnswers(answers) };
+    writeExamStore(store);
+    return { ok: true };
+  },
+
+  async submitCourseExam(
+    examId: string,
+    attemptId: string,
+    answers: Record<string, unknown>,
+  ): Promise<CourseExamSubmitResult> {
+    requireUser();
+    const exam = findDemoExam(examId);
+    const store = readExamStore();
+    const attempt = store.attempts.find((a) => a.attemptId === attemptId);
+    if (!attempt || attempt.examId !== examId) {
+      throw new ApiError('Course exam attempt not found', 404);
+    }
+    if (attempt.status === 'SUBMITTED' && attempt.score !== null) {
+      return demoSubmitResult(exam, attempt);
+    }
+    const merged = { ...attempt.answers, ...sanitizeDemoAnswers(answers) };
+    const scored = scoreDemoAttempt(exam, merged);
+    Object.assign(attempt, {
+      status: 'SUBMITTED',
+      submittedAt: new Date().toISOString(),
+      score: scored.score,
+      passed: scored.passed,
+      answers: merged,
+    });
+    writeExamStore(store);
+    return demoSubmitResult(exam, attempt);
+  },
+
+  async getCourseExamAttemptResult(
+    examId: string,
+    attemptId: string,
+  ): Promise<CourseExamSubmitResult> {
+    requireUser();
+    const exam = findDemoExam(examId);
+    const store = readExamStore();
+    const attempt = store.attempts.find((a) => a.attemptId === attemptId);
+    if (!attempt || attempt.examId !== examId) {
+      throw new ApiError('Course exam attempt not found', 404);
+    }
+    if (attempt.status !== 'SUBMITTED' || attempt.score === null) {
+      throw new ApiError('Attempt has not been submitted', 400);
+    }
+    return demoSubmitResult(exam, attempt);
   },
 
   async listMyCourses(): Promise<CourseSummary[]> {

@@ -1,6 +1,6 @@
 'use client';
 
-import type { CourseSummary, LessonSummary } from '@kia-academy/shared';
+import type { CourseExamSummary, CourseSummary, LessonSummary } from '@kia-academy/shared';
 import { BookOpen, Loader2, ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
@@ -34,6 +34,16 @@ export default function CoursePage() {
   }, [slug, t]);
 
   const localizedCourse = useMemo(() => course && localizeCourse(course, locale), [course, locale]);
+
+  const [exams, setExams] = useState<CourseExamSummary[]>([]);
+  useEffect(() => {
+    if (!slug || !course?.enrolled) return;
+    api
+      .listCourseExamsForLearner(slug)
+      .then(setExams)
+      .catch(() => setExams([]));
+  }, [slug, course?.enrolled]);
+
   const lessons = useMemo(
     () => course?.lessons.map((lesson) => localizeLesson(lesson, slug, locale)) ?? [],
     [course, locale, slug],
@@ -115,6 +125,26 @@ export default function CoursePage() {
             ))}
           </div>
           <p>{t('publicCourses.introBody')}</p>
+          {exams.length > 0 ? (
+            <div style={{ marginTop: '1.25rem' }}>
+              <h3>{t('courses.exams')}</h3>
+              <div className="lesson-nav">
+                {exams.map((exam) => (
+                  <Link
+                    key={exam.id}
+                    href={`/courses/${localizedCourse.slug}/exams/${exam.id}`}
+                    className="lesson-nav-item"
+                  >
+                    <span className="lesson-nav-title">{exam.title}</span>
+                    <span className="lesson-nav-meta">
+                      {t('courses.examQuestions', { count: exam.questionCount })} ·{' '}
+                      {t('courses.examDuration', { min: exam.durationMin })}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ) : null}
           {cartMsg ? <p className="form-success">{cartMsg}</p> : null}
           <div className="catalog-actions" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
             {localizedCourse.enrolled && lessons.length > 0 ? (

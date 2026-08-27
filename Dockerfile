@@ -31,6 +31,10 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json .npmrc ./
 COPY packages/shared/package.json packages/shared/
+# Shared sources are needed during install because the root `postinstall`
+# compiles @kia-academy/shared (fresh type declarations for API build below).
+COPY packages/shared/tsconfig.json packages/shared/
+COPY packages/shared/src packages/shared/src
 COPY apps/api/package.json apps/api/
 # Prisma schema ships with the manifest layer: root `postinstall` generates the client.
 COPY apps/api/prisma apps/api/prisma
