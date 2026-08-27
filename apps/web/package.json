@@ -14,8 +14,8 @@
   },
   "dependencies": {
     "@kia-academy/shared": "workspace:*",
-    "lucide-react": "^1.27.0",
-    "next": "^16.2.12",
+    "lucide-react": "^1.34.0",
+    "next": "^16.3.2",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
@@ -23,7 +23,7 @@
     "@playwright/test": "^1.62.0",
     "@types/node": "^26.1.2",
     "@types/react": "^19.1.4",
-    "@types/react-dom": "^19.1.5",
+    "@types/react-dom": "^19.2.5",
     "typescript": "^5.8.3",
     "vitest": "^4.1.10"
   }
