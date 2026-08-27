@@ -13,7 +13,7 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
-import type { CourseExamQuestion } from '@kia-academy/shared';
+import type { CourseExamKind, CourseExamQuestion } from '@kia-academy/shared';
 
 class AdminCourseExamQuestionDto implements CourseExamQuestion {
   @IsString()
@@ -43,6 +43,15 @@ class AdminCourseExamQuestionDto implements CourseExamQuestion {
 export class AdminCreateCourseExamDto {
   @IsString()
   title!: string;
+
+  @IsOptional()
+  @IsIn(['MIDTERM', 'FINAL'])
+  kind?: CourseExamKind;
+
+  /** Anchor lesson: the exam is placed right after this lesson. Null = end of course. */
+  @IsOptional()
+  @IsString()
+  afterLessonId?: string | null;
 
   @IsOptional()
   @IsString()
@@ -79,6 +88,14 @@ export class AdminUpdateCourseExamDto {
   @IsOptional()
   @IsString()
   title?: string;
+
+  @IsOptional()
+  @IsIn(['MIDTERM', 'FINAL'])
+  kind?: CourseExamKind;
+
+  @IsOptional()
+  @IsString()
+  afterLessonId?: string | null;
 
   @IsOptional()
   @IsString()

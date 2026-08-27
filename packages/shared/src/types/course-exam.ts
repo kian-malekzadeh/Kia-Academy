@@ -2,6 +2,8 @@
 
 export type CourseExamQuestionType = 'single_choice' | 'multi_choice';
 
+export type CourseExamKind = 'MIDTERM' | 'FINAL';
+
 export interface CourseExamChoice {
   id: string;
   label: string;
@@ -37,6 +39,9 @@ export interface AdminCourseExam {
   durationMin: number;
   published: boolean;
   sortOrder: number;
+  kind: CourseExamKind;
+  afterLessonId: string | null;
+  afterLessonSlug: string | null;
   questions: CourseExamQuestion[];
   createdAt: string;
   updatedAt: string;
@@ -54,6 +59,9 @@ export interface CourseExamSummary {
   durationMin: number;
   published: boolean;
   sortOrder: number;
+  kind: CourseExamKind;
+  afterLessonId: string | null;
+  afterLessonSlug: string | null;
   questionCount: number;
 }
 

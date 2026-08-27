@@ -53,16 +53,24 @@ export class CoursesService {
     const courses = (await this.listCourses(userId)).filter((course) => course.enrolled);
     if (courses.length === 0) return courses;
 
-    // First lesson per course (lowest sortOrder) so the UI can link straight into /learn/...
-    const firstLessons = await this.prisma.lesson.findMany({
+    // Resume point per course: the next lesson after the last completed one, so
+    // the UI can link straight into /learn/... (falls back to the first lesson).
+    const lessons = await this.prisma.lesson.findMany({
       where: { courseId: { in: courses.map((course) => course.id) } },
       orderBy: { sortOrder: 'asc' },
-      select: { courseId: true, slug: true },
+      select: { courseId: true, slug: true, id: true },
     });
+    const completedIds = await this.getCompletedLessonIds(
+      userId,
+      lessons.map((lesson) => lesson.id),
+    );
+
     const firstByCourseId = new Map<string, string>();
-    for (const lesson of firstLessons) {
-      if (!firstByCourseId.has(lesson.courseId)) {
-        firstByCourseId.set(lesson.courseId, lesson.slug);
+    for (const course of courses) {
+      const ordered = lessons.filter((lesson) => lesson.courseId === course.id);
+      const resume = ordered.find((lesson) => !completedIds.has(lesson.id)) ?? ordered[0];
+      if (resume) {
+        firstByCourseId.set(course.id, resume.slug);
       }
     }
 

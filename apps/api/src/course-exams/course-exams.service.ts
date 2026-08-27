@@ -14,6 +14,7 @@ import type {
   CourseExamSummary,
   CourseExamResponse,
   PublicCourseExamQuestion,
+  CourseExamKind,
 } from '@kia-academy/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -30,10 +31,13 @@ interface CourseExamRow {
   durationMin: number;
   published: boolean;
   sortOrder: number;
+  kind: string;
+  afterLessonId: string | null;
   questions: string;
   createdAt: Date;
   updatedAt: Date;
   course: { slug: string; title: string };
+  afterLesson: { slug: string } | null;
 }
 
 function parseQuestions(raw: string): CourseExamQuestion[] {
@@ -58,7 +62,10 @@ export class CourseExamsService {
     const course = await this.ensureCourseBySlug(courseSlug);
     const rows = await this.prisma.courseExam.findMany({
       where: { courseId: course.id },
-      include: { course: { select: { slug: true, title: true } } },
+      include: {
+        course: { select: { slug: true, title: true } },
+        afterLesson: { select: { slug: true } },
+      },
       orderBy: { sortOrder: 'asc' },
     });
     return rows.map((row) => this.toAdminExam(row));
@@ -66,7 +73,10 @@ export class CourseExamsService {
 
   async listAllAdmin(): Promise<AdminCourseExam[]> {
     const rows = await this.prisma.courseExam.findMany({
-      include: { course: { select: { slug: true, title: true } } },
+      include: {
+        course: { select: { slug: true, title: true } },
+        afterLesson: { select: { slug: true } },
+      },
       orderBy: [{ course: { sortOrder: 'asc' } }, { sortOrder: 'asc' }],
     });
     return rows.map((row) => this.toAdminExam(row));
@@ -77,7 +87,10 @@ export class CourseExamsService {
     await this.assertEnrolled(userId, course.id);
     const rows = await this.prisma.courseExam.findMany({
       where: { courseId: course.id, published: true },
-      include: { course: { select: { slug: true, title: true } } },
+      include: {
+        course: { select: { slug: true, title: true } },
+        afterLesson: { select: { slug: true } },
+      },
       orderBy: { sortOrder: 'asc' },
     });
     return rows.map((row) => this.toSummary(row));
@@ -93,7 +106,10 @@ export class CourseExamsService {
     if (ids.length === 0) return [];
     const rows = await this.prisma.courseExam.findMany({
       where: { courseId: { in: ids }, published: true },
-      include: { course: { select: { slug: true, title: true } } },
+      include: {
+        course: { select: { slug: true, title: true } },
+        afterLesson: { select: { slug: true } },
+      },
       orderBy: [{ course: { sortOrder: 'asc' } }, { sortOrder: 'asc' }],
     });
     return rows.map((row) => this.toSummary(row));
@@ -123,7 +139,10 @@ export class CourseExamsService {
   async startAttempt(userId: string, examId: string): Promise<CourseExamAttemptSession> {
     const exam = await this.prisma.courseExam.findUnique({
       where: { id: examId },
-      include: { course: { select: { slug: true, title: true } } },
+      include: {
+        course: { select: { slug: true, title: true } },
+        afterLesson: { select: { slug: true } },
+      },
     });
     if (!exam) throw new NotFoundException('Course exam not found');
     if (!exam.published) throw new ForbiddenException('This exam is not published');
@@ -192,12 +211,17 @@ export class CourseExamsService {
         title: dto.title,
         description: dto.description ?? '',
         passScore: dto.passScore ?? 60,
-        durationMin: dto.durationMin ?? 10,
+        durationMin: dto.durationMin ?? 15,
         published: dto.published ?? true,
         sortOrder: dto.sortOrder ?? (maxOrder._max.sortOrder ?? 0) + 1,
+        kind: this.toDbKind(dto.kind),
+        afterLessonId: dto.afterLessonId ?? null,
         questions: JSON.stringify(dto.questions ?? []),
       },
-      include: { course: { select: { slug: true, title: true } } },
+      include: {
+        course: { select: { slug: true, title: true } },
+        afterLesson: { select: { slug: true } },
+      },
     });
     return this.toAdminExam(row);
   }
@@ -217,10 +241,15 @@ export class CourseExamsService {
         durationMin: dto.durationMin,
         published: dto.published,
         sortOrder: dto.sortOrder,
+        kind: dto.kind !== undefined ? this.toDbKind(dto.kind) : undefined,
+        afterLessonId: dto.afterLessonId,
         questions:
           dto.questions !== undefined ? JSON.stringify(dto.questions) : undefined,
       },
-      include: { course: { select: { slug: true, title: true } } },
+      include: {
+        course: { select: { slug: true, title: true } },
+        afterLesson: { select: { slug: true } },
+      },
     });
     return this.toAdminExam(row);
   }
@@ -425,6 +454,10 @@ export class CourseExamsService {
     };
   }
 
+  private toDbKind(kind: CourseExamKind | undefined): 'MIDTERM' | 'FINAL' {
+    return kind === 'MIDTERM' ? 'MIDTERM' : 'FINAL';
+  }
+
   private parseAnswers(raw: string | null): Record<string, CourseExamResponse> {
     if (!raw) return {};
     try {
@@ -489,6 +522,8 @@ export class CourseExamsService {
 
   private toSummary(row: CourseExamRow): CourseExamSummary {
     const courseId = (row as unknown as { courseId: string }).courseId ?? '';
+    const kind: CourseExamKind =
+      row.kind === 'MIDTERM' ? 'MIDTERM' : row.kind === 'FINAL' ? 'FINAL' : 'FINAL';
     return {
       id: row.id,
       courseId,
@@ -500,12 +535,17 @@ export class CourseExamsService {
       durationMin: row.durationMin,
       published: row.published,
       sortOrder: row.sortOrder,
+      kind,
+      afterLessonId: row.afterLessonId,
+      afterLessonSlug: row.afterLesson?.slug ?? null,
       questionCount: parseQuestions(row.questions).length,
     };
   }
 
   private toAdminExam(row: CourseExamRow): AdminCourseExam {
     const courseId = (row as unknown as { courseId: string }).courseId ?? '';
+    const kind: CourseExamKind =
+      row.kind === 'MIDTERM' ? 'MIDTERM' : row.kind === 'FINAL' ? 'FINAL' : 'FINAL';
     return {
       id: row.id,
       courseId,
@@ -517,6 +557,9 @@ export class CourseExamsService {
       durationMin: row.durationMin,
       published: row.published,
       sortOrder: row.sortOrder,
+      kind,
+      afterLessonId: row.afterLessonId,
+      afterLessonSlug: row.afterLesson?.slug ?? null,
       questions: parseQuestions(row.questions),
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),

@@ -338,21 +338,31 @@ model Course {
   cartItems   CartItem[]
 }
 
-/** An exam created by admins inside a course, drawn from the course's lessons. */
+enum CourseExamKind {
+  MIDTERM
+  FINAL
+}
+
+/** An exam created by admins inside a course, placed between lessons. */
 model CourseExam {
-  id          String   @id @default(cuid())
-  courseId    String
-  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  title       String
-  description String   @default("")
-  passScore   Int      @default(60)
-  durationMin Int      @default(10)
-  published   Boolean  @default(true)
-  sortOrder   Int      @default(0)
+  id            String         @id @default(cuid())
+  courseId      String
+  course        Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title         String
+  description   String         @default("")
+  passScore     Int            @default(60)
+  durationMin   Int            @default(15)
+  published     Boolean        @default(true)
+  sortOrder     Int            @default(0)
+  /** Kind of assessment: mid-term (mid lesson) or final. */
+  kind          CourseExamKind @default(FINAL)
+  /** Last (anchor) lesson → exam appears after this lesson. Null = end of course. */
+  afterLessonId String?
+  afterLesson   Lesson?        @relation(fields: [afterLessonId], references: [id], onDelete: SetNull)
   /** JSON payload of CourseExamQuestion[] (server-side grading keys included). */
-  questions   String   @default("[]")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  questions     String         @default("[]")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
   attempts CourseExamAttempt[]
 
@@ -388,6 +398,8 @@ model Lesson {
   sortOrder   Int     @default(0)
 
   progress LessonProgress[]
+
+  examsAfter CourseExam[]
 
   @@unique([courseId, slug])
   @@index([courseId, sortOrder])

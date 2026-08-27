@@ -230,6 +230,29 @@
   box-shadow: inset -3px 0 0 var(--brand-500);
 }
 
+/* Completed lessons render green in the sidebar (class set after "Mark complete"). */
+.kia-lesson-shell .lesson-nav-item.done {
+  border-color: var(--progress-fill);
+  background: var(--progress-tint);
+}
+
+.kia-lesson-shell .lesson-nav-item.done .lesson-nav-title {
+  color: var(--progress);
+}
+
+.kia-lesson-shell .lesson-nav-item.done .lesson-nav-meta {
+  color: var(--progress-fill);
+}
+
+.kia-lesson-shell .lesson-nav-item.done:hover {
+  border-color: var(--progress-fill);
+  box-shadow: inset 3px 0 0 var(--progress-fill);
+}
+
+[dir='rtl'] .kia-lesson-shell .lesson-nav-item.done:hover {
+  box-shadow: inset -3px 0 0 var(--progress-fill);
+}
+
 .kia-lesson-shell .lesson-nav-title {
   font-size: var(--fs-sm);
   font-weight: 700;

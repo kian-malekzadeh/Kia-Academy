@@ -82,7 +82,7 @@ function LessonPlayerContent({
   }, [lessons]);
 
   const markComplete = async () => {
-    if (!courseSlug || !lessonSlug) return;
+    if (!courseSlug || !lessonSlug || !lesson) return;
     setCompleting(true);
     try {
       await api.completeLesson(courseSlug, lessonSlug);
@@ -90,6 +90,13 @@ function LessonPlayerContent({
       setLessons((prev) =>
         prev.map((item) => (item.slug === lessonSlug ? { ...item, completed: true } : item)),
       );
+      // Show the freshly-completed lesson as green for a beat, then auto-advance
+      // to the next lesson so the learner keeps moving forward.
+      if (lesson.nextSlug) {
+        window.setTimeout(() => {
+          router.push(`/learn/${courseSlug}/${lesson.nextSlug}`);
+        }, 600);
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('lesson.completeError'));
     } finally {

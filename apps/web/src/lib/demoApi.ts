@@ -252,12 +252,24 @@ function defaultCourses(): DemoCourse[] {
           sortOrder: 1,
           content: `# Portfolio Story
 
-Your portfolio should tell a clear story: who you are, what you build, and why it matters.
+Your portfolio should tell a clear story: **who you are**, *what you build*, and why it matters.
+
+## A case study that recruiters read
+
+1. **Context** — one sentence on the product and your role.
+2. **Problem** — the constraint or user pain you targeted.
+3. **Solution** — what you shipped, with \`key metrics\` (e.g. *+34% signup*).
+4. **Reflection** — what you would do differently next time.
 
 ## Checklist
+
 - Hero section with role + value proposition
 - 2–3 featured projects with outcomes
-- Contact link and GitHub profile`,
+- Contact link and GitHub profile
+
+> Tip: recruiters skim for ~90 seconds. Put outcomes *before* tooling lists.
+
+Host the site for free with [GitHub Pages](https://pages.github.com/).`,
         },
         {
           id: 'lesson-iv-2',
@@ -268,12 +280,24 @@ Your portfolio should tell a clear story: who you are, what you build, and why i
           sortOrder: 2,
           content: `# Interview Framework
 
-Use STAR (Situation, Task, Action, Result) to answer behavioral questions.
+Use **STAR** (Situation, Task, Action, Result) to answer behavioral questions.
+
+## Run the STAR loop
+
+1. *Situation* — set the scene in two sentences max.
+2. *Task* — state your specific responsibility.
+3. *Action* — say what **you** did, not the team.
+4. *Result* — quantify it, then link it to the role.
 
 ## Tips
+
 - Lead with impact, not tools
 - Quantify results when possible
-- Prepare 3 project deep-dives`,
+- Prepare 3 project deep-dives
+
+> Practice out loud: a strong answer fits in \`90 seconds\`.
+
+Review the STAR method on [Wikipedia](https://en.wikipedia.org/wiki/Situation,_Task,_Action,_Result) before your next mock interview.`,
         },
       ],
     },
@@ -388,6 +412,14 @@ function toCourseSummary(course: DemoCourse): CourseSummary {
   ).length;
   const progressPct =
     course.lessons.length === 0 ? 0 : Math.round((completed / course.lessons.length) * 100);
+  // Entering a course resumes at the next lesson after the last completed one;
+  // when the whole course is done we loop back to the first lesson.
+  const firstLessonSlug =
+    course.lessons.find(
+      (l) => !state.completedLessons.includes(lessonKey(course.slug, l.slug)),
+    )?.slug ??
+    course.lessons[0]?.slug ??
+    null;
   return {
     id: course.id,
     slug: course.slug,
@@ -398,7 +430,7 @@ function toCourseSummary(course: DemoCourse): CourseSummary {
     lessonCount: course.lessons.length,
     enrolled,
     progressPct,
-    firstLessonSlug: course.lessons[0]?.slug ?? null,
+    firstLessonSlug,
   };
 }
 

@@ -49,6 +49,12 @@ export default function CoursePage() {
     [course, locale, slug],
   );
 
+  // Resume at the next lesson after the last completed one; fall back to the first.
+  const resumeLesson = useMemo(
+    () => lessons.find((lesson) => !lesson.completed) ?? lessons[0],
+    [lessons],
+  );
+
   if (loading) {
     return (
       <div className="page-content auth-loading">
@@ -149,7 +155,7 @@ export default function CoursePage() {
           <div className="catalog-actions" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
             {localizedCourse.enrolled && lessons.length > 0 ? (
               <Link
-                href={`/learn/${localizedCourse.slug}/${lessons[0].slug}`}
+                href={`/learn/${localizedCourse.slug}/${resumeLesson?.slug ?? ''}`}
                 className="btn btn--primary"
               >
                 {t('courses.continue')}
