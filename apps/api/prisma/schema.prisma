@@ -77,6 +77,7 @@ model User {
   entitlements         Entitlement[]
   enrollments          Enrollment[]
   lessonProgress       LessonProgress[]
+  courseExamAttempts   CourseExamAttempt[]
   supportTickets       SupportTicket[]
   ticketReplies        TicketReply[]
   learnerMessages      LearnerMessage[]
@@ -330,10 +331,49 @@ model Course {
   createdAt   DateTime @default(now())
 
   lessons     Lesson[]
+  courseExams CourseExam[]
   enrollments Enrollment[]
   attachments CourseAttachment[]
   tickets     SupportTicket[]
   cartItems   CartItem[]
+}
+
+/** An exam created by admins inside a course, drawn from the course's lessons. */
+model CourseExam {
+  id          String   @id @default(cuid())
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title       String
+  description String   @default("")
+  passScore   Int      @default(60)
+  durationMin Int      @default(10)
+  published   Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  /** JSON payload of CourseExamQuestion[] (server-side grading keys included). */
+  questions   String   @default("[]")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  attempts CourseExamAttempt[]
+
+  @@index([courseId, sortOrder])
+}
+
+model CourseExamAttempt {
+  id          String     @id @default(cuid())
+  examId      String
+  exam        CourseExam @relation(fields: [examId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status      String     @default("IN_PROGRESS")
+  startedAt   DateTime   @default(now())
+  submittedAt DateTime?
+  answers     String?
+  score       Int?
+  passed      Boolean?
+
+  @@index([examId])
+  @@index([userId, examId])
 }
 
 model Lesson {

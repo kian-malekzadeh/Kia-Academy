@@ -9,6 +9,7 @@ import { AuthModule } from './auth/auth.module';
 import { HealthModule } from './health/health.module';
 import { PaymentsModule } from './payments/payments.module';
 import { CoursesModule } from './courses/courses.module';
+import { CourseExamsModule } from './course-exams/course-exams.module';
 import { AssessmentsModule } from './assessments/assessments.module';
 import { PersonalityModule } from './personality/personality.module';
 import { RoadmapsModule } from './roadmaps/roadmaps.module';
@@ -50,6 +51,7 @@ ConfigModule.forRoot({
     PaymentsModule,
     CartModule,
     CoursesModule,
+    CourseExamsModule,
     AssessmentsModule,
     PersonalityModule,
     RoadmapsModule,

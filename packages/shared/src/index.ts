@@ -7,6 +7,7 @@ export * from './types/payment';
 export * from './types/cart';
 export * from './types/order';
 export * from './types/course';
+export * from './types/course-exam';
 export * from './types/admin';
 export * from './types/site-settings';
 export * from './types/contact';
