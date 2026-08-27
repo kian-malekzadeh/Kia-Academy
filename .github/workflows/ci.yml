@@ -33,7 +33,7 @@ jobs:
       DATABASE_URL: postgresql://kia_academy:kia_academy@localhost:5432/kia_academy?schema=public
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v4
         with:
