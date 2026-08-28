@@ -108,8 +108,10 @@
   position: sticky;
   top: calc(var(--space-4) + 60px);
   max-height: calc(100vh - 100px);
-  overflow: auto;
+  overflow: hidden;
   padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
 }
 
 .kia-lesson-shell .sidebar-head {
@@ -224,6 +226,15 @@
   border-color: var(--brand-500);
   background: var(--brand-tint);
   box-shadow: inset 3px 0 0 var(--brand-500);
+}
+
+/* The lessons list scrolls on its own; the active lesson is pinned to its top. */
+.kia-lesson-shell .lesson-nav {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  scroll-behavior: smooth;
 }
 
 [dir='rtl'] .kia-lesson-shell .lesson-nav-item.active {

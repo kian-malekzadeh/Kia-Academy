@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import type { CourseExamSummary, LessonDetail, LessonSummary } from '@kia-academy/shared';
 import { parseLessonContent } from '@kia-academy/shared';
 import { RequireAuth } from '@/components/auth/RequireAuth';
@@ -56,6 +56,8 @@ function LessonPlayerContent({
   const [note, setNote] = useState('');
   const [query, setQuery] = useState('');
   const [copied, setCopied] = useState(false);
+  /** Scroll container of the lessons navigation (active lesson pinned to its top). */
+  const navRef = useRef<HTMLElement>(null);
   /** True after being redirected here from a failed exam (?examFailed=1). */
   const [failWarning, setFailWarning] = useState(false);
 
@@ -156,6 +158,16 @@ function LessonPlayerContent({
   }, [lessons, examsAfterLesson, passedExamIds]);
 
   const isLessonLocked = (slug: string) => lockedLessonSlugs.has(slug);
+
+  // Pin the active lesson to the top of the lessons navigation: previous lessons
+  // stay above it (reachable by scrolling up), next ones remain below.
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const active = nav.querySelector<HTMLElement>('.lesson-nav-item.active');
+    if (!active) return;
+    nav.scrollTop = active.offsetTop;
+  }, [lessonSlug, lessons, loading]);
 
   /** If the current lesson is locked, send the learner back to the last open one. */
   useEffect(() => {
@@ -317,7 +329,7 @@ function LessonPlayerContent({
               </div>
             </div>
 
-            <nav className="lesson-nav" aria-label={t('lesson.lessonsNav')}>
+            <nav ref={navRef} className="lesson-nav" aria-label={t('lesson.lessonsNav')}>
               {filteredLessons.map((item) => {
                 const locked = isLessonLocked(item.slug);
                 const soon = item.comingSoon;
