@@ -1160,6 +1160,7 @@ export const en = {
     lessonsNav: 'Lessons',
     duration: '{minutes} min',
     lockedHint: 'This lesson is locked until you pass the previous exam.',
+    comingSoonHint: 'Coming soon — this section is not active yet.',
     examFailWarning:
       "You didn't pass the exam — review this lesson and practice the exam again to unlock the next lessons.",
     dismiss: 'Okay',
@@ -1688,6 +1689,7 @@ export const en = {
       loadingCourse: 'Loading course…',
       lessonsHeading: 'Lessons ({count})',
       addLesson: 'Add lesson',
+      comingSoon: 'Coming soon',
       editLesson: 'Edit lesson: {slug}',
       updateLesson: 'Update lesson',
       updatingLesson: 'Updating…',

@@ -5,6 +5,7 @@ import {
   ArrowRight,
   CheckCircle,
   ClipboardList,
+  Clock,
   Loader2,
   Lock,
   XCircle,
@@ -319,24 +320,36 @@ function LessonPlayerContent({
             <nav className="lesson-nav" aria-label={t('lesson.lessonsNav')}>
               {filteredLessons.map((item) => {
                 const locked = isLessonLocked(item.slug);
+                const soon = item.comingSoon;
                 const itemBody = (
                   <>
                     <span className="lesson-nav-title">
-                      {locked ? (
+                      {soon ? (
+                        <Clock size={13} className="inline-leading-icon" aria-hidden />
+                      ) : locked ? (
                         <Lock size={13} className="inline-leading-icon" aria-hidden />
                       ) : null}
                       {item.title}
                     </span>
                     <span className="lesson-nav-meta">
-                      {locked
-                        ? t('lesson.lockedHint')
-                        : `${t('lesson.duration', { minutes: item.durationMin })}${item.completed ? ` · ${t('lesson.completed')}` : ''}`}
+                      {soon
+                        ? t('lesson.comingSoonHint')
+                        : locked
+                          ? t('lesson.lockedHint')
+                          : `${t('lesson.duration', { minutes: item.durationMin })}${item.completed ? ` · ${t('lesson.completed')}` : ''}`}
                     </span>
                   </>
                 );
                 return (
                   <Fragment key={item.id}>
-                    {locked ? (
+                    {soon ? (
+                      <span
+                        className={`lesson-nav-item${item.slug === lessonSlug ? ' active' : ''} coming-soon`}
+                        title={t('lesson.comingSoonHint')}
+                      >
+                        {itemBody}
+                      </span>
+                    ) : locked ? (
                       <span
                         className={`lesson-nav-item${item.slug === lessonSlug ? ' active' : ''}${item.completed ? ' done' : ''} locked`}
                         title={t('lesson.lockedHint')}

@@ -1159,6 +1159,7 @@ export const fa = {
     lessonsNav: 'درس‌ها',
     duration: '{minutes} دقیقه',
     lockedHint: 'این درس تا وقتی که آزمون قبلی را قبول نشوی قفل است.',
+    comingSoonHint: 'به‌زودی — این سرفصل هنوز فعال نشده است.',
     examFailWarning:
       'در آزمون قبول نشدی — دوباره همین درس را مرور کن و برای آزمون تمرین کن تا بتوانی درس‌های بعدی را باز کنی.',
     dismiss: 'باشه',
@@ -1686,6 +1687,7 @@ export const fa = {
       loadingCourse: 'در حال بارگذاری دوره…',
       lessonsHeading: 'درس‌ها ({count})',
       addLesson: 'افزودن درس',
+      comingSoon: 'به‌زودی',
       editLesson: 'ویرایش درس: {slug}',
       updateLesson: 'به‌روزرسانی درس',
       updatingLesson: 'در حال به‌روزرسانی…',

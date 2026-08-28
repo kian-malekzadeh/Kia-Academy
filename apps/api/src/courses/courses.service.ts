@@ -58,7 +58,7 @@ export class CoursesService {
     const lessons = await this.prisma.lesson.findMany({
       where: { courseId: { in: courses.map((course) => course.id) } },
       orderBy: { sortOrder: 'asc' },
-      select: { courseId: true, slug: true, id: true },
+      select: { courseId: true, slug: true, id: true, comingSoon: true },
     });
     const completedIds = await this.getCompletedLessonIds(
       userId,
@@ -67,7 +67,9 @@ export class CoursesService {
 
     const firstByCourseId = new Map<string, string>();
     for (const course of courses) {
-      const ordered = lessons.filter((lesson) => lesson.courseId === course.id);
+      const ordered = lessons.filter(
+        (lesson) => lesson.courseId === course.id && !lesson.comingSoon,
+      );
       const resume = ordered.find((lesson) => !completedIds.has(lesson.id)) ?? ordered[0];
       if (resume) {
         firstByCourseId.set(course.id, resume.slug);
@@ -107,6 +109,7 @@ export class CoursesService {
       durationMin: lesson.durationMin,
       completed: completedLessonIds.has(lesson.id),
       hasVideo: Boolean(lesson.videoUrl),
+      comingSoon: lesson.comingSoon,
     }));
 
     const enrolled = Array.isArray(course.enrollments) && course.enrollments.length > 0;
@@ -150,12 +153,23 @@ export class CoursesService {
     }
 
     const lesson = course.lessons[lessonIndex];
+
+    // Coming-soon lessons stay visible in listings but are locked — no content access.
+    if (lesson.comingSoon) {
+      throw new ForbiddenException('This lesson is coming soon');
+    }
+
     const progress = await this.prisma.lessonProgress.findUnique({
       where: { userId_lessonId: { userId, lessonId: lesson.id } },
     });
 
-    const prevLesson = course.lessons[lessonIndex - 1];
-    const nextLesson = course.lessons[lessonIndex + 1];
+    // Navigation skips coming-soon lessons: they are shown but not enterable.
+    const prevLesson = [...course.lessons.slice(0, lessonIndex)]
+      .reverse()
+      .find((entry) => !entry.comingSoon);
+    const nextLesson = course.lessons
+      .slice(lessonIndex + 1)
+      .find((entry) => !entry.comingSoon);
 
     return {
       id: lesson.id,
@@ -164,6 +178,7 @@ export class CoursesService {
       durationMin: lesson.durationMin,
       completed: progress?.completed ?? false,
       hasVideo: Boolean(lesson.videoUrl),
+      comingSoon: lesson.comingSoon,
       content: lesson.content,
       videoUrl: this.resolveVideoUrl(lesson.videoUrl, lesson.id, userId),
       courseSlug: course.slug,
@@ -231,6 +246,11 @@ export class CoursesService {
       throw new NotFoundException(`Lesson ${lessonSlug} not found in course ${courseSlug}`);
     }
 
+    // Coming-soon lessons cannot be marked complete.
+    if (lesson.comingSoon) {
+      throw new ForbiddenException('This lesson is coming soon');
+    }
+
     await this.assertCourseEntitlement(userId, course.slug);
 
     const progress = await this.prisma.lessonProgress.upsert({
@@ -253,6 +273,7 @@ export class CoursesService {
       title: lesson.title,
       durationMin: lesson.durationMin,
       completed: progress.completed,
+      comingSoon: lesson.comingSoon,
     };
   }
 

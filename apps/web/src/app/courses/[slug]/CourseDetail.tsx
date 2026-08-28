@@ -116,7 +116,9 @@ export default function CoursePage() {
               <span key={lesson.id} className="lesson-nav-item">
                 <span className="lesson-nav-title">{lesson.title}</span>
                 <span className="lesson-nav-meta">
-                  {t('common.durationMin', { min: lesson.durationMin })}
+                  {lesson.comingSoon
+                    ? t('lesson.comingSoonHint')
+                    : t('common.durationMin', { min: lesson.durationMin })}
                 </span>
               </span>
             ))}

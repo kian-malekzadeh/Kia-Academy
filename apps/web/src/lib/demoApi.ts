@@ -170,6 +170,7 @@ interface DemoLesson {
   content: string;
   sortOrder: number;
   videoUrl: string | null;
+  comingSoon?: boolean;
 }
 
 interface DemoCourse {
@@ -1423,6 +1424,7 @@ export const demoApi = {
       durationMin: l.durationMin,
       completed: state.completedLessons.includes(lessonKey(slug, l.slug)),
       hasVideo: Boolean(l.videoUrl),
+      comingSoon: l.comingSoon ?? false,
     }));
     return delay({ ...toCourseSummary(course), lessons });
   },
@@ -1441,6 +1443,7 @@ export const demoApi = {
       durationMin: lesson.durationMin,
       completed: state.completedLessons.includes(lessonKey(courseSlug, lessonSlug)),
       hasVideo: Boolean(lesson.videoUrl),
+      comingSoon: lesson.comingSoon ?? false,
       content: lesson.content,
       videoUrl: lesson.videoUrl,
       courseSlug,
@@ -2082,6 +2085,7 @@ export const demoApi = {
             videoUrl: l.videoUrl,
             durationMin: l.durationMin,
             sortOrder: l.sortOrder,
+            comingSoon: l.comingSoon ?? false,
           }),
         ),
       })),
@@ -2107,6 +2111,7 @@ export const demoApi = {
         durationMin: l.durationMin ?? 10,
         sortOrder: l.sortOrder ?? i + 1,
         videoUrl: null,
+        comingSoon: l.comingSoon ?? false,
       })),
     };
     courses = [...courses, course];
@@ -2176,7 +2181,7 @@ export const demoApi = {
       sortOrder: course.sortOrder,
       published: course.published,
       lessonCount: course.lessons.length,
-      lessons: course.lessons,
+      lessons: course.lessons.map((l) => ({ ...l, comingSoon: l.comingSoon ?? false })),
     });
   },
 
@@ -2202,7 +2207,7 @@ export const demoApi = {
       sortOrder: updated.sortOrder,
       published: updated.published,
       lessonCount: updated.lessons.length,
-      lessons: updated.lessons,
+      lessons: updated.lessons.map((l) => ({ ...l, comingSoon: l.comingSoon ?? false })),
     });
   },
 
@@ -2224,9 +2229,10 @@ export const demoApi = {
       durationMin: dto.durationMin ?? 10,
       sortOrder: dto.sortOrder ?? course.lessons.length + 1,
       videoUrl: null,
+      comingSoon: dto.comingSoon ?? false,
     };
     course.lessons = [...course.lessons, lesson];
-    return delay(lesson);
+    return delay({ ...lesson, comingSoon: lesson.comingSoon ?? false });
   },
 
   async adminUpdateLesson(
@@ -2245,7 +2251,7 @@ export const demoApi = {
     }
     const updated: DemoLesson = { ...current, ...dto };
     course.lessons = course.lessons.map((l, i) => (i === index ? updated : l));
-    return delay(updated);
+    return delay({ ...updated, comingSoon: updated.comingSoon ?? false });
   },
 
   async adminDeleteLesson(courseSlug: string, lessonSlug: string): Promise<void> {
@@ -2269,7 +2275,7 @@ export const demoApi = {
     const videoUrl = await fileToDataUrl(file);
     const updated = { ...course.lessons[index], videoUrl };
     course.lessons = course.lessons.map((l, i) => (i === index ? updated : l));
-    return delay(updated);
+    return delay({ ...updated, comingSoon: updated.comingSoon ?? false });
   },
 
   async adminDeleteLessonVideo(courseSlug: string, lessonSlug: string): Promise<AdminLesson> {
@@ -2280,7 +2286,7 @@ export const demoApi = {
     if (index < 0) throw new ApiError('Lesson not found', 404);
     const updated = { ...course.lessons[index], videoUrl: null };
     course.lessons = course.lessons.map((l, i) => (i === index ? updated : l));
-    return delay(updated);
+    return delay({ ...updated, comingSoon: updated.comingSoon ?? false });
   },
 
   async adminListChallenges(): Promise<AdminChallenge[]> {

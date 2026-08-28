@@ -904,6 +904,14 @@
   border-color: rgba(138, 138, 255, 0.34);
 }
 
+/* "Coming soon" chapter badge in the admin lessons table. */
+.admin-badge.soon {
+  margin-inline-start: 0.5rem;
+  background: rgba(255, 200, 100, 0.16);
+  color: var(--admin-warning, #d9a53f);
+  border-color: rgba(255, 200, 100, 0.34);
+}
+
 .admin-badge.danger {
   background: rgba(240, 120, 127, 0.16);
   color: var(--admin-danger);

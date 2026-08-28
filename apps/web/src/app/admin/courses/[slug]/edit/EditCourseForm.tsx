@@ -39,6 +39,7 @@ export default function AdminEditCoursePage() {
   const [lessonContent, setLessonContent] = useState('');
   const [lessonDuration, setLessonDuration] = useState(10);
   const [lessonSortOrder, setLessonSortOrder] = useState(0);
+  const [lessonComingSoon, setLessonComingSoon] = useState(false);
   const [lessonVideoFile, setLessonVideoFile] = useState<File | null>(null);
   const [lessonVideoUrl, setLessonVideoUrl] = useState<string | null>(null);
   const [lessonSubmitting, setLessonSubmitting] = useState(false);
@@ -84,6 +85,7 @@ export default function AdminEditCoursePage() {
     setLessonContent('');
     setLessonDuration(10);
     setLessonSortOrder(0);
+    setLessonComingSoon(false);
     setLessonVideoFile(null);
     setLessonVideoUrl(null);
   };
@@ -95,6 +97,7 @@ export default function AdminEditCoursePage() {
     setLessonContent(lesson.content);
     setLessonDuration(lesson.durationMin);
     setLessonSortOrder(lesson.sortOrder);
+    setLessonComingSoon(lesson.comingSoon);
     setLessonVideoFile(null);
     setLessonVideoUrl(sanitizeLessonVideoPath(lesson.videoUrl));
   };
@@ -130,6 +133,7 @@ export default function AdminEditCoursePage() {
         content: lessonContent,
         durationMin: lessonDuration,
         sortOrder: lessonSortOrder || undefined,
+        comingSoon: lessonComingSoon,
       };
       let lesson: AdminLesson;
       if (editingLesson) {
@@ -294,7 +298,12 @@ export default function AdminEditCoursePage() {
               <tbody>
                 {lessons.map((lesson) => (
                   <tr key={lesson.id}>
-                    <td>{lesson.title}</td>
+                    <td>
+                      {lesson.title}
+                      {lesson.comingSoon ? (
+                        <span className="admin-badge soon">{t('admin.courses.comingSoon')}</span>
+                      ) : null}
+                    </td>
                     <td>
                       <code>{lesson.slug}</code>
                     </td>
@@ -370,6 +379,14 @@ export default function AdminEditCoursePage() {
               />
             </label>
           </div>
+          <label className="admin-checkbox">
+            <input
+              type="checkbox"
+              checked={lessonComingSoon}
+              onChange={(e) => setLessonComingSoon(e.target.checked)}
+            />
+            {t('admin.courses.comingSoon')}
+          </label>
           <label className="form-field">
             <span>{t('admin.courses.contentMarkdown')}</span>
             <textarea

@@ -5,6 +5,8 @@ export interface LessonSummary {
   durationMin: number;
   completed: boolean;
   hasVideo?: boolean;
+  /** "Coming soon" — visible in listings but locked with no content access. */
+  comingSoon: boolean;
 }
 
 export interface CourseSummary {

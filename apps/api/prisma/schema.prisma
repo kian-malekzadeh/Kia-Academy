@@ -396,6 +396,8 @@ model Lesson {
   videoUrl    String?
   durationMin Int     @default(10)
   sortOrder   Int     @default(0)
+  /** "Coming soon" lessons stay visible in listings but are locked with no content access. */
+  comingSoon  Boolean @default(false)
 
   progress LessonProgress[]
 

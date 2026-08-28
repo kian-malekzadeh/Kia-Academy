@@ -51,6 +51,10 @@ export class AdminCreateLessonDto {
   @IsOptional()
   @IsInt()
   sortOrder?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  comingSoon?: boolean;
 }
 
 export class AdminCreateCourseDto {
@@ -213,4 +217,8 @@ export class AdminUpdateLessonDto {
   @IsOptional()
   @IsInt()
   sortOrder?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  comingSoon?: boolean;
 }

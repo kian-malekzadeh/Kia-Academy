@@ -20,6 +20,7 @@ const sampleLesson: LessonSummary = {
   title: 'HTML HOME',
   durationMin: 5,
   completed: false,
+  comingSoon: false,
 };
 
 const brandingCourse: CourseSummary = {
@@ -35,6 +36,7 @@ const brandingLesson: LessonSummary = {
   title: 'Portfolio Story',
   durationMin: 14,
   completed: false,
+  comingSoon: false,
 };
 
 describe('courseLocalization', () => {

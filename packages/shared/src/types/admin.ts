@@ -20,6 +20,7 @@ export interface AdminLesson {
   videoUrl: string | null;
   durationMin: number;
   sortOrder: number;
+  comingSoon: boolean;
 }
 
 export interface AdminCourse {
@@ -97,6 +98,8 @@ export interface CreateLessonDto {
   content: string;
   durationMin?: number;
   sortOrder?: number;
+  /** "Coming soon" — visible in listings but locked with no content access. */
+  comingSoon?: boolean;
 }
 
 export interface CreateChallengeDto {

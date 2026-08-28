@@ -111,6 +111,7 @@ export class AdminService {
                 content: lesson.content,
                 durationMin: lesson.durationMin ?? 10,
                 sortOrder: lesson.sortOrder ?? index + 1,
+                comingSoon: lesson.comingSoon ?? false,
               })),
             }
           : undefined,
@@ -227,6 +228,7 @@ export class AdminService {
         content: dto.content,
         durationMin: dto.durationMin ?? 10,
         sortOrder: dto.sortOrder ?? (maxOrder._max.sortOrder ?? 0) + 1,
+        comingSoon: dto.comingSoon ?? false,
       },
     });
 
@@ -263,6 +265,7 @@ export class AdminService {
         content: dto.content,
         durationMin: dto.durationMin,
         sortOrder: dto.sortOrder,
+        comingSoon: dto.comingSoon,
       },
     });
 
@@ -684,6 +687,7 @@ export class AdminService {
     videoUrl?: string | null;
     durationMin: number;
     sortOrder: number;
+    comingSoon?: boolean;
   }): AdminLesson {
     return {
       id: lesson.id,
@@ -693,6 +697,7 @@ export class AdminService {
       videoUrl: lesson.videoUrl ?? null,
       durationMin: lesson.durationMin,
       sortOrder: lesson.sortOrder,
+      comingSoon: lesson.comingSoon ?? false,
     };
   }
 
