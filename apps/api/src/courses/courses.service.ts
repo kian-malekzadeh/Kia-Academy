@@ -45,6 +45,7 @@ export class CoursesService {
         lessonCount,
         enrolled,
         progressPct,
+        comingSoon: course.comingSoon,
       };
     });
   }
@@ -128,6 +129,7 @@ export class CoursesService {
       lessonCount: lessons.length,
       enrolled,
       progressPct,
+      comingSoon: course.comingSoon,
       lessons,
     };
   }
@@ -155,8 +157,8 @@ export class CoursesService {
     const lesson = course.lessons[lessonIndex];
 
     // Coming-soon lessons stay visible in listings but are locked — no content access.
-    if (lesson.comingSoon) {
-      throw new ForbiddenException('This lesson is coming soon');
+    if (lesson.comingSoon || course.comingSoon) {
+      throw new ForbiddenException('This course is coming soon');
     }
 
     const progress = await this.prisma.lessonProgress.findUnique({
@@ -198,6 +200,11 @@ export class CoursesService {
       throw new NotFoundException(`Course ${courseSlug} not found`);
     }
 
+    // Coming-soon courses are visible but not purchasable/enterable yet.
+    if (course.comingSoon) {
+      throw new ForbiddenException('This course is coming soon');
+    }
+
     await this.assertCourseEntitlement(userId, courseSlug);
 
     const existing = await this.prisma.enrollment.findUnique({
@@ -221,6 +228,7 @@ export class CoursesService {
       lessonCount: course.lessons.length,
       enrolled: true,
       progressPct: 0,
+      comingSoon: course.comingSoon,
     };
   }
 
@@ -247,8 +255,8 @@ export class CoursesService {
     }
 
     // Coming-soon lessons cannot be marked complete.
-    if (lesson.comingSoon) {
-      throw new ForbiddenException('This lesson is coming soon');
+    if (lesson.comingSoon || course.comingSoon) {
+      throw new ForbiddenException('This course is coming soon');
     }
 
     await this.assertCourseEntitlement(userId, course.slug);

@@ -182,6 +182,7 @@ interface DemoCourse {
   trackKey: string | null;
   sortOrder: number;
   published: boolean;
+  comingSoon?: boolean;
   lessons: DemoLesson[];
 }
 
@@ -435,6 +436,7 @@ function toCourseSummary(course: DemoCourse): CourseSummary {
     lessonCount: course.lessons.length,
     enrolled,
     progressPct,
+    comingSoon: course.comingSoon ?? false,
     firstLessonSlug,
   };
 }
@@ -1457,6 +1459,7 @@ export const demoApi = {
     requireUser();
     const course = courses.find((c) => c.slug === slug);
     if (!course) throw new ApiError('Course not found', 404);
+    if (course.comingSoon) throw new ApiError('This course is coming soon', 403);
     const state = readState();
     if (!state.enrollments.includes(slug)) {
       state.enrollments = [...state.enrollments, slug];
@@ -2075,6 +2078,7 @@ export const demoApi = {
         trackKey: c.trackKey,
         sortOrder: c.sortOrder,
         published: c.published,
+        comingSoon: c.comingSoon ?? false,
         lessonCount: c.lessons.length,
         lessons: c.lessons.map(
           (l): AdminLesson => ({
@@ -2103,6 +2107,7 @@ export const demoApi = {
       trackKey: dto.trackKey ?? null,
       sortOrder: dto.sortOrder ?? courses.length + 1,
       published: dto.published ?? true,
+      comingSoon: dto.comingSoon ?? false,
       lessons: (dto.lessons ?? []).map((l, i) => ({
         id: `lesson-${Date.now()}-${i}`,
         slug: l.slug,
@@ -2180,6 +2185,7 @@ export const demoApi = {
       trackKey: course.trackKey,
       sortOrder: course.sortOrder,
       published: course.published,
+      comingSoon: course.comingSoon ?? false,
       lessonCount: course.lessons.length,
       lessons: course.lessons.map((l) => ({ ...l, comingSoon: l.comingSoon ?? false })),
     });
@@ -2206,6 +2212,7 @@ export const demoApi = {
       trackKey: updated.trackKey,
       sortOrder: updated.sortOrder,
       published: updated.published,
+      comingSoon: updated.comingSoon ?? false,
       lessonCount: updated.lessons.length,
       lessons: updated.lessons.map((l) => ({ ...l, comingSoon: l.comingSoon ?? false })),
     });

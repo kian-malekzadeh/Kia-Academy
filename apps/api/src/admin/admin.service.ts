@@ -103,6 +103,7 @@ export class AdminService {
         trackKey: dto.trackKey ?? null,
         sortOrder: dto.sortOrder ?? 0,
         published: dto.published ?? true,
+        comingSoon: dto.comingSoon ?? false,
         lessons: dto.lessons?.length
           ? {
               create: dto.lessons.map((lesson, index) => ({
@@ -184,6 +185,7 @@ export class AdminService {
         trackKey: dto.trackKey,
         sortOrder: dto.sortOrder,
         published: dto.published,
+        comingSoon: dto.comingSoon,
       },
       include: { lessons: { orderBy: { sortOrder: 'asc' } } },
     });
@@ -710,6 +712,7 @@ export class AdminService {
     trackKey: string | null;
     sortOrder: number;
     published: boolean;
+    comingSoon?: boolean;
     lessons: Array<{
       id: string;
       slug: string;
@@ -729,6 +732,7 @@ export class AdminService {
       trackKey: course.trackKey,
       sortOrder: course.sortOrder,
       published: course.published,
+      comingSoon: course.comingSoon ?? false,
       lessonCount: course.lessons.length,
       lessons: course.lessons.map((lesson) => this.toAdminLesson(lesson)),
     };

@@ -103,7 +103,12 @@ export default function CoursePage() {
           <BookOpen size={14} className="inline-leading-icon" />
           {t('publicCourses.introEyebrow')}
         </span>
-        <h1>{localizedCourse.title}</h1>
+        <h1>
+          {localizedCourse.title}
+          {localizedCourse.comingSoon ? (
+            <span className="catalog-soon">{t('common.comingSoon')}</span>
+          ) : null}
+        </h1>
         <p className="auth-sub">{localizedCourse.description}</p>
         <div className="catalog-card" style={{ maxWidth: 760 }}>
           <div className="catalog-meta">
@@ -129,7 +134,9 @@ export default function CoursePage() {
             className="catalog-actions"
             style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}
           >
-            {localizedCourse.enrolled && lessons.length > 0 ? (
+            {localizedCourse.comingSoon ? (
+              <p className="panel-muted">{t('lesson.comingSoonHint')}</p>
+            ) : localizedCourse.enrolled && lessons.length > 0 ? (
               <Link
                 href={`/learn/${localizedCourse.slug}/${resumeLesson?.slug ?? ''}`}
                 className="btn btn--primary"

@@ -328,6 +328,8 @@ model Course {
   trackKey    String?
   sortOrder   Int      @default(0)
   published   Boolean  @default(true)
+  /** "Coming soon" courses stay visible in listings but are locked with no content access. */
+  comingSoon  Boolean  @default(false)
   createdAt   DateTime @default(now())
 
   lessons     Lesson[]

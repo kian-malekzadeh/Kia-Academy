@@ -912,6 +912,12 @@
   border-color: rgba(255, 200, 100, 0.34);
 }
 
+/* Quick "coming soon" toggle buttons in the admin lists (highlighted when active). */
+.admin-link.active-soon {
+  color: var(--admin-warning, #d9a53f);
+  font-weight: 600;
+}
+
 .admin-badge.danger {
   background: rgba(240, 120, 127, 0.16);
   color: var(--admin-danger);

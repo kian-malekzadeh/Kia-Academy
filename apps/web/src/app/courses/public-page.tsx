@@ -44,7 +44,12 @@ export function PublicCoursesPage() {
           {localizedCourses.map((course) => (
             <article key={course.id} className="catalog-card">
               <span className="catalog-icon">{course.icon}</span>
-              <h3>{course.title}</h3>
+              <h3>
+                {course.title}
+                {course.comingSoon ? (
+                  <span className="catalog-soon">{t('common.comingSoon')}</span>
+                ) : null}
+              </h3>
               <p>{course.description}</p>
               <div className="catalog-meta">
                 <span>{t('common.lessonsCount', { count: course.lessonCount })}</span>

@@ -83,6 +83,11 @@ export class AdminCreateCourseDto {
   @IsBoolean()
   published?: boolean;
 
+  /** "Coming soon" — visible in listings but locked with no content access. */
+  @IsOptional()
+  @IsBoolean()
+  comingSoon?: boolean;
+
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
@@ -118,6 +123,10 @@ export class AdminUpdateCourseDto {
   @IsOptional()
   @IsBoolean()
   published?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  comingSoon?: boolean;
 }
 
 export class AdminCreateChallengeDto {

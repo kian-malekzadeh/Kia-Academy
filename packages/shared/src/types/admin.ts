@@ -32,6 +32,7 @@ export interface AdminCourse {
   trackKey: string | null;
   sortOrder: number;
   published: boolean;
+  comingSoon: boolean;
   lessonCount?: number;
   lessons?: AdminLesson[];
 }
@@ -87,6 +88,8 @@ export interface CreateCourseDto {
   trackKey?: string;
   sortOrder?: number;
   published?: boolean;
+  /** "Coming soon" — visible in listings but locked with no content access. */
+  comingSoon?: boolean;
   lessons?: CreateLessonDto[];
 }
 

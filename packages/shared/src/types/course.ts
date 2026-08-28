@@ -19,6 +19,8 @@ export interface CourseSummary {
   lessonCount: number;
   enrolled: boolean;
   progressPct: number;
+  /** "Coming soon" — visible in listings but locked with no content access. */
+  comingSoon: boolean;
   /** Slug of the first lesson (sortOrder asc) — set on /courses/mine for direct "continue" links. */
   firstLessonSlug?: string | null;
 }

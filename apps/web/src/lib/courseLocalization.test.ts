@@ -12,6 +12,7 @@ const sampleCourse: CourseSummary = {
   lessonCount: 3,
   enrolled: false,
   progressPct: 0,
+  comingSoon: false,
 };
 
 const sampleLesson: LessonSummary = {

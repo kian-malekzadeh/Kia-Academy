@@ -33,6 +33,18 @@ export default function AdminCoursesPage() {
     }
   };
 
+  const handleToggleComingSoon = async (course: AdminCourse) => {
+    setError('');
+    try {
+      const updated = await api.adminUpdateCourse(course.slug, {
+        comingSoon: !course.comingSoon,
+      });
+      setCourses((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t('admin.courses.saveError'));
+    }
+  };
+
   if (loading) {
     return (
       <div className="admin-content auth-loading">
@@ -83,11 +95,23 @@ export default function AdminCoursesPage() {
                       ? t('domain.courseStatuses.published')
                       : t('domain.courseStatuses.draft')}
                   </span>
+                  {course.comingSoon ? (
+                    <span className="admin-badge soon">{t('admin.courses.comingSoon')}</span>
+                  ) : null}
                 </td>
                 <td className="admin-actions">
                   <Link href={`/admin/courses/${course.slug}/edit`} className="admin-link">
                     {t('common.edit')}
                   </Link>
+                  <button
+                    type="button"
+                    className={`admin-link${course.comingSoon ? ' active-soon' : ''}`}
+                    onClick={() => handleToggleComingSoon(course)}
+                  >
+                    {course.comingSoon
+                      ? t('admin.courses.comingSoonOff')
+                      : t('admin.courses.comingSoon')}
+                  </button>
                   <button
                     type="button"
                     className="admin-link danger"

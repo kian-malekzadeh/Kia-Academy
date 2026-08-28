@@ -29,6 +29,7 @@ export default function AdminEditCoursePage() {
   const [trackKey, setTrackKey] = useState('');
   const [sortOrder, setSortOrder] = useState(0);
   const [published, setPublished] = useState(true);
+  const [comingSoon, setComingSoon] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState('');
@@ -67,6 +68,7 @@ export default function AdminEditCoursePage() {
     setTrackKey(found.trackKey ?? '');
     setSortOrder(found.sortOrder);
     setPublished(found.published);
+    setComingSoon(found.comingSoon);
     return found;
   }, [slug, t]);
 
@@ -114,6 +116,7 @@ export default function AdminEditCoursePage() {
         trackKey: trackKey || undefined,
         sortOrder,
         published,
+        comingSoon,
       });
       setCourse(updated);
       setSaved(t('admin.courses.saved'));
@@ -167,6 +170,16 @@ export default function AdminEditCoursePage() {
       );
     } finally {
       setLessonSubmitting(false);
+    }
+  };
+
+  const handleToggleLessonComingSoon = async (lesson: AdminLesson) => {
+    setError('');
+    try {
+      await api.adminUpdateLesson(slug, lesson.slug, { comingSoon: !lesson.comingSoon });
+      await loadCourse();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t('admin.courses.updateLessonError'));
     }
   };
 
@@ -274,6 +287,14 @@ export default function AdminEditCoursePage() {
           />
           {t('common.published')}
         </label>
+        <label className="admin-checkbox">
+          <input
+            type="checkbox"
+            checked={comingSoon}
+            onChange={(e) => setComingSoon(e.target.checked)}
+          />
+          {t('admin.courses.comingSoon')}
+        </label>
         {error && <p className="form-error">{error}</p>}
         {saved && <p className="form-success">{saved}</p>}
         <button type="submit" className="cta-primary">
@@ -316,6 +337,15 @@ export default function AdminEditCoursePage() {
                       </span>
                     </td>
                     <td className="admin-actions">
+                      <button
+                        type="button"
+                        className={`admin-link${lesson.comingSoon ? ' active-soon' : ''}`}
+                        onClick={() => handleToggleLessonComingSoon(lesson)}
+                      >
+                        {lesson.comingSoon
+                          ? t('admin.courses.comingSoonOff')
+                          : t('admin.courses.comingSoon')}
+                      </button>
                       <button
                         type="button"
                         className="admin-link"
