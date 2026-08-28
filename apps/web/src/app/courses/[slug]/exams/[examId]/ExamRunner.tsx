@@ -1,21 +1,25 @@
 'use client';
 
-import type { CourseExamAttemptSession, CourseExamSubmitResult } from '@kia-academy/shared';
+import type {
+  CourseExamAttemptSession,
+  CourseExamSubmitResult,
+  LessonSummary,
+} from '@kia-academy/shared';
 import { CheckCircle2, Loader2, Timer, XCircle } from 'lucide-react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PageBackButton } from '@/components/layout/PageBackButton';
 import { useLanguage } from '@/context/LanguageProvider';
 import { api, ApiError } from '@/lib/api';
 
 type ExamAnswer =
-  | { type: 'single_choice'; optionId: string }
-  | { type: 'multi_choice'; optionIds: string[] };
+  { type: 'single_choice'; optionId: string } | { type: 'multi_choice'; optionIds: string[] };
 type ExamAnswers = Record<string, ExamAnswer>;
 
 export default function CourseExamRunner() {
   const { slug, examId } = useParams<{ slug: string; examId: string }>();
+  const router = useRouter();
   const { t } = useLanguage();
   const [session, setSession] = useState<CourseExamAttemptSession | null>(null);
   const [answers, setAnswers] = useState<ExamAnswers>({});
@@ -26,6 +30,38 @@ export default function CourseExamRunner() {
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [now, setNow] = useState(() => Date.now());
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Course lessons + which lesson this exam is anchored after, so we know where
+  // to send the learner afterwards (next lesson on pass / anchor lesson on fail).
+  const [lessons, setLessons] = useState<LessonSummary[]>([]);
+  const [examAnchorSlug, setExamAnchorSlug] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!slug) return;
+    let alive = true;
+    api
+      .getCourse(slug)
+      .then((course) => {
+        if (alive) setLessons(course.lessons ?? []);
+      })
+      .catch(() => {});
+    api
+      .listCourseExamsForLearner(slug)
+      .then((list) => {
+        if (!alive) return;
+        const exam = list.find((e) => e.id === examId);
+        setExamAnchorSlug(exam?.afterLessonSlug ?? null);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [slug, examId]);
+
+  const anchorIndex = examAnchorSlug
+    ? lessons.findIndex((lesson) => lesson.slug === examAnchorSlug)
+    : -1;
+  const lessonAfterExam = anchorIndex >= 0 ? lessons[anchorIndex + 1] : undefined;
 
   useEffect(() => {
     let alive = true;
@@ -102,6 +138,25 @@ export default function CourseExamRunner() {
     try {
       const r = await api.submitCourseExam(examId, session.attemptId, answers);
       setResult(r);
+      // Keep moving through the course: pass → lesson right after the exam,
+      // fail → back to the lesson before the exam with a warning banner.
+      if (r.passed) {
+        window.setTimeout(() => {
+          if (lessonAfterExam) {
+            router.push(`/learn/${slug}/${lessonAfterExam.slug}`);
+          } else {
+            router.push(`/courses/${slug}`);
+          }
+        }, 1400);
+      } else {
+        window.setTimeout(() => {
+          if (examAnchorSlug) {
+            router.push(`/learn/${slug}/${examAnchorSlug}?examFailed=1`);
+          } else {
+            router.push(`/courses/${slug}`);
+          }
+        }, 2400);
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('courses.runner.loadError'));
     } finally {
@@ -137,7 +192,8 @@ export default function CourseExamRunner() {
           <div className="catalog-card" style={{ maxWidth: 640 }}>
             {result.passed ? (
               <p className="form-success">
-                <CheckCircle2 size={16} className="inline-leading-icon" /> {t('courses.runner.passed')}
+                <CheckCircle2 size={16} className="inline-leading-icon" />{' '}
+                {t('courses.runner.passed')}
               </p>
             ) : (
               <p className="form-error">
@@ -158,6 +214,11 @@ export default function CourseExamRunner() {
                 })}
               </span>
             </div>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-dim)', margin: 0 }}>
+              {result.passed
+                ? t('courses.runner.passedRedirect')
+                : t('courses.runner.failRedirect')}
+            </p>
             <div className="catalog-actions">
               <Link href={`/courses/${slug}`} className="btn btn--primary">
                 {t('courses.runner.back')}
@@ -177,11 +238,12 @@ export default function CourseExamRunner() {
       <div className="container auth-shell">
         <PageBackButton href={`/courses/${slug}`} />
         <h1>{session.examTitle}</h1>
-        <div className="catalog-meta" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        <div
+          className="catalog-meta"
+          style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}
+        >
           <span>
-            {session.kind === 'MIDTERM'
-              ? t('courses.examKindMidterm')
-              : t('courses.examKindFinal')}
+            {session.kind === 'MIDTERM' ? t('courses.examKindMidterm') : t('courses.examKindFinal')}
           </span>
           <span>
             <Timer size={14} className="inline-leading-icon" /> {t('courses.runner.timeLeft')}:{' '}
@@ -207,7 +269,9 @@ export default function CourseExamRunner() {
                 className="lesson-nav-item"
                 style={{ flexDirection: 'column', alignItems: 'stretch', gap: '0.5rem' }}
               >
-                <strong>{t('courses.runner.question', { n: idx + 1, total: session.questions.length })}</strong>
+                <strong>
+                  {t('courses.runner.question', { n: idx + 1, total: session.questions.length })}
+                </strong>
                 <p style={{ whiteSpace: 'pre-line', margin: 0 }}>{q.prompt}</p>
                 <span className="lesson-nav-meta">
                   {q.type === 'multi_choice'
@@ -222,7 +286,12 @@ export default function CourseExamRunner() {
                   return (
                     <label
                       key={opt.id}
-                      style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', cursor: 'pointer' }}
+                      style={{
+                        display: 'flex',
+                        gap: '0.5rem',
+                        alignItems: 'center',
+                        cursor: 'pointer',
+                      }}
                     >
                       <input
                         type={q.type === 'single_choice' ? 'radio' : 'checkbox'}
@@ -243,7 +312,12 @@ export default function CourseExamRunner() {
           })}
         </div>
         <div className="catalog-actions" style={{ marginTop: '1rem' }}>
-          <button type="button" className="btn btn--primary" onClick={() => void submit()} disabled={busy}>
+          <button
+            type="button"
+            className="btn btn--primary"
+            onClick={() => void submit()}
+            disabled={busy}
+          >
             {busy ? <Loader2 size={16} className="spin" /> : null} {t('courses.runner.submit')}
           </button>
         </div>

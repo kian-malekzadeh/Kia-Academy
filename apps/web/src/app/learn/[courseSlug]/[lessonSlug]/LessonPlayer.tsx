@@ -1,6 +1,14 @@
 'use client';
 
-import { ArrowLeft, ArrowRight, CheckCircle, ClipboardList, Loader2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle,
+  ClipboardList,
+  Loader2,
+  Lock,
+  XCircle,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { Fragment, useEffect, useMemo, useState } from 'react';
@@ -19,8 +27,7 @@ export default function LessonPlayerPage() {
   const params = useParams<{ courseSlug: string; lessonSlug: string }>();
   const courseSlug = params.courseSlug;
   const lessonSlug = params.lessonSlug;
-  const nextPath =
-    courseSlug && lessonSlug ? `/learn/${courseSlug}/${lessonSlug}` : '/courses';
+  const nextPath = courseSlug && lessonSlug ? `/learn/${courseSlug}/${lessonSlug}` : '/courses';
 
   return (
     <RequireAuth nextPath={nextPath} learnerFlow>
@@ -48,6 +55,15 @@ function LessonPlayerContent({
   const [note, setNote] = useState('');
   const [query, setQuery] = useState('');
   const [copied, setCopied] = useState(false);
+  /** True after being redirected here from a failed exam (?examFailed=1). */
+  const [failWarning, setFailWarning] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (new URLSearchParams(window.location.search).get('examFailed') === '1') {
+      setFailWarning(true);
+    }
+  }, []);
 
   useEffect(() => {
     if (!courseSlug) return;
@@ -116,6 +132,60 @@ function LessonPlayerContent({
   /** Exams held at the end of the course (finals without an anchor lesson). */
   const endOfCourseExams = useMemo(() => exams.filter((exam) => !exam.afterLessonSlug), [exams]);
 
+  /**
+   * Sequential gating: lessons up to where an exam exists are open; lessons that
+   * come after an exam remain locked until that exam has been passed.
+   */
+  const lockedLessonSlugs = useMemo(() => {
+    const locked = new Set<string>();
+    if (!lessons.length) return locked;
+    const indexBySlug: Record<string, number> = {};
+    lessons.forEach((lesson, i) => {
+      indexBySlug[lesson.slug] = i;
+    });
+    for (let i = 0; i < lessons.length; i++) {
+      const gated = Object.entries(examsAfterLesson).some(([anchorSlug, list]) => {
+        const anchorIndex = indexBySlug[anchorSlug];
+        if (anchorIndex === undefined || anchorIndex >= i) return false;
+        return list.some((exam) => !passedExamIds.has(exam.id));
+      });
+      if (gated) locked.add(lessons[i].slug);
+    }
+    return locked;
+  }, [lessons, examsAfterLesson, passedExamIds]);
+
+  const isLessonLocked = (slug: string) => lockedLessonSlugs.has(slug);
+
+  /** If the current lesson is locked, send the learner back to the last open one. */
+  useEffect(() => {
+    if (!courseSlug || !lessonSlug) return;
+    if (loading || !lessons.length) return;
+    if (!lockedLessonSlugs.has(lessonSlug)) return;
+    let target: LessonSummary | undefined;
+    for (let i = lessons.length - 1; i >= 0; i--) {
+      if (!lockedLessonSlugs.has(lessons[i].slug)) {
+        target = lessons[i];
+        break;
+      }
+    }
+    if (target && target.slug !== lessonSlug) {
+      router.replace(`/learn/${courseSlug}/${target.slug}`);
+    }
+  }, [courseSlug, lessonSlug, loading, lessons, lockedLessonSlugs, router]);
+
+  /** Where "complete/next" should advance; routes past a pending exam to that exam. */
+  const nextTarget = useMemo(() => {
+    if (!courseSlug || !lessonSlug || !lesson) return null;
+    const immediateExam = (examsAfterLesson[lessonSlug] ?? []).find(
+      (exam) => !passedExamIds.has(exam.id),
+    );
+    if (immediateExam) return `/courses/${courseSlug}/exams/${immediateExam.id}`;
+    if (lesson.nextSlug && !lockedLessonSlugs.has(lesson.nextSlug)) {
+      return `/learn/${courseSlug}/${lesson.nextSlug}`;
+    }
+    return null;
+  }, [courseSlug, lessonSlug, lesson, examsAfterLesson, lockedLessonSlugs, passedExamIds]);
+
   const renderExamNavItem = (exam: CourseExamSummary) => {
     const passed = passedExamIds.has(exam.id);
     return (
@@ -160,10 +230,11 @@ function LessonPlayerContent({
         prev.map((item) => (item.slug === lessonSlug ? { ...item, completed: true } : item)),
       );
       // Show the freshly-completed lesson as green for a beat, then auto-advance
-      // to the next lesson so the learner keeps moving forward.
-      if (lesson.nextSlug) {
+      // to the next step (an anchored exam, or the next lesson) so the learner
+      // keeps moving forward.
+      if (nextTarget) {
         window.setTimeout(() => {
-          router.push(`/learn/${courseSlug}/${lesson.nextSlug}`);
+          router.push(nextTarget);
         }, 600);
       }
     } catch (err) {
@@ -246,26 +317,60 @@ function LessonPlayerContent({
             </div>
 
             <nav className="lesson-nav" aria-label={t('lesson.lessonsNav')}>
-              {filteredLessons.map((item) => (
-                <Fragment key={item.id}>
-                  <Link
-                    href={`/learn/${courseSlug}/${item.slug}`}
-                    className={`lesson-nav-item${item.slug === lessonSlug ? ' active' : ''}${item.completed ? ' done' : ''}`}
-                  >
-                    <span className="lesson-nav-title">{item.title}</span>
-                    <span className="lesson-nav-meta">
-                      {t('lesson.duration', { minutes: item.durationMin })}
-                      {item.completed ? ` · ${t('lesson.completed')}` : ''}
+              {filteredLessons.map((item) => {
+                const locked = isLessonLocked(item.slug);
+                const itemBody = (
+                  <>
+                    <span className="lesson-nav-title">
+                      {locked ? (
+                        <Lock size={13} className="inline-leading-icon" aria-hidden />
+                      ) : null}
+                      {item.title}
                     </span>
-                  </Link>
-                  {(examsAfterLesson[item.slug] ?? []).map(renderExamNavItem)}
-                </Fragment>
-              ))}
+                    <span className="lesson-nav-meta">
+                      {locked
+                        ? t('lesson.lockedHint')
+                        : `${t('lesson.duration', { minutes: item.durationMin })}${item.completed ? ` · ${t('lesson.completed')}` : ''}`}
+                    </span>
+                  </>
+                );
+                return (
+                  <Fragment key={item.id}>
+                    {locked ? (
+                      <span
+                        className={`lesson-nav-item${item.slug === lessonSlug ? ' active' : ''}${item.completed ? ' done' : ''} locked`}
+                        title={t('lesson.lockedHint')}
+                      >
+                        {itemBody}
+                      </span>
+                    ) : (
+                      <Link
+                        href={`/learn/${courseSlug}/${item.slug}`}
+                        className={`lesson-nav-item${item.slug === lessonSlug ? ' active' : ''}${item.completed ? ' done' : ''}`}
+                      >
+                        {itemBody}
+                      </Link>
+                    )}
+                    {(examsAfterLesson[item.slug] ?? []).map(renderExamNavItem)}
+                  </Fragment>
+                );
+              })}
               {endOfCourseExams.map(renderExamNavItem)}
             </nav>
           </aside>
 
           <section className="learn-main">
+            {failWarning ? (
+              <div className="exam-fail-warning">
+                <span className="exam-fail-warning__msg">
+                  <XCircle size={16} className="inline-leading-icon" />
+                  {t('lesson.examFailWarning')}
+                </span>
+                <button type="button" className="pill-btn" onClick={() => setFailWarning(false)}>
+                  {t('lesson.dismiss')}
+                </button>
+              </div>
+            ) : null}
             <article className="lesson-content-card glass-panel">
               <div className="lesson-top-row">
                 <div>
@@ -301,11 +406,11 @@ function LessonPlayerContent({
                     <ArrowLeft size={16} className="nav-arrow" aria-hidden /> {t('lesson.previous')}
                   </button>
                 ) : null}
-                {lesson.nextSlug ? (
+                {nextTarget ? (
                   <button
                     type="button"
                     className="pill-btn"
-                    onClick={() => router.push(`/learn/${courseSlug}/${lesson.nextSlug}`)}
+                    onClick={() => router.push(nextTarget)}
                   >
                     {t('lesson.next')} <ArrowRight size={16} className="nav-arrow" aria-hidden />
                   </button>

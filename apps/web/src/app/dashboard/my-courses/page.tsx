@@ -1,10 +1,6 @@
 'use client';
 
-import type {
-  CourseAttachmentDto,
-  CourseExamSummary,
-  CourseSummary,
-} from '@kia-academy/shared';
+import type { CourseAttachmentDto, CourseExamSummary, CourseSummary } from '@kia-academy/shared';
 import { BookOpen, ClipboardList, Loader2, Paperclip, Ticket } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -19,9 +15,9 @@ export default function MyCoursesPage() {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { t, locale } = useLanguage();
   const [courses, setCourses] = useState<CourseSummary[]>([]);
-  const [attachmentsBySlug, setAttachmentsBySlug] = useState<
-    Record<string, CourseAttachmentDto[]>
-  >({});
+  const [attachmentsBySlug, setAttachmentsBySlug] = useState<Record<string, CourseAttachmentDto[]>>(
+    {},
+  );
   const [examsBySlug, setExamsBySlug] = useState<Record<string, CourseExamSummary[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -141,15 +137,6 @@ export default function MyCoursesPage() {
                         href={`/courses/${course.slug}/exams/${exam.id}`}
                       >
                         {exam.title}
-                        <span className="panel-muted">
-                          {' '}
-                          ·{' '}
-                          {exam.kind === 'MIDTERM'
-                            ? t('courses.examKindMidterm')
-                            : t('courses.examKindFinal')}{' '}
-                          · {t('courses.examQuestions', { count: exam.questionCount })} ·{' '}
-                          {t('courses.examDuration', { min: exam.durationMin })}
-                        </span>
                       </Link>
                     ))}
                   </div>

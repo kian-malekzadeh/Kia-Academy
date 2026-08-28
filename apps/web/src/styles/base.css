@@ -1214,3 +1214,16 @@ input[type='tel'],
     animation: none;
   }
 }
+/* Disable selecting body copy so course/exam content cannot be copied by the
+   learner. Editable fields (notes, code playground, forms) stay selectable. */
+body {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input,
+textarea,
+[contenteditable='true'] {
+  -webkit-user-select: text;
+  user-select: text;
+}

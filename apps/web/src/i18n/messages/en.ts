@@ -107,7 +107,8 @@ export const en = {
       savings: 'bundle savings',
     },
     howHeading: 'How Kia Academy works',
-    howSub: 'Choose Material Studio for design tools, or Education to register and begin your assessment.',
+    howSub:
+      'Choose Material Studio for design tools, or Education to register and begin your assessment.',
     feature: {
       goal: {
         title: 'Free goal discovery',
@@ -1101,6 +1102,8 @@ export const en = {
       correctCount: 'Correct answers: {correct} of {total}',
       scoreLabel: 'Score',
       passScoreLabel: 'Pass score',
+      passedRedirect: 'Taking you to the lesson after the exam…',
+      failRedirect: 'Returning you to the lesson before the exam — review it and try again.',
     },
     enroll: 'Enroll',
     empty: 'No courses yet. Complete your assessment to unlock your roadmap.',
@@ -1156,6 +1159,10 @@ export const en = {
     progressLabel: 'Course progress',
     lessonsNav: 'Lessons',
     duration: '{minutes} min',
+    lockedHint: 'This lesson is locked until you pass the previous exam.',
+    examFailWarning:
+      "You didn't pass the exam — review this lesson and practice the exam again to unlock the next lessons.",
+    dismiss: 'Okay',
     examPassed: 'Passed',
     playgroundTitle: 'Code playground',
     autoRun: 'Auto-run',
@@ -1698,7 +1705,8 @@ export const en = {
       deleteLessonConfirm: 'Delete lesson "{slug}"? This cannot be undone.',
       colDuration: 'Duration',
       videoLabel: 'Lesson video',
-      videoHint: 'Optional. MP4, WebM, OGG, or MOV up to 200 MB. Upload replaces any existing video.',
+      videoHint:
+        'Optional. MP4, WebM, OGG, or MOV up to 200 MB. Upload replaces any existing video.',
       videoChoose: 'Choose video file',
       videoSelected: 'Selected: {name}',
       videoAttached: 'Attached',
