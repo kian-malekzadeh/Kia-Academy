@@ -2,7 +2,6 @@ import {
   IsArray,
   IsBoolean,
   IsDateString,
-  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -29,8 +28,8 @@ export class AdminCreateUserDto {
   phone?: string;
 
   @IsOptional()
-  @IsIn(['LEARNER', 'ADMIN', 'SUPER_ADMIN'])
-  role?: 'LEARNER' | 'ADMIN' | 'SUPER_ADMIN';
+  @IsString()
+  role?: string;
 }
 
 export class AdminCreateLessonDto {
@@ -196,7 +195,31 @@ export class AdminUpdateChallengeDto {
 
 export class AdminUpdateUserRoleDto {
   @IsString()
-  role!: 'LEARNER' | 'ADMIN' | 'SUPER_ADMIN';
+  role!: string;
+}
+
+export class AdminCreateRoleDto {
+  @IsString()
+  key!: string;
+
+  @IsString()
+  name!: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => SiteAdminAccessDto)
+  access?: SiteAdminAccessDto;
+}
+
+export class AdminUpdateRoleDto {
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => SiteAdminAccessDto)
+  access?: SiteAdminAccessDto;
 }
 
 export class AdminUpdateUserAccessDto {

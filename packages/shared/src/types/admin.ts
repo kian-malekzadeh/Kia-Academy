@@ -59,6 +59,26 @@ export interface AdminUser {
   adminPanelAccess?: SiteAdminAccessSettings | null;
 }
 
+/** A role definition: system roles are built-in, custom roles are admin-managed. */
+export interface AdminRole {
+  id: string;
+  key: string;
+  name: string;
+  isSystem: boolean;
+  /** Panel access template applied to users holding this role. */
+  access: SiteAdminAccessSettings | null;
+}
+
+export interface CreateRoleDto {
+  /** Unique role key stored on users (e.g. "support"). */
+  key: string;
+  /** Human-readable display name. */
+  name: string;
+  access?: SiteAdminAccessSettings;
+}
+
+export type UpdateRoleDto = Partial<Pick<CreateRoleDto, 'name' | 'access'>>;
+
 export interface AdminCreateUserDto {
   name: string;
   email: string;

@@ -56,6 +56,9 @@ import type {
   AdminCreateUserDto,
   AdminUser,
   AdminPayment,
+  AdminRole,
+  CreateRoleDto,
+  UpdateRoleDto,
   SiteAdminAccessSettings,
   AssessmentBank,
   PersonalityBank,
@@ -100,6 +103,7 @@ import {
   gradeAttempt,
   scoreMiniIpip,
   toPublicExamQuestions,
+  SYSTEM_ROLES,
 } from '@kia-academy/shared';
 import { ApiError } from '@/lib/apiError';
 import { clearTokens, setAccessToken } from '@/lib/auth';
@@ -161,6 +165,22 @@ let demoAdminUsers: AdminUser[] = [
     createdAt: DEMO_CREATED_AT,
   },
 ];
+
+/**
+ * In-memory store for custom (admin-created) roles in demo mode.
+ * Seeded empty; created/edited/deleted via the admin UI.
+ */
+let demoRoles: AdminRole[] = [];
+
+function systemRolesSnapshot(): AdminRole[] {
+  return SYSTEM_ROLES.map((r) => ({
+    id: r,
+    key: r,
+    name: r,
+    isSystem: true,
+    access: r === 'ADMIN' ? normalizeAdminAccess(readDemoSettings().adminAccess) : null,
+  }));
+}
 
 interface DemoLesson {
   id: string;
@@ -2353,6 +2373,10 @@ export const demoApi = {
       throw new ApiError('Phone already registered', 409);
     }
     const role = dto.role ?? 'LEARNER';
+    const customRole = demoRoles.find((r) => r.key === role);
+    const isKnownRole =
+      (SYSTEM_ROLES as readonly string[]).includes(role) || Boolean(customRole);
+    if (!isKnownRole) throw new ApiError(`Role "${role}" does not exist`, 400);
     const created: AdminUser = {
       id: `demo-user-${Date.now()}`,
       name: dto.name.trim(),
@@ -2363,7 +2387,9 @@ export const demoApi = {
       adminPanelAccess:
         role === 'ADMIN'
           ? normalizeAdminAccess(readDemoSettings().adminAccess)
-          : null,
+          : customRole?.access
+            ? customRole.access
+            : null,
     };
     demoAdminUsers = [created, ...demoAdminUsers];
     return delay({ ...created });
@@ -2405,6 +2431,10 @@ export const demoApi = {
     requireUser();
     const index = demoAdminUsers.findIndex((u) => u.id === userId);
     if (index < 0) throw new ApiError('User not found', 404);
+    const customRole = demoRoles.find((r) => r.key === role);
+    if (!(SYSTEM_ROLES as readonly string[]).includes(role) && !customRole) {
+      throw new ApiError(`Role "${role}" does not exist`, 400);
+    }
     const updated: AdminUser = {
       ...demoAdminUsers[index],
       role,
@@ -2412,7 +2442,9 @@ export const demoApi = {
         role === 'ADMIN'
           ? demoAdminUsers[index].adminPanelAccess ??
             normalizeAdminAccess(readDemoSettings().adminAccess)
-          : null,
+          : customRole?.access
+            ? demoAdminUsers[index].adminPanelAccess ?? customRole.access
+            : null,
     };
     demoAdminUsers = demoAdminUsers.map((u, i) => (i === index ? updated : u));
     return delay({ ...updated });
@@ -2432,6 +2464,56 @@ export const demoApi = {
     };
     demoAdminUsers = demoAdminUsers.map((u, i) => (i === index ? updated : u));
     return delay({ ...updated });
+  },
+
+  async adminListRoles(): Promise<AdminRole[]> {
+    requireUser();
+    return delay([...systemRolesSnapshot(), ...demoRoles.map((r) => ({ ...r }))]);
+  },
+
+  async adminCreateRole(dto: CreateRoleDto): Promise<AdminRole> {
+    requireUser();
+    const key = dto.key.trim();
+    if (!key) throw new ApiError('Role key is required', 400);
+    if ((SYSTEM_ROLES as readonly string[]).includes(key)) {
+      throw new ApiError(`Role "${key}" is a built-in system role`, 409);
+    }
+    if (demoRoles.some((r) => r.key === key)) {
+      throw new ApiError(`Role key "${key}" already exists`, 409);
+    }
+    const role: AdminRole = {
+      id: `demo-role-${Date.now()}`,
+      key,
+      name: dto.name.trim() || key,
+      isSystem: false,
+      access: dto.access ? normalizeAdminAccess(dto.access) : null,
+    };
+    demoRoles = [...demoRoles, role];
+    return delay({ ...role });
+  },
+
+  async adminUpdateRole(id: string, dto: UpdateRoleDto): Promise<AdminRole> {
+    requireUser();
+    const role = demoRoles.find((r) => r.id === id);
+    if (!role) throw new ApiError('Role not found', 404);
+    const updated: AdminRole = {
+      ...role,
+      name: dto.name !== undefined ? dto.name.trim() || role.name : role.name,
+      access: dto.access !== undefined ? normalizeAdminAccess(dto.access) : role.access,
+    };
+    demoRoles = demoRoles.map((r) => (r.id === id ? updated : r));
+    return delay({ ...updated });
+  },
+
+  async adminDeleteRole(id: string): Promise<{ deleted: true }> {
+    requireUser();
+    const role = demoRoles.find((r) => r.id === id);
+    if (!role) throw new ApiError('Role not found', 404);
+    if (demoAdminUsers.some((u) => u.role === role.key)) {
+      throw new ApiError(`Role "${role.key}" is assigned to users — reassign them first`, 409);
+    }
+    demoRoles = demoRoles.filter((r) => r.id !== id);
+    return delay({ deleted: true });
   },
 
   async adminListContactMessages(): Promise<AdminContactMessage[]> {

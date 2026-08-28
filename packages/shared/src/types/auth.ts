@@ -1,6 +1,19 @@
 import type { SiteAdminAccessSettings } from './site-settings';
 
-export type UserRole = 'LEARNER' | 'ADMIN' | 'SUPER_ADMIN';
+export const SYSTEM_ROLES = ['LEARNER', 'ADMIN', 'SUPER_ADMIN'] as const;
+
+export type SystemRole = (typeof SYSTEM_ROLES)[number];
+
+/**
+ * Known system roles plus dynamic custom roles created in the admin panel
+ * (any non-empty string key backed by a `Role` record).
+ */
+export type UserRole = SystemRole | (string & {});
+
+/** Any non-learner role can open the admin panel (custom roles are matrix-gated). */
+export function isStaffRole(role: UserRole | undefined | null): boolean {
+  return Boolean(role) && role !== 'LEARNER';
+}
 
 export interface AuthUser {
   id: string;

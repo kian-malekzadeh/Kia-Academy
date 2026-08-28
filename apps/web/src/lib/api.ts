@@ -48,12 +48,15 @@ import type {
   AdminStats,
   AdminCourse,
   AdminLesson,
+  AdminRole,
   AdminChallenge,
   AdminContactMessage,
   AdminCreateUserDto,
   AdminUser,
   AdminPayment,
   AssessmentBank,
+  CreateRoleDto,
+  UpdateRoleDto,
   PersonalityBank,
   TestBankId,
   TestBankMeta,
@@ -795,6 +798,30 @@ const liveApi = {
     return request<AdminUser>(`/admin/users/${userId}/access`, {
       method: 'PATCH',
       body: JSON.stringify({ adminPanelAccess }),
+    });
+  },
+
+  adminListRoles(): Promise<AdminRole[]> {
+    return request<AdminRole[]>('/admin/roles');
+  },
+
+  adminCreateRole(dto: CreateRoleDto): Promise<AdminRole> {
+    return request<AdminRole>('/admin/roles', {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    });
+  },
+
+  adminUpdateRole(id: string, dto: UpdateRoleDto): Promise<AdminRole> {
+    return request<AdminRole>(`/admin/roles/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(dto),
+    });
+  },
+
+  adminDeleteRole(id: string): Promise<{ deleted: true }> {
+    return request<{ deleted: true }>(`/admin/roles/${id}`, {
+      method: 'DELETE',
     });
   },
 

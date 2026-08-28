@@ -426,6 +426,7 @@ describe('PaymentsService', () => {
 
     const result = await service.handlePublicCallback({
       paymentId: 'pay-1',
+      authority: 'auth-1',
       status: 'NOK',
     });
 
@@ -442,6 +443,37 @@ describe('PaymentsService', () => {
         data: { status: 'FAILED' },
       }),
     );
+  });
+
+  it('ignores public failure callbacks that do not carry the payment gateway authority', async () => {
+    verifyPaymentMock.mockResolvedValue({
+      success: false,
+      failureReason: 'NOK',
+    });
+    prisma.payment.findUnique.mockResolvedValue({
+      id: 'pay-1',
+      userId: 'user-1',
+      productType: 'COURSE',
+      productRef: 'js-basics',
+      amountCents: 490_000,
+      currency: 'irr',
+      status: 'PENDING',
+      orderId: 'ord-1',
+      provider: 'dev',
+      gatewayRef: 'auth-1',
+      metadata: null,
+    });
+
+    // Forged callback: knows only the payment id, not the gateway authority.
+    const result = await service.handlePublicCallback({
+      paymentId: 'pay-1',
+      status: 'NOK',
+    });
+
+    expect(result.success).toBe(false);
+    // The pending payment must be left untouched.
+    expect(prisma.payment.updateMany).not.toHaveBeenCalled();
+    expect(prisma.order.updateMany).not.toHaveBeenCalled();
   });
 
   it('rejects checkout when payments are disabled', async () => {

@@ -5,6 +5,7 @@ import type {
   AdminCourse,
   AdminLesson,
   AdminPayment,
+  AdminRole,
   AdminStats,
   AdminUser,
   AuthUser,
@@ -24,16 +25,28 @@ import {
   AdminCreateChallengeDto,
   AdminCreateCourseDto,
   AdminCreateLessonDto,
+  AdminCreateRoleDto,
   AdminCreateUserDto,
   AdminUpdateChallengeDto,
   AdminUpdateCourseDto,
   AdminUpdateLessonDto,
+  AdminUpdateRoleDto,
   AdminUpdateUserAccessDto,
   AdminUpdateUserRoleDto,
 } from './dto/admin.dto';
 import { Prisma } from '@prisma/client';
 
 const BCRYPT_ROUNDS = 12;
+
+const SYSTEM_ROLE_DEFS = [
+  { key: 'LEARNER', isSystem: true },
+  { key: 'ADMIN', isSystem: true },
+  { key: 'SUPER_ADMIN', isSystem: true },
+] as const;
+
+/** Custom roles are moderator-like: panel access is decided by their access matrix. */
+const isStaffRole = (role: string): boolean =>
+  role === 'ADMIN' || (role !== 'LEARNER' && role !== 'SUPER_ADMIN');
 
 function toJsonAccess(value: SiteAdminAccessSettings): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
@@ -416,7 +429,7 @@ export class AdminService {
       role: user.role,
       createdAt: user.createdAt.toISOString(),
       adminPanelAccess:
-        user.role === 'ADMIN'
+        isStaffRole(user.role) && user.role !== 'SUPER_ADMIN'
           ? normalizeAdminAccess(user.adminPanelAccess)
           : null,
     }));
@@ -434,6 +447,16 @@ export class AdminService {
     const role = dto.role ?? 'LEARNER';
     if (role === 'SUPER_ADMIN' && actor.role !== 'SUPER_ADMIN') {
       throw new ForbiddenException('Only super admins can create super-admin accounts');
+    }
+
+    // Custom roles must exist before they can be assigned.
+    let customRoleAccess: SiteAdminAccessSettings | null = null;
+    if (role !== 'LEARNER' && role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
+      const customRole = await this.prisma.role.findUnique({ where: { key: role } });
+      if (!customRole) {
+        throw new BadRequestException(`Role "${role}" does not exist`);
+      }
+      customRoleAccess = customRole.access ? normalizeAdminAccess(customRole.access) : null;
     }
 
     let phone: string | null = null;
@@ -469,7 +492,11 @@ export class AdminService {
         profileComplete: true,
         emailVerified: true,
         adminPanelAccess:
-          role === 'ADMIN' ? toJsonAccess(settings.adminAccess) : undefined,
+          role === 'ADMIN'
+            ? toJsonAccess(settings.adminAccess)
+            : customRoleAccess
+              ? toJsonAccess(customRoleAccess)
+              : undefined,
         bootcampProfile: {
           create: {
             rank: settings.bootcamp.defaultRank,
@@ -496,10 +523,122 @@ export class AdminService {
       role: user.role,
       createdAt: user.createdAt.toISOString(),
       adminPanelAccess:
-        user.role === 'ADMIN'
+        isStaffRole(user.role) && user.role !== 'SUPER_ADMIN'
           ? normalizeAdminAccess(user.adminPanelAccess)
           : null,
     };
+  }
+
+  async listRoles(): Promise<AdminRole[]> {
+    const settings = await this.siteSettings.get();
+    const custom = await this.prisma.role.findMany({ orderBy: { createdAt: 'asc' } });
+
+    const systemRoles: AdminRole[] = SYSTEM_ROLE_DEFS.map((def) => ({
+      id: def.key,
+      key: def.key,
+      name: def.key,
+      isSystem: true,
+      access:
+        def.key === 'ADMIN'
+          ? normalizeAdminAccess(settings.adminAccess)
+          : def.key === 'SUPER_ADMIN'
+            ? null
+            : normalizeAdminAccess({}),
+    }));
+
+    return [
+      ...systemRoles,
+      ...custom.map((role) => ({
+        id: role.id,
+        key: role.key,
+        name: role.name,
+        isSystem: role.isSystem,
+        access: role.access ? normalizeAdminAccess(role.access) : null,
+      })),
+    ];
+  }
+
+  async createRole(dto: AdminCreateRoleDto): Promise<AdminRole> {
+    const key = dto.key.trim();
+    if (!key) {
+      throw new BadRequestException('Role key is required');
+    }
+    if (SYSTEM_ROLE_DEFS.some((def) => def.key === key)) {
+      throw new ConflictException(`Role "${key}" is a built-in system role`);
+    }
+
+    const existing = await this.prisma.role.findUnique({ where: { key } });
+    if (existing) {
+      throw new ConflictException(`Role key "${key}" already exists`);
+    }
+
+    const role = await this.prisma.role.create({
+      data: {
+        key,
+        name: dto.name.trim() || key,
+        isSystem: false,
+        access: dto.access ? toJsonAccess(normalizeAdminAccess(dto.access)) : undefined,
+      },
+    });
+
+    return {
+      id: role.id,
+      key: role.key,
+      name: role.name,
+      isSystem: role.isSystem,
+      access: role.access ? normalizeAdminAccess(role.access) : null,
+    };
+  }
+
+  async updateRole(id: string, dto: AdminUpdateRoleDto): Promise<AdminRole> {
+    const role = await this.prisma.role.findUnique({ where: { id } });
+    if (!role) {
+      throw new NotFoundException(`Role ${id} not found`);
+    }
+    if (role.isSystem) {
+      throw new BadRequestException('System roles cannot be edited');
+    }
+
+    const updated = await this.prisma.role.update({
+      where: { id },
+      data: {
+        name: dto.name !== undefined ? dto.name.trim() || role.name : role.name,
+        access:
+          dto.access !== undefined
+            ? toJsonAccess(normalizeAdminAccess(dto.access))
+            : role.access === null
+              ? Prisma.DbNull
+              : (role.access as Prisma.InputJsonValue),
+      },
+    });
+
+    return {
+      id: updated.id,
+      key: updated.key,
+      name: updated.name,
+      isSystem: updated.isSystem,
+      access: updated.access ? normalizeAdminAccess(updated.access) : null,
+    };
+  }
+
+  async deleteRole(id: string): Promise<{ deleted: true }> {
+    const role = await this.prisma.role.findUnique({ where: { id } });
+    if (!role) {
+      throw new NotFoundException(`Role ${id} not found`);
+    }
+    if (role.isSystem) {
+      throw new BadRequestException('System roles cannot be deleted');
+    }
+
+    const inUse = await this.prisma.user.count({ where: { role: role.key } });
+    if (inUse > 0) {
+      throw new ConflictException(
+        `Role "${role.key}" is assigned to ${inUse} user(s) — reassign them first`,
+      );
+    }
+
+    await this.prisma.role.delete({ where: { id } });
+    return { deleted: true };
   }
 
   async updateUserRole(
@@ -525,6 +664,17 @@ export class AdminService {
       }
     }
 
+    // Resolve the requested role: system roles are built-in, anything else must
+    // exist as a custom Role record.
+    let customRoleAccess: SiteAdminAccessSettings | null = null;
+    if (!SYSTEM_ROLE_DEFS.some((def) => def.key === dto.role)) {
+      const customRole = await this.prisma.role.findUnique({ where: { key: dto.role } });
+      if (!customRole) {
+        throw new BadRequestException(`Role "${dto.role}" does not exist`);
+      }
+      customRoleAccess = customRole.access ? normalizeAdminAccess(customRole.access) : null;
+    }
+
     const settings = await this.siteSettings.get();
     const roleData: Prisma.UserUpdateInput = { role: dto.role };
 
@@ -532,6 +682,8 @@ export class AdminService {
       roleData.adminPanelAccess =
         (user.adminPanelAccess as Prisma.InputJsonValue | null) ??
         toJsonAccess(settings.adminAccess);
+    } else if (customRoleAccess) {
+      roleData.adminPanelAccess = toJsonAccess(customRoleAccess);
     } else {
       roleData.adminPanelAccess = Prisma.DbNull;
     }
@@ -558,7 +710,7 @@ export class AdminService {
       role: updated.role,
       createdAt: updated.createdAt.toISOString(),
       adminPanelAccess:
-        updated.role === 'ADMIN'
+        updated.role === 'ADMIN' || isStaffRole(updated.role)
           ? normalizeAdminAccess(updated.adminPanelAccess)
           : null,
     };
@@ -577,7 +729,7 @@ export class AdminService {
     if (!user) {
       throw new NotFoundException(`User ${id} not found`);
     }
-    if (user.role !== 'ADMIN') {
+    if (user.role !== 'ADMIN' && !isStaffRole(user.role)) {
       throw new BadRequestException('Panel access applies to moderator accounts only');
     }
 

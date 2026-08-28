@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
 import { existsSync, mkdirSync } from 'fs';
@@ -74,7 +74,11 @@ async function bootstrap() {
 
   const port = process.env.PORT ?? 3001;
   await app.listen(port);
-  console.log(`Kia Academy API running on http://localhost:${port}/api`);
+
+  // Ensure SIGTERM/SIGINT close in-flight requests and DB connections cleanly.
+  app.enableShutdownHooks();
+
+  new Logger('Bootstrap').log(`Kia Academy API running on http://localhost:${port}/api`);
 }
 
 bootstrap();

@@ -7,12 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum UserRole {
-  LEARNER
-  ADMIN
-  SUPER_ADMIN
-}
-
 enum PaymentStatus {
   PENDING
   COMPLETED
@@ -42,6 +36,15 @@ enum OrderStatus {
   REFUNDED
 }
 
+model Role {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  name      String
+  isSystem  Boolean  @default(false)
+  access    Json?
+  createdAt DateTime @default(now())
+}
+
 model User {
   id              String    @id @default(cuid())
   name            String    @default("")
@@ -55,7 +58,7 @@ model User {
   phoneVerified   Boolean   @default(false)
   email           String?   @unique
   passwordHash    String?
-  role            UserRole  @default(LEARNER)
+  role            String    @default("LEARNER")
   emailVerified   Boolean   @default(false)
   profileComplete Boolean   @default(false)
   /** Per-moderator admin panel permissions (ADMIN role). Null → site default template. */
@@ -136,6 +139,8 @@ model Roadmap {
   enrolled     Boolean  @default(false)
   paymentId    String?
   createdAt    DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 model ReadinessTest {
@@ -149,6 +154,8 @@ model ReadinessTest {
   verdict     String
   paymentId   String?
   createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 /** Mini-IPIP Big Five personality result (Donnellan et al., 2006). */
@@ -206,6 +213,8 @@ model ChallengeSubmission {
   topScore  Boolean
   result    String
   createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 model Payment {
@@ -229,6 +238,7 @@ model Payment {
 
   @@index([userId, status])
   @@index([stripeId])
+  @@index([gatewayRef])
 }
 
 model Order {
@@ -430,6 +440,7 @@ model LessonProgress {
   completedAt DateTime?
 
   @@unique([userId, lessonId])
+  @@index([lessonId])
 }
 
 model Challenge {

@@ -6,6 +6,8 @@ import { Fragment, useEffect, useMemo, useState } from 'react';
 import {
   createDefaultSiteSettings,
   normalizeAdminAccess,
+  isStaffRole,
+  type AdminRole,
   type SiteAdminAccessSettings,
   type UserRole,
 } from '@kia-academy/shared';
@@ -15,10 +17,12 @@ import { useLanguage } from '@/context/LanguageProvider';
 import { api, ApiError } from '@/lib/api';
 import type { AdminUser } from '@kia-academy/shared';
 
-function roleLabel(role: UserRole, t: (key: string) => string): string {
+function roleLabel(role: UserRole, t: (key: string) => string, customNames?: Map<string, string>): string {
   if (role === 'SUPER_ADMIN') return t('domain.roles.superAdmin');
   if (role === 'ADMIN') return t('domain.roles.moderator');
-  return t('domain.roles.learner');
+  if (role === 'LEARNER') return t('domain.roles.learner');
+  const custom = customNames?.get(role);
+  return custom ?? role;
 }
 
 const defaultModeratorAccess = () =>
@@ -29,6 +33,7 @@ export default function AdminUsersPage() {
   const { user: me } = useAuth();
   const isSuper = me?.role === 'SUPER_ADMIN';
   const [users, setUsers] = useState<AdminUser[]>([]);
+  const [roles, setRoles] = useState<AdminRole[]>([]);
   const [draftRoles, setDraftRoles] = useState<Record<string, UserRole>>({});
   const [draftAccess, setDraftAccess] = useState<Record<string, SiteAdminAccessSettings>>({});
   const [loading, setLoading] = useState(true);
@@ -40,16 +45,19 @@ export default function AdminUsersPage() {
   const [roleFilter, setRoleFilter] = useState('');
 
   useEffect(() => {
-    api
-      .adminListUsers()
-      .then((list) => {
+    Promise.all([
+      api.adminListUsers(),
+      api.adminListRoles().catch(() => [] as AdminRole[]),
+    ])
+      .then(([list, roleList]) => {
         setUsers(list);
+        setRoles(roleList);
         setDraftRoles(Object.fromEntries(list.map((u) => [u.id, u.role])));
         setDraftAccess(
           Object.fromEntries(
             list.map((u) => [
               u.id,
-              u.role === 'ADMIN'
+              u.role === 'ADMIN' || (u.role !== 'LEARNER' && u.role !== 'SUPER_ADMIN')
                 ? normalizeAdminAccess(u.adminPanelAccess ?? defaultModeratorAccess())
                 : defaultModeratorAccess(),
             ]),
@@ -62,12 +70,18 @@ export default function AdminUsersPage() {
       .finally(() => setLoading(false));
   }, [t]);
 
+  const customRoleNames = useMemo(
+    () =>
+      new Map(roles.filter((r) => !r.isSystem).map((r) => [r.key, r.name || r.key])),
+    [roles],
+  );
+
   const filteredUsers = useMemo(() => {
     const q = search.trim().toLowerCase();
     return users.filter((user) => {
       if (roleFilter && user.role !== roleFilter) return false;
       if (!q) return true;
-      const roleText = roleLabel(user.role, t).toLowerCase();
+      const roleText = roleLabel(user.role, t, customRoleNames).toLowerCase();
       return (
         user.name.toLowerCase().includes(q) ||
         (user.email ?? '').toLowerCase().includes(q) ||
@@ -76,7 +90,7 @@ export default function AdminUsersPage() {
         roleText.includes(q)
       );
     });
-  }, [users, search, roleFilter, t]);
+  }, [users, search, roleFilter, t, customRoleNames]);
 
   const saveRole = async (user: AdminUser) => {
     const nextRole = draftRoles[user.id];
@@ -118,7 +132,7 @@ export default function AdminUsersPage() {
 
   const saveAccess = async (user: AdminUser) => {
     const access = draftAccess[user.id];
-    if (!access || user.role !== 'ADMIN') return;
+    if (!access || (user.role !== 'ADMIN' && !isStaffRole(user.role))) return;
 
     setSavingAccessId(user.id);
     setError('');
@@ -182,6 +196,13 @@ export default function AdminUsersPage() {
             <option value="LEARNER">{t('domain.roles.learner')}</option>
             <option value="ADMIN">{t('domain.roles.moderator')}</option>
             <option value="SUPER_ADMIN">{t('domain.roles.superAdmin')}</option>
+            {roles
+              .filter((r) => !r.isSystem)
+              .map((r) => (
+                <option key={r.id} value={r.key}>
+                  {r.name || r.key}
+                </option>
+              ))}
           </select>
         </label>
       </div>
@@ -202,8 +223,8 @@ export default function AdminUsersPage() {
               const draft = draftRoles[user.id] ?? user.role;
               const dirty = draft !== user.role;
               const rowFeedback = feedback[user.id];
-              const isModerator = user.role === 'ADMIN';
-              const showAccess = isSuper && isModerator;
+              const isModerator = user.role === 'ADMIN' || isStaffRole(user.role);
+              const showAccess = isSuper && isModerator && user.role !== 'SUPER_ADMIN';
 
               return (
                 <Fragment key={user.id}>
@@ -213,10 +234,10 @@ export default function AdminUsersPage() {
                     <td>
                       <span
                         className={`admin-badge${
-                          user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' ? ' ok' : ''
+                          user.role !== 'LEARNER' ? ' ok' : ''
                         }`}
                       >
-                        {roleLabel(user.role, t)}
+                        {roleLabel(user.role, t, customRoleNames)}
                       </span>
                     </td>
                     <td>{format.date(user.createdAt)}</td>
@@ -241,6 +262,13 @@ export default function AdminUsersPage() {
                             {isSuper && (
                               <option value="SUPER_ADMIN">{t('domain.roles.superAdmin')}</option>
                             )}
+                            {roles
+                              .filter((r) => !r.isSystem)
+                              .map((r) => (
+                                <option key={r.id} value={r.key}>
+                                  {r.name || r.key}
+                                </option>
+                              ))}
                           </select>
                         </label>
                         <button

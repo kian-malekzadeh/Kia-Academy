@@ -7,6 +7,9 @@ function roleSatisfies(userRole: UserRole, required: UserRole): boolean {
   if (userRole === required) return true;
   // SUPER_ADMIN inherits every ADMIN capability.
   if (required === 'ADMIN' && userRole === 'SUPER_ADMIN') return true;
+  // Custom (dynamic) roles are moderator-like: they pass the controller-level
+  // gate and their reach is then limited by their access matrix.
+  if (required === 'ADMIN' && userRole !== 'LEARNER') return true;
   return false;
 }
 

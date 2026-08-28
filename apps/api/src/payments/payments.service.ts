@@ -242,6 +242,25 @@ export class PaymentsService {
       throw new NotFoundException('Payment not found for gateway callback');
     }
 
+    // Public (unauthenticated) failure callbacks must prove they belong to this
+    // payment's gateway session. Without this, anyone who knows a payment id
+    // could flip a PENDING payment/order to FAILED (forged status=NOK).
+    const failureStatus =
+      dto.status !== undefined && dto.status !== null && dto.status.toUpperCase() !== 'OK'
+        ? dto.status.toUpperCase()
+        : null;
+    if (
+      !userId &&
+      failureStatus &&
+      (!dto.authority || dto.authority !== payment.gatewayRef)
+    ) {
+      const failureUrl = this.resolveUrl(
+        paymentCfg.failureUrl,
+        `/checkout/cancel?payment_id=${payment.id}`,
+      );
+      return { success: false, payment: this.toResponse(payment), redirectUrl: failureUrl };
+    }
+
     const successUrl = this.resolveUrl(
       paymentCfg.successUrl,
       `/checkout/success?payment_id=${payment.id}`,

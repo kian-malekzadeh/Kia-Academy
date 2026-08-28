@@ -21,6 +21,7 @@ import {
   isValidEmail,
   isValidIranCity,
   isValidIranProvince,
+  normalizeAdminAccess,
   normalizeIranianPhone,
   resolveModeratorAdminAccess,
   sanitizeProfileText,
@@ -507,7 +508,7 @@ export class AuthService {
         expiresIn: parseExpiresInSeconds(refreshExpiresIn),
       },
     );
-    const refreshRecord = await this.prisma.refreshToken.create({
+    await this.prisma.refreshToken.create({
       data: {
         id: tokenId,
         // Store only a SHA-256 digest of the JWT: a database leak must never
@@ -570,6 +571,17 @@ export class AuthService {
         user.adminPanelAccess,
         settings.adminAccess,
       );
+    } else if (user.role !== 'LEARNER' && user.role !== 'SUPER_ADMIN') {
+      // Custom (dynamic) roles carry their access matrix so the admin UI can
+      // show/hide sections without an extra request.
+      if (user.adminPanelAccess) {
+        authUser.adminPanelAccess = normalizeAdminAccess(user.adminPanelAccess);
+      } else {
+        const role = await this.prisma.role.findUnique({ where: { key: user.role } });
+        if (role?.access) {
+          authUser.adminPanelAccess = normalizeAdminAccess(role.access);
+        }
+      }
     }
 
     return authUser;

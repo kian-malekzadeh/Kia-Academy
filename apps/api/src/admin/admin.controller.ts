@@ -25,10 +25,12 @@ import {
   AdminCreateChallengeDto,
   AdminCreateCourseDto,
   AdminCreateLessonDto,
+  AdminCreateRoleDto,
   AdminCreateUserDto,
   AdminUpdateChallengeDto,
   AdminUpdateCourseDto,
   AdminUpdateLessonDto,
+  AdminUpdateRoleDto,
   AdminUpdateUserAccessDto,
   AdminUpdateUserRoleDto,
 } from './dto/admin.dto';
@@ -167,6 +169,30 @@ export class AdminController {
     @Body() dto: AdminUpdateUserAccessDto,
   ) {
     return this.adminService.updateUserAdminAccess(id, dto, actor);
+  }
+
+  @Get('roles')
+  @AdminAccess('users', 'view')
+  listRoles() {
+    return this.adminService.listRoles();
+  }
+
+  @Post('roles')
+  @AdminAccess('users', 'manage')
+  createRole(@Body() dto: AdminCreateRoleDto) {
+    return this.adminService.createRole(dto);
+  }
+
+  @Patch('roles/:id')
+  @AdminAccess('users', 'edit')
+  updateRole(@Param('id') id: string, @Body() dto: AdminUpdateRoleDto) {
+    return this.adminService.updateRole(id, dto);
+  }
+
+  @Delete('roles/:id')
+  @AdminAccess('users', 'manage')
+  deleteRole(@Param('id') id: string) {
+    return this.adminService.deleteRole(id);
   }
 
   @Get('contact')

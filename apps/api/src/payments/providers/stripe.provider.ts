@@ -4,6 +4,7 @@ import {
   type SitePaymentSettings,
 } from '@kia-academy/shared';
 import { StripeService } from '../../stripe/stripe.service';
+import { isProductionEnv } from '../../common/utils/node-env';
 import type {
   PaymentCreateInput,
   PaymentCreateResult,
@@ -48,6 +49,11 @@ export class StripePaymentProvider implements PaymentProvider {
     }
 
     // Simulator fallback (IRR or missing secret)
+    if (isProductionEnv()) {
+      throw new BadRequestException(
+        'Stripe cannot process IRR payments. Configure a supported currency or a live gateway.',
+      );
+    }
     const origin = safeOrigin(input.successUrl) ?? safeOrigin(input.callbackUrl) ?? '';
     const params = new URLSearchParams({
       payment_id: input.paymentId,
@@ -65,18 +71,24 @@ export class StripePaymentProvider implements PaymentProvider {
     input: PaymentVerifyInput,
     _settings: SitePaymentSettings,
   ): Promise<PaymentVerifyResult> {
-    // Live Stripe completions arrive via webhook; API verify is for simulator only.
-    if (input.gatewayRef && !String(input.gatewayRef).startsWith('cs_')) {
-      return { success: true, gatewayRef: input.gatewayRef };
-    }
     if (input.status && ['FAILED', 'CANCEL', 'NOK'].includes(input.status.toUpperCase())) {
       return { success: false, failureReason: `Gateway status: ${input.status}` };
+    }
+    // Live Stripe completions arrive via webhook; API verify is for simulator only.
+    if (input.gatewayRef && !String(input.gatewayRef).startsWith('cs_')) {
+      if (isProductionEnv()) {
+        return { success: false, failureReason: 'Simulated payments are not available in production' };
+      }
+      return { success: true, gatewayRef: input.gatewayRef };
     }
     // For real Stripe sessions, refuse silent confirm — webhook owns completion.
     if (input.gatewayRef?.startsWith('cs_')) {
       throw new BadRequestException(
         'Stripe payments are confirmed via webhook, not the verify endpoint',
       );
+    }
+    if (isProductionEnv()) {
+      return { success: false, failureReason: 'Missing gateway reference' };
     }
     return { success: true, gatewayRef: input.gatewayRef };
   }

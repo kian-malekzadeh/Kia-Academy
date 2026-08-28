@@ -40,6 +40,15 @@ class GatewayVerifyBodyDto {
   @IsOptional()
   @IsString()
   status?: string;
+
+  // IDPay posts its transaction/order ids under these field names.
+  @IsOptional()
+  @IsString()
+  id?: string;
+
+  @IsOptional()
+  @IsString()
+  order_id?: string;
 }
 
 class RetryPaymentBodyDto {
@@ -128,8 +137,8 @@ export class PaymentsController {
     @Query('Status') status?: string,
   ): Promise<void> {
     const result = await this.paymentsService.handlePublicCallback({
-      paymentId: body.paymentId || paymentId,
-      authority: body.authority || authority,
+      paymentId: body.paymentId || body.order_id || paymentId,
+      authority: body.authority || body.id || authority,
       status: body.status || status,
     });
     const accept = String(req.headers.accept ?? '');

@@ -20,7 +20,7 @@ export class ModeratorAccessService {
     if (user.role === 'SUPER_ADMIN') {
       return null;
     }
-    if (user.role !== 'ADMIN') {
+    if (user.role === 'LEARNER') {
       return normalizeAdminAccess({});
     }
     const settings = await this.siteSettings.get();
@@ -28,6 +28,16 @@ export class ModeratorAccessService {
       where: { id: user.id },
       select: { adminPanelAccess: true },
     });
+    if (row?.adminPanelAccess) {
+      return normalizeAdminAccess(row.adminPanelAccess);
+    }
+    // Custom roles fall back to their own access matrix, then the site template.
+    if (user.role !== 'ADMIN') {
+      const role = await this.prisma.role.findUnique({ where: { key: user.role } });
+      if (role?.access) {
+        return normalizeAdminAccess(role.access);
+      }
+    }
     return resolveModeratorAdminAccess(row?.adminPanelAccess, settings.adminAccess);
   }
 
