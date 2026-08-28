@@ -1156,6 +1156,7 @@ export const en = {
     progressLabel: 'Course progress',
     lessonsNav: 'Lessons',
     duration: '{minutes} min',
+    examPassed: 'Passed',
     playgroundTitle: 'Code playground',
     autoRun: 'Auto-run',
     run: 'Run',

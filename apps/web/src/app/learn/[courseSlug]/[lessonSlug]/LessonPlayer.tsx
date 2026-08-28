@@ -1,10 +1,10 @@
 'use client';
 
-import { ArrowLeft, ArrowRight, CheckCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle, ClipboardList, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
-import type { LessonDetail, LessonSummary } from '@kia-academy/shared';
+import { Fragment, useEffect, useMemo, useState } from 'react';
+import type { CourseExamSummary, LessonDetail, LessonSummary } from '@kia-academy/shared';
 import { parseLessonContent } from '@kia-academy/shared';
 import { RequireAuth } from '@/components/auth/RequireAuth';
 import { LessonPlayground } from '@/components/lesson/LessonPlayground';
@@ -40,12 +40,45 @@ function LessonPlayerContent({
   const { t, format } = useLanguage();
   const [lesson, setLesson] = useState<LessonDetail | null>(null);
   const [lessons, setLessons] = useState<LessonSummary[]>([]);
+  const [exams, setExams] = useState<CourseExamSummary[]>([]);
+  const [passedExamIds, setPassedExamIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [completing, setCompleting] = useState(false);
   const [note, setNote] = useState('');
   const [query, setQuery] = useState('');
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!courseSlug) return;
+    let alive = true;
+    // Exams anchored to lessons are rendered inside the lessons navigation.
+    api
+      .listCourseExamsForLearner(courseSlug)
+      .then(async (list) => {
+        if (!alive) return;
+        setExams(list);
+        const passed = await Promise.all(
+          list.map(async (exam) => {
+            try {
+              const attempts = await api.listCourseExamAttempts(exam.id);
+              return attempts.some((attempt) => attempt.passed);
+            } catch {
+              return false;
+            }
+          }),
+        );
+        if (alive) {
+          setPassedExamIds(new Set(list.filter((_, i) => passed[i]).map((exam) => exam.id)));
+        }
+      })
+      .catch(() => {
+        if (alive) setExams([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [courseSlug]);
 
   useEffect(() => {
     if (!courseSlug || !lessonSlug) return;
@@ -69,6 +102,42 @@ function LessonPlayerContent({
     if (!q) return lessons;
     return lessons.filter((item) => item.title.toLowerCase().includes(q));
   }, [lessons, query]);
+
+  /** Exams anchored right after a specific lesson (midterms). */
+  const examsAfterLesson = useMemo(() => {
+    const map: Record<string, CourseExamSummary[]> = {};
+    for (const exam of exams) {
+      if (!exam.afterLessonSlug) continue;
+      (map[exam.afterLessonSlug] ??= []).push(exam);
+    }
+    return map;
+  }, [exams]);
+
+  /** Exams held at the end of the course (finals without an anchor lesson). */
+  const endOfCourseExams = useMemo(() => exams.filter((exam) => !exam.afterLessonSlug), [exams]);
+
+  const renderExamNavItem = (exam: CourseExamSummary) => {
+    const passed = passedExamIds.has(exam.id);
+    return (
+      <Link
+        key={exam.id}
+        href={`/courses/${courseSlug}/exams/${exam.id}`}
+        className={`lesson-nav-item lesson-nav-item--exam${passed ? ' done' : ''}`}
+      >
+        <span className="lesson-nav-title">
+          <ClipboardList size={14} className="inline-leading-icon" aria-hidden /> {exam.title}
+        </span>
+        <span className="lesson-nav-meta">
+          {exam.kind === 'MIDTERM' ? t('courses.examKindMidterm') : t('courses.examKindFinal')}
+          {' · '}
+          {t('courses.examQuestions', { count: exam.questionCount })}
+          {' · '}
+          {t('courses.examDuration', { min: exam.durationMin })}
+          {passed ? ` · ${t('lesson.examPassed')}` : ''}
+        </span>
+      </Link>
+    );
+  };
 
   const parsedContent = useMemo(
     () => (lesson ? parseLessonContent(lesson.content) : null),
@@ -178,18 +247,21 @@ function LessonPlayerContent({
 
             <nav className="lesson-nav" aria-label={t('lesson.lessonsNav')}>
               {filteredLessons.map((item) => (
-                <Link
-                  key={item.id}
-                  href={`/learn/${courseSlug}/${item.slug}`}
-                  className={`lesson-nav-item${item.slug === lessonSlug ? ' active' : ''}${item.completed ? ' done' : ''}`}
-                >
-                  <span className="lesson-nav-title">{item.title}</span>
-                  <span className="lesson-nav-meta">
-                    {t('lesson.duration', { minutes: item.durationMin })}
-                    {item.completed ? ` · ${t('lesson.completed')}` : ''}
-                  </span>
-                </Link>
+                <Fragment key={item.id}>
+                  <Link
+                    href={`/learn/${courseSlug}/${item.slug}`}
+                    className={`lesson-nav-item${item.slug === lessonSlug ? ' active' : ''}${item.completed ? ' done' : ''}`}
+                  >
+                    <span className="lesson-nav-title">{item.title}</span>
+                    <span className="lesson-nav-meta">
+                      {t('lesson.duration', { minutes: item.durationMin })}
+                      {item.completed ? ` · ${t('lesson.completed')}` : ''}
+                    </span>
+                  </Link>
+                  {(examsAfterLesson[item.slug] ?? []).map(renderExamNavItem)}
+                </Fragment>
               ))}
+              {endOfCourseExams.map(renderExamNavItem)}
             </nav>
           </aside>
 

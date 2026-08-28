@@ -244,6 +244,17 @@
   color: var(--progress-fill);
 }
 
+/* Exams embedded in the lessons navigation (after their anchor lesson). */
+.kia-lesson-shell .lesson-nav-item--exam {
+  border-style: dashed;
+}
+
+.kia-lesson-shell .lesson-nav-item--exam .lesson-nav-title {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .kia-lesson-shell .lesson-nav-item.done:hover {
   border-color: var(--progress-fill);
   box-shadow: inset 3px 0 0 var(--progress-fill);

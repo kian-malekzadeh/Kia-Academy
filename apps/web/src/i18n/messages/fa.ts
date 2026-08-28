@@ -1155,6 +1155,7 @@ export const fa = {
     progressLabel: 'پیشرفت دوره',
     lessonsNav: 'درس‌ها',
     duration: '{minutes} دقیقه',
+    examPassed: 'قبول شدید',
     playgroundTitle: 'زمین تمرین کد',
     autoRun: 'اجرای خودکار',
     run: 'اجرا',
