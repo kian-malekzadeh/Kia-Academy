@@ -8,7 +8,6 @@ import {
   normalizeAdminAccess,
   type AdminRole,
   type SiteAdminAccessSettings,
-  type UserRole,
 } from '@kia-academy/shared';
 import { AdminAccessMatrix } from '@/components/admin/AdminAccessMatrix';
 import { useLanguage } from '@/context/LanguageProvider';
