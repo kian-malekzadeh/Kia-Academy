@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChevronDown, LogOut, Menu, Shield, Trophy, X } from 'lucide-react';
+import { ChevronDown, LogOut, Menu, MoveHorizontal, Shield, Trophy, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { BrandMark } from '@/components/brand/BrandMark';
 import { CartBadge } from '@/components/cart/CartBadge';
@@ -14,6 +14,16 @@ import { useLanguage } from '@/context/LanguageProvider';
 import { useTheme } from '@/context/ThemeProvider';
 import { useSiteSettings } from '@/hooks/useSiteSettings';
 
+/** Sidebar width presets — 'default' keeps the original 18.5rem panel width. */
+type PanelNavSize = 'compact' | 'default' | 'wide';
+
+const PANEL_NAV_SIZES: PanelNavSize[] = ['default', 'compact', 'wide'];
+const PANEL_NAV_STORAGE_KEY = 'kia-panel-nav-size';
+
+function isPanelNavSize(value: string | null): value is PanelNavSize {
+  return value === 'compact' || value === 'default' || value === 'wide';
+}
+
 export function TopBar() {
   const router = useRouter();
   const { t } = useLanguage();
@@ -23,8 +33,34 @@ export function TopBar() {
   const { settings } = useSiteSettings();
   const [menuOpen, setMenuOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
+  // Sidebar size starts at the original default; the stored preference is
+  // applied after mount so server and client markup stay identical.
+  const [navSize, setNavSize] = useState<PanelNavSize>('default');
   const menuRef = useRef<HTMLDivElement>(null);
   const topbarRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(PANEL_NAV_STORAGE_KEY);
+      if (isPanelNavSize(stored)) setNavSize(stored);
+    } catch {
+      /* storage unavailable — keep default */
+    }
+  }, []);
+
+  const cycleNavSize = () => {
+    setNavSize((prev) => {
+      const next =
+        PANEL_NAV_SIZES[(PANEL_NAV_SIZES.indexOf(prev) + 1) % PANEL_NAV_SIZES.length];
+      try {
+        localStorage.setItem(PANEL_NAV_STORAGE_KEY, next);
+      } catch {
+        /* storage unavailable */
+      }
+      return next;
+    });
+  };
+
 
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
   const isAdmin = user?.role === 'ADMIN';
@@ -89,12 +125,36 @@ export function TopBar() {
     </button>
   );
 
+  const navSizeClass =
+    navSize === 'compact'
+      ? ' panel-nav--compact'
+      : navSize === 'wide'
+        ? ' panel-nav--wide'
+        : '';
+  const navSizeLabel =
+    navSize === 'compact'
+      ? t('nav.menuSizeCompact')
+      : navSize === 'wide'
+        ? t('nav.menuSizeWide')
+        : t('nav.menuSizeDefault');
+
   return (
-    <div className="topbar" ref={topbarRef}>
+    <div className={`topbar${navSizeClass}`} ref={topbarRef}>
       <div className="topbar-primary">
         <button type="button" className="logo" onClick={handleLogoClick}>
           <BrandMark className="logo-mark" size={26} title="" />
           <span className="logo-text">{settings.general.siteName || t('common.brand')}</span>
+        </button>
+
+        <button
+          type="button"
+          className="panel-nav-size-toggle"
+          onClick={cycleNavSize}
+          aria-label={t('nav.resizeMenu')}
+          title={`${t('nav.resizeMenu')} — ${navSizeLabel}`}
+        >
+          <MoveHorizontal size={14} aria-hidden="true" />
+          <span className="panel-nav-size-toggle-label">{navSizeLabel}</span>
         </button>
 
         <button

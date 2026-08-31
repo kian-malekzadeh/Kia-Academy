@@ -40,6 +40,11 @@
   }
 }
 
+/* Sidebar resize control is desktop-only — mobile keeps the horizontal bar. */
+.panel-nav-size-toggle {
+  display: none;
+}
+
 /* --- logged-in panel shell (sidebar on desktop) -------------------------- */
 .panel-shell {
   display: flex;
@@ -89,6 +94,51 @@
     gap: var(--space-5);
     /* Scroll lives on .learner-nav so expanded groups never cover secondary. */
     overflow: hidden;
+    /* Animate the learner-driven sidebar resize (compact / default / wide). */
+    transition:
+      flex-basis var(--dur-slow) var(--ease-out),
+      width var(--dur-slow) var(--ease-out);
+  }
+
+  /* Sidebar size presets — default keeps the original 18.5rem width. */
+  .panel-shell .topbar.panel-nav--compact {
+    flex-basis: 15rem;
+    width: 15rem;
+    max-width: 15rem;
+  }
+
+  .panel-shell .topbar.panel-nav--wide {
+    flex-basis: 23rem;
+    width: 23rem;
+    max-width: 23rem;
+  }
+
+  /* Resize control sits right after the logo inside the sidebar. */
+  .panel-shell .panel-nav-size-toggle {
+    order: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--space-2);
+    width: 100%;
+    min-height: var(--control-h-sm);
+    padding: 0 var(--space-2);
+    background: none;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text-faint);
+    font-family: inherit;
+    font-size: var(--fs-micro);
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      color var(--dur-base) var(--ease-out),
+      border-color var(--dur-base) var(--ease-out);
+  }
+
+  .panel-shell .panel-nav-size-toggle:hover {
+    color: var(--brand);
+    border-color: var(--brand-hairline);
   }
 
   /* Flatten so logo / secondary / nav can be ordered as topbar flex children. */

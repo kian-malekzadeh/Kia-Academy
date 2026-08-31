@@ -732,6 +732,15 @@
     max-height: none;
   }
 
+  /* Mobile: show ~3 lessons at a time and scroll the rest inside the list,
+     so the lesson content is reachable without a long page scroll. */
+  .kia-lesson-shell .lesson-nav {
+    flex: 0 0 auto;
+    max-height: 13.5rem;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .kia-lesson-shell .editor-grid {
     grid-template-columns: 1fr;
   }
