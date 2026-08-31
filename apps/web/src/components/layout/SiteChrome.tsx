@@ -2,7 +2,6 @@
 
 import type { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
-import { DemoBanner } from '@/components/layout/DemoBanner';
 import { Footer } from '@/components/layout/Footer';
 import { SiteAurora } from '@/components/layout/SiteAurora';
 import { TopBar } from '@/components/layout/TopBar';
@@ -30,7 +29,6 @@ export function SiteChrome({ children }: { children: ReactNode }) {
   return (
     <>
       {!isAdminRoute ? <SiteAurora /> : null}
-      {!isAdminRoute ? <DemoBanner /> : null}
       {showChrome ? (
         <div className="panel-shell">
           <TopBar />

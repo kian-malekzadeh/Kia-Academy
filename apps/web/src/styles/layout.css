@@ -2,17 +2,6 @@
    Global chrome — demo banner, floating top bar, page back button
    ========================================================================== */
 
-.demo-banner {
-  width: 100%;
-  padding: var(--space-2) var(--space-4);
-  text-align: center;
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  color: var(--value);
-  background: var(--value-tint);
-  border-bottom: 1px solid rgba(255, 200, 100, 0.32);
-}
-
 /* --- floating top bar ----------------------------------------------------- */
 .topbar {
   display: flex;
