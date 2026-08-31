@@ -37,10 +37,29 @@ function pathActive(pathname: string, href: string, exact?: boolean) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function LearnerNav({ onNavigate }: { onNavigate?: () => void }) {
+export function LearnerNav({
+  onNavigate,
+  compact = false,
+}: {
+  onNavigate?: () => void;
+  compact?: boolean;
+}) {
   const pathname = usePathname() || '/dashboard';
   const { t } = useLanguage();
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+  // Icon-only compact mode applies to the desktop panel sidebar (>=901px)
+  // only — the mobile top-nav sheet always keeps its labels.
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 901px)');
+    const update = () => setIsDesktop(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+
+  const iconOnly = compact && isDesktop;
 
   const nav = useMemo((): NavItem[] => {
     return [
@@ -119,6 +138,27 @@ export function LearnerNav({ onNavigate }: { onNavigate?: () => void }) {
           const groupActive = item.children.some((child) =>
             pathActive(pathname, child.href, child.exact),
           );
+          // Icon-only sidebar: groups become a single icon link to their
+          // active (or first) child — no expandable children.
+          if (iconOnly) {
+            const primary =
+              item.children.find((child) => pathActive(pathname, child.href, child.exact)) ??
+              item.children[0];
+            if (!primary) return null;
+            return (
+              <Link
+                key={item.id}
+                href={primary.href}
+                className={`top-nav-link learner-nav-link${groupActive ? ' is-active' : ''}`}
+                title={item.label}
+                aria-label={item.label}
+                onClick={onNavigate}
+              >
+                <Icon size={16} aria-hidden="true" />
+                <span className="learner-nav-text">{item.label}</span>
+              </Link>
+            );
+          }
           return (
             <div
               key={item.id}
@@ -132,7 +172,7 @@ export function LearnerNav({ onNavigate }: { onNavigate?: () => void }) {
               >
                 <span className="learner-nav-label">
                   <Icon size={16} aria-hidden="true" />
-                  {item.label}
+                  <span className="learner-nav-text">{item.label}</span>
                 </span>
                 <ChevronDown
                   size={14}
@@ -152,7 +192,7 @@ export function LearnerNav({ onNavigate }: { onNavigate?: () => void }) {
                         onClick={onNavigate}
                       >
                         <ClipboardList size={13} aria-hidden="true" />
-                        {child.label}
+                        <span className="learner-nav-text">{child.label}</span>
                       </Link>
                     );
                   })}
@@ -168,10 +208,11 @@ export function LearnerNav({ onNavigate }: { onNavigate?: () => void }) {
             key={item.id}
             href={item.href}
             className={`top-nav-link learner-nav-link${active ? ' is-active' : ''}`}
+            title={item.label}
             onClick={onNavigate}
           >
             <Icon size={16} aria-hidden="true" />
-            {item.label}
+            <span className="learner-nav-text">{item.label}</span>
           </Link>
         );
       })}

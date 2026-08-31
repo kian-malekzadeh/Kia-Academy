@@ -171,14 +171,19 @@ export function TopBar() {
         <nav id="site-top-nav" className={`top-nav${navOpen ? ' top-nav--open' : ''}`}>
           {isSuperAdmin ? (
             <Link href="/admin" className="top-nav-link" onClick={() => setNavOpen(false)}>
-              <Shield size={14} /> {t('nav.admin')}
+              <Shield size={14} />
+              <span className="learner-nav-text">{t('nav.admin')}</span>
             </Link>
           ) : (
             <>
-              <LearnerNav onNavigate={() => setNavOpen(false)} />
+              <LearnerNav
+                onNavigate={() => setNavOpen(false)}
+                compact={navSize === 'compact'}
+              />
               {isAdmin && (
                 <Link href="/admin" className="top-nav-link" onClick={() => setNavOpen(false)}>
-                  <Shield size={14} /> {t('nav.admin')}
+                  <Shield size={14} />
+                  <span className="learner-nav-text">{t('nav.admin')}</span>
                 </Link>
               )}
             </>
@@ -186,7 +191,8 @@ export function TopBar() {
 
           {user && !isSuperAdmin ? (
             <Link href="/rewards" className="top-nav-link" onClick={() => setNavOpen(false)}>
-              <Trophy size={14} aria-hidden="true" /> {t('nav.rewards')}
+              <Trophy size={14} aria-hidden="true" />
+              <span className="learner-nav-text">{t('nav.rewards')}</span>
             </Link>
           ) : null}
 
@@ -199,7 +205,8 @@ export function TopBar() {
                 void handleLogout();
               }}
             >
-              <LogOut size={14} aria-hidden="true" /> {t('nav.signOut')}
+              <LogOut size={14} aria-hidden="true" />
+              <span className="learner-nav-text">{t('nav.signOut')}</span>
             </button>
           ) : null}
 

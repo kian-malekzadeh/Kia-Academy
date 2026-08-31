@@ -89,11 +89,36 @@
       width var(--dur-slow) var(--ease-out);
   }
 
-  /* Sidebar size presets — default keeps the original 18.5rem width. */
+  /* Icon-only compact sidebar: narrow rail, texts hidden, icons centered. */
   .panel-shell .topbar.panel-nav--compact {
-    flex-basis: 15rem;
-    width: 15rem;
-    max-width: 15rem;
+    flex-basis: 4.75rem;
+    width: 4.75rem;
+    max-width: 4.75rem;
+    padding-inline: var(--space-2);
+    align-items: center;
+  }
+
+  .panel-shell .topbar.panel-nav--compact .logo,
+  .panel-shell .topbar.panel-nav--compact .panel-nav-size-toggle,
+  .panel-shell .topbar.panel-nav--compact .theme-toggle,
+  .panel-shell .topbar.panel-nav--compact .lang-toggle,
+  .panel-shell .topbar.panel-nav--compact .user-chip,
+  .panel-shell .topbar.panel-nav--compact .top-nav-link {
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  .panel-shell .topbar.panel-nav--compact .logo-text,
+  .panel-shell .topbar.panel-nav--compact .panel-nav-size-toggle-label,
+  .panel-shell .topbar.panel-nav--compact .theme-toggle-label,
+  .panel-shell .topbar.panel-nav--compact .lang-toggle .lang-code,
+  .panel-shell .topbar.panel-nav--compact .lang-toggle .lang-label,
+  .panel-shell .topbar.panel-nav--compact .user-chip-name,
+  .panel-shell .topbar.panel-nav--compact .user-chip svg,
+  .panel-shell .topbar.panel-nav--compact .learner-nav-text,
+  .panel-shell .topbar.panel-nav--compact .learner-nav-children,
+  .panel-shell .topbar.panel-nav--compact .learner-nav-chevron {
+    display: none;
   }
 
   .panel-shell .topbar.panel-nav--wide {
