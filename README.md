@@ -9,7 +9,7 @@
 [![CI](https://github.com/kian-malekzadeh/Kia-Academy/actions/workflows/ci.yml/badge.svg)](https://github.com/kian-malekzadeh/Kia-Academy/actions/workflows/ci.yml)
 [![Node](https://img.shields.io/badge/node-%E2%89%A522.13-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org)
 [![pnpm](https://img.shields.io/badge/pnpm-monorepo-F69220?logo=pnpm&logoColor=white)](https://pnpm.io)
-[![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=nextdotjs&logoColor=white)](https://nextjs.org)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=nextdotjs&logoColor=white)](https://nextjs.org)
 [![NestJS](https://img.shields.io/badge/NestJS-11-E0234E?logo=nestjs&logoColor=white)](https://nestjs.com)
 [![Prisma](https://img.shields.io/badge/Prisma-6-2D3748?logo=prisma&logoColor=white)](https://prisma.io)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org)
@@ -72,7 +72,7 @@ Results (/readiness/results) ─► Roadmap (/roadmap) ──► Checkout ──
 
 | Layer | Technology |
 | --- | --- |
-| Frontend | Next.js 15 (App Router), React 19, TypeScript, lucide-react, local Persian fonts (YekanBakh/Pelak) |
+| Frontend | Next.js 16 (App Router), React 19, TypeScript, lucide-react, local Persian fonts (YekanBakh/Pelak) |
 | Backend | NestJS 11, Passport JWT, class-validator, @nestjs/throttler, helmet |
 | Database | PostgreSQL 16 + Prisma ORM 6 (single baseline migration) |
 | Shared | `@kia-academy/shared` — types, banks, grading, entitlements, validators (built first) |
@@ -84,7 +84,7 @@ Results (/readiness/results) ─► Roadmap (/roadmap) ──► Checkout ──
 ```text
 kia-academy/
 ├── apps/
-│   ├── web/            # Next.js 15 — port 3000, fa locale, proxies /api → API
+│   ├── web/            # Next.js 16 — port 3000, fa locale, proxies /api → API
 │   │   ├── src/app/          # route segments (material, education, dashboard…)
 │   │   ├── src/features/     # modular features (material studio, …)
 │   │   └── public/brand/     # logos used across the app + this README
