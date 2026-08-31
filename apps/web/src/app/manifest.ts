@@ -15,14 +15,28 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: '#f5f6fb',
     theme_color: '#f5f6fb',
     icons: [
+      // Relative srcs resolve against the manifest URL, so they work both
+      // self-hosted and under the GitHub Pages basePath (/Kia-Academy/).
       {
-        src: '/favicon.svg',
+        src: 'icons/icon-192.png',
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: 'icons/icon-512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: 'favicon.svg',
         sizes: 'any',
         type: 'image/svg+xml',
         purpose: 'any',
       },
       {
-        src: '/brand/logo-mark.svg',
+        src: 'brand/logo-mark.svg',
         sizes: 'any',
         type: 'image/svg+xml',
         purpose: 'maskable',
