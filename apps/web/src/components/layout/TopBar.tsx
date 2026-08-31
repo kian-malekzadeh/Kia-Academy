@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChevronDown, LogOut, Menu, MoveHorizontal, Shield, Trophy, X } from 'lucide-react';
+import { ChevronDown, Library, LogOut, Menu, MoveHorizontal, Shield, Trophy, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { BrandMark } from '@/components/brand/BrandMark';
 import { CartBadge } from '@/components/cart/CartBadge';
@@ -219,6 +219,14 @@ export function TopBar() {
 
       <div className="topbar-secondary top-right">
         <div className="top-right-tools">
+          <Link
+            href="/courses"
+            className="theme-toggle all-courses-btn"
+            aria-label={t('nav.allCourses')}
+          >
+            <Library size={16} aria-hidden="true" />
+            <span className="theme-toggle-label">{t('nav.allCourses')}</span>
+          </Link>
           <LanguageSelector />
           {renderThemeToggle()}
         </div>
@@ -243,6 +251,14 @@ export function TopBar() {
                     <b>{user.name}</b>
                     <span className="ltr-isolate">{user.email || user.phone}</span>
                   </div>
+                  <Link
+                    href="/courses"
+                    className="user-dropdown-item"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    <Library size={14} aria-hidden="true" />
+                    <span>{t('nav.allCourses')}</span>
+                  </Link>
                 </div>
               )}
             </div>

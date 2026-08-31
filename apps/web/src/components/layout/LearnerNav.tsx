@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ClipboardList,
   LayoutDashboard,
+  Library,
   MessageSquare,
   Palette,
   Ticket,
@@ -75,6 +76,12 @@ export function LearnerNav({
         href: '/dashboard/my-courses',
         label: t('panel.nav.myCourses'),
         icon: BookOpen,
+      },
+      {
+        id: 'all-courses',
+        href: '/courses',
+        label: t('nav.allCourses'),
+        icon: Library,
       },
       {
         id: 'tickets',

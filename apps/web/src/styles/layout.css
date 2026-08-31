@@ -228,7 +228,8 @@
     order: 2;
   }
 
-  .panel-shell .top-right-tools .theme-toggle {
+  .panel-shell .top-right-tools .theme-toggle,
+  .panel-shell .top-right-tools .all-courses-btn {
     order: 1;
   }
 
@@ -237,6 +238,7 @@
   }
 
   .panel-shell .top-right-tools .theme-toggle,
+  .panel-shell .top-right-tools .all-courses-btn,
   .panel-shell .top-right-tools .lang-toggle,
   .panel-shell .topbar button.lang-toggle {
     width: 100%;
@@ -371,6 +373,12 @@
 .theme-toggle:hover {
   color: var(--brand);
   border-color: var(--brand-hairline);
+}
+
+/* All-courses pill reuses .theme-toggle sizing so it matches the dark-mode
+   button and the user chip in the account cluster. */
+a.theme-toggle {
+  text-decoration: none;
 }
 
 .lang-selector {

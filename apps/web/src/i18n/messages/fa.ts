@@ -44,6 +44,7 @@ export const fa = {
   },
   nav: {
     courses: 'دوره‌ها',
+    allCourses: 'همه دوره‌ها',
     admin: 'مدیر',
     dashboard: 'پنل',
     mode: 'حالت',

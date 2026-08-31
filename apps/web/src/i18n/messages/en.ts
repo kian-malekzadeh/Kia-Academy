@@ -44,6 +44,7 @@ export const en = {
   },
   nav: {
     courses: 'Courses',
+    allCourses: 'All courses',
     admin: 'Admin',
     dashboard: 'Dashboard',
     mode: 'Mode',
