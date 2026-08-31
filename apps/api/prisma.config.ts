@@ -2,11 +2,12 @@ import 'dotenv/config';
 import { defineConfig } from 'prisma/config';
 
 /**
- * Prisma CLI configuration (supported since Prisma 6.16, required in 7+).
+ * Prisma 7 CLI configuration.
  *
- * The datasource URL lives here instead of `schema.prisma` so the schema stays
- * compatible with Prisma 7 CLIs (which no longer accept `url` in schema files)
- * while remaining fully supported by the pinned Prisma 6 CLI.
+ * In Prisma 7 the datasource `url` is not allowed in `schema.prisma` anymore —
+ * it lives here and is used by Migrate (`migrate dev` / `migrate deploy`).
+ * The runtime client (`PrismaClient`) connects through the `@prisma/adapter-pg`
+ * driver adapter instead (see `src/prisma/prisma.service.ts`).
  */
 export default defineConfig({
   schema: 'prisma/schema.prisma',

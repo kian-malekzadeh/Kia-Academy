@@ -10,6 +10,7 @@ export default tseslint.config(
       '**/coverage/**',
       '**/test-results/**',
       '**/playwright-report/**',
+      '**/src/generated/**',
     ],
   },
   js.configs.recommended,

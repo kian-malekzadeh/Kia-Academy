@@ -65,3 +65,6 @@ Desktop.ini
 *.zip
 nohup.out
 
+
+# Generated Prisma client (apps/api)
+apps/api/src/generated/

@@ -34,7 +34,7 @@ import {
   AdminUpdateUserAccessDto,
   AdminUpdateUserRoleDto,
 } from './dto/admin.dto';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '../generated/prisma/client';
 
 const BCRYPT_ROUNDS = 12;
 
