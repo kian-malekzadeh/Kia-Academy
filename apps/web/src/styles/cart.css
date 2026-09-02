@@ -6,29 +6,11 @@
   position: relative;
 }
 
+/* Cart pill reuses .theme-toggle sizing so it matches the dark-mode button,
+   all-courses pill, and the user chip in the top-right tools cluster; only the
+   count-badge anchor stays cart-specific. */
 .cart-badge-btn {
   position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--bg-card);
-  color: var(--text);
-  cursor: pointer;
-  transition:
-    border-color var(--dur-base) var(--ease-out),
-    background var(--dur-base) var(--ease-out),
-    color var(--dur-base) var(--ease-out);
-}
-
-.cart-badge-btn:hover {
-  border-color: var(--brand-hairline);
-  background: var(--brand-tint);
-  color: var(--brand);
 }
 
 .cart-badge-count {

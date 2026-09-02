@@ -34,7 +34,7 @@ export function CartBadge() {
     <div className="cart-badge-wrap" ref={wrapRef}>
       <button
         type="button"
-        className="cart-badge-btn"
+        className="theme-toggle cart-badge-btn"
         aria-label={t('cart.badge')}
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
