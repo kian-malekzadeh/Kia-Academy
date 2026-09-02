@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { randomBytes } from 'crypto';
 import {
   hasCourseEntitlement,
   normalizePaymentSettings,
@@ -18,6 +19,7 @@ import {
   type OrderResponse,
   type OrderStatus,
   type PaymentResponse,
+  type PaymentStatus,
   type SitePaymentSettings,
   type RoadmapResponse,
   type WalletSummary,
@@ -25,11 +27,16 @@ import {
 } from '@kia-academy/shared';
 import type Stripe from 'stripe';
 import { isProductionEnv } from '../common/utils/node-env';
+import type { Prisma } from '../generated/prisma/client';
 import { CartService } from '../cart/cart.service';
 import { EmailService } from '../email/email.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SiteSettingsService } from '../site-settings/site-settings.service';
 import { StripeService } from '../stripe/stripe.service';
+import {
+  assertValidPaymentTransition,
+  COMPLETABLE_PAYMENT_STATES,
+} from './payment-state';
 import { PaymentProviderRegistry } from './providers/payment-provider.registry';
 
 type LineDraft = {
@@ -67,6 +74,7 @@ type InvoiceOrderItemLike = {
 };
 
 type InvoiceOrderLike = {
+  id: string;
   currency: string;
   subtotalCents: number;
   discountCents: number;
@@ -130,6 +138,10 @@ export class PaymentsService {
     }
     if (order.payment?.status === 'COMPLETED') {
       throw new BadRequestException('Payment already completed');
+    }
+    // Refunded money must never be silently re-attempted through retry.
+    if (order.payment?.status === 'REFUNDED' || order.payment?.status === 'PARTIALLY_REFUNDED') {
+      throw new BadRequestException('Refunded payments cannot be retried');
     }
 
     const lines: LineDraft[] = order.items.map((item) => ({
@@ -296,8 +308,9 @@ export class PaymentsService {
     if (!verify.success) {
       // Never clobber a COMPLETED (or newer terminal) state — a stale failure
       // callback arriving after a successful one must not flip money-state.
+      // Only non-terminal states (PENDING/PROCESSING) may be marked FAILED.
       await this.prisma.payment.updateMany({
-        where: { id: payment.id, status: { not: 'COMPLETED' } },
+        where: { id: payment.id, status: { in: ['PENDING', 'PROCESSING'] } },
         data: {
           status: 'FAILED',
           gatewayRef: verify.gatewayRef ?? payment.gatewayRef,
@@ -309,7 +322,7 @@ export class PaymentsService {
       });
       if (payment.orderId) {
         await this.prisma.order.updateMany({
-          where: { id: payment.orderId, status: { not: 'PAID' } },
+          where: { id: payment.orderId, status: { in: ['PENDING', 'AWAITING_PAYMENT'] } },
           data: { status: 'FAILED' },
         });
       }
@@ -351,8 +364,38 @@ export class PaymentsService {
 
     const event = this.stripeService.constructWebhookEvent(rawBody, signature);
 
-    if (event.type === 'checkout.session.completed') {
-      await this.handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
+    // Exactly-once processing: the event id is the idempotency key. A replayed
+    // webhook (same id) hits the unique constraint and is skipped; failed
+    // processing deletes the row so the provider retry re-processes.
+    let recordId: string;
+    try {
+      const record = await this.prisma.paymentWebhookEvent.create({
+        data: {
+          eventId: event.id,
+          provider: 'stripe',
+          eventType: event.type,
+          payload: JSON.stringify({ id: event.id, type: event.type }),
+        },
+      });
+      recordId = record.id;
+    } catch (err) {
+      if ((err as { code?: string } | null)?.code === 'P2002') {
+        // Duplicate delivery — already processed. Idempotent acknowledgement.
+        return { received: true };
+      }
+      throw err;
+    }
+
+    try {
+      if (event.type === 'checkout.session.completed') {
+        await this.handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
+      }
+    } catch (err) {
+      // Release the idempotency claim so a retry can reprocess exactly once.
+      await this.prisma.paymentWebhookEvent
+        .delete({ where: { id: recordId } })
+        .catch(() => undefined);
+      throw err;
     }
 
     return { received: true };
@@ -705,44 +748,62 @@ export class PaymentsService {
       return this.toResponse(payment);
     }
 
-    // Atomic single-winner transition. Concurrent triggers (gateway redirect
-    // callback + client verify POST + Stripe webhook) race here; only the call
-    // that flips PENDING→COMPLETED may run side effects exactly once.
-    const claimed = await this.prisma.payment.updateMany({
-      where: { id: paymentId, status: { not: 'COMPLETED' } },
-      data: {
-        status: 'COMPLETED',
-        ...(opts.gatewayRef ? { gatewayRef: opts.gatewayRef } : {}),
-      },
+    // Strict payment state machine: only PENDING/PROCESSING may reach COMPLETED.
+    // FAILED → COMPLETED, REFUNDED → COMPLETED, CANCELLED → COMPLETED are rejected.
+    assertValidPaymentTransition(payment.status, 'COMPLETED', 'completePayment');
+
+    // Atomic single-winner transition + atomic financial side effects. Concurrent
+    // triggers (gateway redirect callback + client verify POST + Stripe webhook)
+    // race here; the one that flips PENDING/PROCESSING → COMPLETED runs the
+    // side effects exactly once inside the same transaction.
+    const allowedClaim = { in: [...COMPLETABLE_PAYMENT_STATES] } as const;
+    const completed = await this.prisma.$transaction(async (tx) => {
+      const claimed = await tx.payment.updateMany({
+        where: { id: paymentId, status: allowedClaim as never },
+        data: {
+          status: 'COMPLETED',
+          ...(opts.gatewayRef ? { gatewayRef: opts.gatewayRef } : {}),
+        },
+      });
+      if (claimed.count === 0) {
+        // Lost the race or illegal state. Re-read to give an accurate answer.
+        const current = await tx.payment.findUnique({ where: { id: paymentId } });
+        if (!current) {
+          throw new NotFoundException(`Payment ${paymentId} not found`);
+        }
+        if (current.status === 'COMPLETED') {
+          return current;
+        }
+        throw new BadRequestException(
+          `Cannot complete payment in state ${current.status}`,
+        );
+      }
+
+      const fresh =
+        (await tx.payment.findUnique({ where: { id: paymentId } })) ?? payment;
+
+      await this.grantEntitlements(tx, fresh);
+
+      if (payment.orderId) {
+        const order = await tx.order.findUniqueOrThrow({
+          where: { id: payment.orderId },
+          include: { items: true },
+        });
+
+        const existingInvoice = await tx.invoice.findUnique({
+          where: { orderId: order.id },
+        });
+        if (!existingInvoice) {
+          await this.markOrderPaidAndCreateInvoiceTx(tx, order, payment);
+        }
+      }
+      return fresh;
     });
-    if (claimed.count === 0) {
-      // Lost the race — payment was completed concurrently; return idempotently.
-      const current = await this.prisma.payment.findUniqueOrThrow({
-        where: { id: paymentId },
-      });
-      return this.toResponse(current);
-    }
-    const completed =
-      (await this.prisma.payment.findUnique({ where: { id: paymentId } })) ?? payment;
 
-    await this.grantEntitlements(completed);
-
-    if (payment.orderId) {
-      const order = await this.prisma.order.findUniqueOrThrow({
-        where: { id: payment.orderId },
-        include: { items: true },
-      });
-
-      const existingInvoice = await this.prisma.invoice.findUnique({
-        where: { orderId: order.id },
-      });
-      if (!existingInvoice) {
-        await this.markOrderPaidAndCreateInvoice(payment.orderId, order, payment);
-      }
-
-      if (order.source === 'CART') {
-        await this.cartService.clearCart(payment.userId);
-      }
+    // Cart clearing is cosmetic — safe outside the money transaction and guarded
+    // so a failure here never blocks or rolls back the completion.
+    if (payment.orderId && payment.order?.source === 'CART') {
+      await this.cartService.clearCart(payment.userId).catch(() => undefined);
     }
 
     await this.emailService.sendPaymentReceipt(
@@ -905,68 +966,62 @@ export class PaymentsService {
     return [productRef];
   }
 
-  private async nextInvoiceNumber(): Promise<string> {
-    const year = new Date().getFullYear();
-    const count = await this.prisma.invoice.count({
-      where: { invoiceNumber: { startsWith: `INV-${year}-` } },
-    });
-    return `INV-${year}-${String(count + 1).padStart(5, '0')}`;
+  /**
+   * Collision-safe invoice number: time + CSPRNG instead of the old count-based
+   * CONUS race (two concurrent completions could draw the same padded count).
+   * Fully unique even under concurrent orders, so no in-transaction retry.
+   */
+  private nextInvoiceNumber(): string {
+    return `INV-${new Date().getFullYear()}-${randomBytes(4).toString('hex').toUpperCase()}`;
   }
 
   /**
-   * Marks the order PAID and creates its invoice atomically-enough: two
-   * concurrent completions of different payments can draw the same count-based
-   * invoice number — regenerate and retry once per unique-violation (P2002).
+   * Marks the order PAID and creates its invoice INSIDE the same DB transaction
+   * as the payment claim — order + invoice + entitlements commit or roll back
+   * together, so a failed invoice can never leave a paid order without a
+   * financial record (or vice-versa).
    */
-  private async markOrderPaidAndCreateInvoice(
-    orderId: string,
+  private async markOrderPaidAndCreateInvoiceTx(
+    tx: Prisma.TransactionClient,
     order: InvoiceOrderLike,
     buyer: { user: InvoiceBuyerLike },
   ): Promise<void> {
-    let lastError: unknown = new Error('Invoice creation did not execute');
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const invoiceNumber = await this.nextInvoiceNumber();
-      try {
-        await this.prisma.order.update({
-          where: { id: orderId },
-          data: { status: 'PAID', invoiceNumber },
-        });
-        await this.prisma.invoice.create({
-          data: {
-            orderId,
-            invoiceNumber,
-            buyerName:
-              buyer.user.name ||
-              [buyer.user.firstName, buyer.user.lastName].filter(Boolean).join(' ') ||
-              'Learner',
-            buyerEmail: buyer.user.email,
-            buyerPhone: buyer.user.phone,
-            currency: order.currency,
-            subtotalCents: order.subtotalCents,
-            discountCents: order.discountCents,
-            totalCents: order.totalCents,
-            lineItems: JSON.stringify(order.items.map((item) => this.toOrderItemResponse(item))),
-          },
-        });
-        return;
-      } catch (err) {
-        lastError = err;
-        if ((err as { code?: string } | null)?.code === 'P2002') continue;
-        throw err;
-      }
-    }
-    throw lastError;
+    const invoiceNumber = this.nextInvoiceNumber();
+    await tx.order.update({
+      where: { id: order.id },
+      data: { status: 'PAID', invoiceNumber },
+    });
+    await tx.invoice.create({
+      data: {
+        orderId: order.id,
+        invoiceNumber,
+        buyerName:
+          buyer.user.name ||
+          [buyer.user.firstName, buyer.user.lastName].filter(Boolean).join(' ') ||
+          'Learner',
+        buyerEmail: buyer.user.email,
+        buyerPhone: buyer.user.phone,
+        currency: order.currency,
+        subtotalCents: order.subtotalCents,
+        discountCents: order.discountCents,
+        totalCents: order.totalCents,
+        lineItems: JSON.stringify(order.items.map((item) => this.toOrderItemResponse(item))),
+      },
+    });
   }
 
-  private async grantEntitlements(payment: {
-    id: string;
-    userId: string;
-    productType: 'READINESS_TEST' | 'ROADMAP_BUNDLE' | 'COURSE';
-    productRef: string | null;
-  }): Promise<void> {
+  private async grantEntitlements(
+    tx: Prisma.TransactionClient,
+    payment: {
+      id: string;
+      userId: string;
+      productType: 'READINESS_TEST' | 'ROADMAP_BUNDLE' | 'COURSE';
+      productRef: string | null;
+    },
+  ): Promise<void> {
     switch (payment.productType) {
       case 'READINESS_TEST':
-        await this.prisma.entitlement.upsert({
+        await tx.entitlement.upsert({
           where: {
             userId_resourceType_resourceId: {
               userId: payment.userId,
@@ -988,7 +1043,7 @@ export class PaymentsService {
         if (!payment.productRef) {
           throw new BadRequestException('Roadmap reference missing on payment');
         }
-        await this.prisma.entitlement.upsert({
+        await tx.entitlement.upsert({
           where: {
             userId_resourceType_resourceId: {
               userId: payment.userId,
@@ -1004,7 +1059,7 @@ export class PaymentsService {
           },
           update: { source: 'BUNDLE' },
         });
-        await this.prisma.roadmap.update({
+        await tx.roadmap.update({
           where: { id: payment.productRef },
           data: { enrolled: true, paymentId: payment.id },
         });
@@ -1012,11 +1067,11 @@ export class PaymentsService {
 
       case 'COURSE':
         for (const slug of this.parseCourseRefs(payment.productRef)) {
-          const course = await this.prisma.course.findFirst({
+          const course = await tx.course.findFirst({
             where: { OR: [{ slug }, { id: slug }] },
           });
           const courseSlug = course?.slug ?? slug;
-          await this.prisma.entitlement.upsert({
+          await tx.entitlement.upsert({
             where: {
               userId_resourceType_resourceId: {
                 userId: payment.userId,
@@ -1033,7 +1088,7 @@ export class PaymentsService {
             update: { source: 'PURCHASE' },
           });
           if (course) {
-            await this.prisma.enrollment.upsert({
+            await tx.enrollment.upsert({
               where: { userId_courseId: { userId: payment.userId, courseId: course.id } },
               create: { userId: payment.userId, courseId: course.id },
               update: {},
@@ -1051,7 +1106,7 @@ export class PaymentsService {
       productRef?: string | null;
       amountCents: number;
       currency: string;
-      status: 'PENDING' | 'COMPLETED' | 'FAILED' | 'REFUNDED';
+      status: PaymentStatus;
       orderId?: string | null;
       provider?: string | null;
       createdAt?: Date;
@@ -1176,7 +1231,7 @@ export class PaymentsService {
     }>;
     payment?: {
       id: string;
-      status: 'PENDING' | 'COMPLETED' | 'FAILED' | 'REFUNDED';
+      status: PaymentStatus;
     } | null;
     invoice?: {
       id: string;

@@ -1,5 +1,12 @@
 export type ProductType = 'READINESS_TEST' | 'ROADMAP_BUNDLE' | 'COURSE';
-export type PaymentStatus = 'PENDING' | 'COMPLETED' | 'FAILED' | 'REFUNDED';
+export type PaymentStatus =
+  | 'PENDING'
+  | 'PROCESSING'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'CANCELLED'
+  | 'REFUNDED'
+  | 'PARTIALLY_REFUNDED';
 
 export interface CheckoutDto {
   productType?: ProductType;

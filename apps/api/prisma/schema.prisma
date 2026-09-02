@@ -13,9 +13,12 @@ datasource db {
 
 enum PaymentStatus {
   PENDING
+  PROCESSING
   COMPLETED
   FAILED
+  CANCELLED
   REFUNDED
+  PARTIALLY_REFUNDED
 }
 
 enum ProductType {
@@ -251,6 +254,23 @@ model Payment {
   @@index([userId, status])
   @@index([stripeId])
   @@index([gatewayRef])
+}
+
+/**
+ * Exactly-once receipt of provider webhook events (Stripe replays / duplicate
+ * deliveries). eventId is unique — a second delivery of the same event is
+ * skipped. Failed processing deletes the row so the provider retry reprocesses,
+ * guaranteeing at-least-once delivery with exactly-once side effects.
+ */
+model PaymentWebhookEvent {
+  id          String   @id @default(cuid())
+  eventId     String   @unique
+  provider    String
+  eventType   String
+  payload     String
+  processedAt DateTime @default(now())
+
+  @@index([provider, processedAt])
 }
 
 model Order {

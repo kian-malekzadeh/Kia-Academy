@@ -44,6 +44,14 @@ describe('PaymentsService', () => {
     course: {
       findFirst: jest.fn(),
     },
+    paymentWebhookEvent: {
+      create: jest.fn(),
+      delete: jest.fn().mockResolvedValue({ id: 'wh-1' }),
+    },
+    // completePayment runs its money side effects inside a DB transaction that
+    // reuses the same delegate mocks as the outer prisma client (implementation
+    // attached in beforeEach to avoid a self-referencing initializer).
+    $transaction: jest.fn(),
   };
 
   const stripeService = {
@@ -123,6 +131,9 @@ describe('PaymentsService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    prisma.$transaction.mockImplementation(
+      async (cb: (tx: never) => Promise<unknown>) => cb(prisma as never),
+    );
     prisma.entitlement.findMany.mockResolvedValue([]);
     prisma.invoice.count.mockResolvedValue(0);
     prisma.invoice.findUnique.mockResolvedValue(null);
@@ -525,5 +536,225 @@ describe('PaymentsService', () => {
       updatedAt: new Date().toISOString(),
     });
     await expect(service.checkoutCart('user-1')).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  describe('payment state machine enforcement', () => {
+    it('rejects completing a FAILED payment (FAILED → COMPLETED is illegal)', async () => {
+      prisma.payment.findUnique.mockResolvedValue({
+        id: 'pay-failed',
+        userId: 'user-1',
+        productType: 'COURSE',
+        productRef: 'js-basics',
+        amountCents: 490_000,
+        currency: 'irr',
+        status: 'FAILED',
+        orderId: 'ord-1',
+        provider: 'dev',
+        gatewayRef: null,
+        metadata: null,
+        user: { id: 'user-1', name: 'Alex', email: 'a@b.c', phone: null },
+        order: { id: 'ord-1', source: 'DIRECT', items: [] },
+      });
+      await expect(
+        service.confirmPayment('user-1', 'pay-failed'),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.payment.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('rejects completing a REFUNDED payment (REFUNDED → COMPLETED is illegal)', async () => {
+      prisma.payment.findUnique.mockResolvedValue({
+        id: 'pay-refunded',
+        userId: 'user-1',
+        productType: 'COURSE',
+        productRef: 'js-basics',
+        amountCents: 490_000,
+        currency: 'irr',
+        status: 'REFUNDED',
+        orderId: 'ord-1',
+        provider: 'dev',
+        gatewayRef: null,
+        metadata: null,
+        user: { id: 'user-1', name: 'Alex', email: 'a@b.c', phone: null },
+        order: { id: 'ord-1', source: 'DIRECT', items: [] },
+      });
+      await expect(
+        service.confirmPayment('user-1', 'pay-refunded'),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.payment.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('rejects completing a CANCELLED payment', async () => {
+      prisma.payment.findUnique.mockResolvedValue({
+        id: 'pay-cancelled',
+        userId: 'user-1',
+        productType: 'COURSE',
+        productRef: 'js-basics',
+        amountCents: 490_000,
+        currency: 'irr',
+        status: 'CANCELLED',
+        orderId: null,
+        provider: 'dev',
+        gatewayRef: null,
+        metadata: null,
+        user: { id: 'user-1', name: 'Alex', email: 'a@b.c', phone: null },
+        order: null,
+      });
+      await expect(
+        service.confirmPayment('user-1', 'pay-cancelled'),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.payment.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('atomically claims only from PENDING/PROCESSING and runs side effects in a transaction', async () => {
+      // confirmPayment reads the payment once (PENDING), completePayment reads
+      // it again (PENDING) and the post-claim re-read returns COMPLETED.
+      prisma.payment.findUnique
+        .mockResolvedValueOnce({
+          id: 'pay-1',
+          userId: 'user-1',
+          productType: 'COURSE',
+          productRef: 'js-basics',
+          amountCents: 490_000,
+          currency: 'irr',
+          status: 'PENDING',
+          orderId: 'ord-1',
+          provider: 'dev',
+          gatewayRef: 'auth-1',
+          metadata: null,
+          user: { id: 'user-1', name: 'Alex', email: 'a@b.c', phone: null },
+          order: { id: 'ord-1', source: 'DIRECT', items: [] },
+        })
+        .mockResolvedValueOnce({
+          id: 'pay-1',
+          userId: 'user-1',
+          productType: 'COURSE',
+          productRef: 'js-basics',
+          amountCents: 490_000,
+          currency: 'irr',
+          status: 'PENDING',
+          orderId: 'ord-1',
+          provider: 'dev',
+          gatewayRef: 'auth-1',
+          metadata: null,
+          user: { id: 'user-1', name: 'Alex', email: 'a@b.c', phone: null },
+          order: { id: 'ord-1', source: 'DIRECT', items: [] },
+        })
+        .mockResolvedValueOnce({
+          id: 'pay-1',
+          userId: 'user-1',
+          productType: 'COURSE',
+          productRef: 'js-basics',
+          amountCents: 490_000,
+          currency: 'irr',
+          status: 'COMPLETED',
+          orderId: 'ord-1',
+          provider: 'dev',
+          gatewayRef: 'auth-1',
+          metadata: null,
+          user: { id: 'user-1', name: 'Alex', email: 'a@b.c', phone: null },
+          order: { id: 'ord-1', source: 'DIRECT', items: [] },
+        });
+      prisma.order.findUnique.mockResolvedValue(null);
+      prisma.invoice.findUnique.mockResolvedValue(null);
+      prisma.order.findUniqueOrThrow.mockResolvedValue({
+        id: 'ord-1',
+        source: 'DIRECT',
+        subtotalCents: 490_000,
+        discountCents: 0,
+        totalCents: 490_000,
+        currency: 'irr',
+        items: [],
+      });
+
+      const result = await service.confirmPayment('user-1', 'pay-1');
+
+      expect(prisma.$transaction).toHaveBeenCalled();
+      expect(prisma.payment.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            status: { in: ['PENDING', 'PROCESSING'] },
+          }),
+          data: expect.objectContaining({ status: 'COMPLETED' }),
+        }),
+      );
+      expect(prisma.invoice.create).toHaveBeenCalled();
+      expect(cartService.clearCart).not.toHaveBeenCalled();
+      expect(result.status).toBe('COMPLETED');
+    });
+  });
+
+  describe('stripe webhook idempotency', () => {
+    const event = {
+      id: 'evt_dup',
+      type: 'checkout.session.completed',
+      data: { object: { id: 'cs_1', metadata: { paymentId: 'pay-9' } } },
+    };
+
+    it('skips duplicate deliveries (same event id processed twice)', async () => {
+      stripeService.constructWebhookEvent.mockReturnValue(event);
+      prisma.paymentWebhookEvent.create.mockRejectedValue({
+        code: 'P2002',
+        message: 'unique violation',
+      });
+
+      await expect(
+        service.handleStripeWebhook(Buffer.from('{}'), 'sig-1'),
+      ).resolves.toEqual({ received: true });
+
+      // A duplicate webhook must not touch the payment at all.
+      expect(prisma.payment.findUnique).not.toHaveBeenCalled();
+      expect(prisma.paymentWebhookEvent.delete).not.toHaveBeenCalled();
+    });
+
+    it('deletes the idempotency row when processing fails so the provider can retry', async () => {
+      stripeService.constructWebhookEvent.mockReturnValue(event);
+      prisma.paymentWebhookEvent.create.mockResolvedValue({
+        id: 'wh-row',
+        eventId: 'evt_dup',
+        provider: 'stripe',
+        eventType: 'checkout.session.completed',
+        payload: '{}',
+        processedAt: new Date(),
+      });
+      prisma.payment.findUnique.mockRejectedValue(new Error('db down'));
+
+      await expect(
+        service.handleStripeWebhook(Buffer.from('{}'), 'sig-1'),
+      ).rejects.toThrow('db down');
+
+      // The claim is released so a retried webhook processes exactly once later.
+      expect(prisma.paymentWebhookEvent.delete).toHaveBeenCalledWith({
+        where: { id: 'wh-row' },
+      });
+    });
+
+    it('acks a fresh event id exactly once and processes it', async () => {
+      stripeService.constructWebhookEvent.mockReturnValue(event);
+      prisma.paymentWebhookEvent.create.mockResolvedValue({
+        id: 'wh-row-2',
+        eventId: 'evt_dup',
+        provider: 'stripe',
+        eventType: 'checkout.session.completed',
+        payload: '{}',
+        processedAt: new Date(),
+      });
+      prisma.payment.findUnique.mockResolvedValue({
+        id: 'pay-9',
+        userId: 'user-1',
+        productType: 'COURSE',
+        productRef: 'js-basics',
+        amountCents: 490_000,
+        currency: 'irr',
+        status: 'COMPLETED',
+        orderId: null,
+        gatewayRef: null,
+        metadata: null,
+      });
+
+      await expect(
+        service.handleStripeWebhook(Buffer.from('{}'), 'sig-1'),
+      ).resolves.toEqual({ received: true });
+      expect(prisma.paymentWebhookEvent.create).toHaveBeenCalledTimes(1);
+    });
   });
 });

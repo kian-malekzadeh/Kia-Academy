@@ -26,10 +26,10 @@ flood caps, bcrypt cost 12, throttled auth endpoints.
 ### Payments
 | ID | Severity | Finding | Status |
 | --- | --- | --- | --- |
-| PAY-1 | P0 | `completePayment` transition guard is `status: { not: 'COMPLETED' }` → `FAILED→COMPLETED` and `REFUNDED→COMPLETED` are accepted, violating the payment state machine | fixed (Phase 3) |
-| PAY-2 | P0 | No webhook event idempotency table — Stripe replays rely solely on payment status | fixed (Phase 3) |
-| PAY-3 | P1 | `PaymentStatus` enum lacks `CANCELLED`/`PROCESSING`; refund flows cannot be modelled properly | backlog (Phase 3) |
-| PAY-4 | P1 | Side effects (entitlements, invoice, email) run outside a DB transaction; email failure cannot rollback payment (good) but entitlement+order+invoice are not atomic | backlog (Phase 3) |
+| PAY-1 | P0 | `completePayment` transition guard is `status: { not: 'COMPLETED' }` → `FAILED→COMPLETED` and `REFUNDED→COMPLETED` are accepted, violating the payment state machine | **fixed (Phase 3)** |
+| PAY-2 | P0 | No webhook event idempotency table — Stripe replays rely solely on payment status | **fixed (Phase 3)** |
+| PAY-3 | P1 | `PaymentStatus` enum lacks `CANCELLED`/`PROCESSING`; refund flows cannot be modelled properly | **enum fixed (Phase 3)**; refund admin endpoint still missing (P1 backlog) |
+| PAY-4 | P1 | Side effects (entitlements, invoice) run outside a DB transaction; email failure cannot rollback payment (good) but entitlement+order+invoice are not atomic | **fixed (Phase 3)** — completion claim + order PAID + invoice + entitlements now commit in one transaction; email/cart outside |
 | PAY-5 | P2 | Client verify callback and webhook both call complete — protected by single-winner claim (good) but no outbox | backlog |
 
 ### Exams
