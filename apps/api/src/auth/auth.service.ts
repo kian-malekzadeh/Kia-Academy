@@ -46,6 +46,16 @@ const OTP_MAX_ATTEMPTS = 5;
 const OTP_PHONE_WINDOW_MS = 10 * 60 * 1000;
 const OTP_MAX_PER_PHONE = 3;
 
+/**
+ * Accounts that must never authenticate: suspended (temporary) or banned
+ * (permanent). Enforced on every credential mint AND on every request via
+ * the JWT strategy, so suspension takes effect immediately even for
+ * already-issued access tokens.
+ */
+function isAccountInactive(status: string): boolean {
+  return status === 'SUSPENDED' || status === 'BANNED';
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -107,6 +117,12 @@ export class AuthService {
     });
     if (!user?.passwordHash) {
       throw new UnauthorizedException('Invalid email or password');
+    }
+    if (isAccountInactive(user.status)) {
+      // Session revocation: suspended/banned accounts cannot mint new sessions.
+      // Also clears any refresh token that survived (defense in depth).
+      await this.prisma.refreshToken.deleteMany({ where: { userId: user.id } });
+      throw new UnauthorizedException('Account suspended');
     }
 
     const valid = await bcrypt.compare(dto.password, user.passwordHash);
@@ -228,6 +244,9 @@ export class AuthService {
         where: { id: user.id },
         data: { phoneVerified: true },
       });
+    }
+    if (isAccountInactive(user.status)) {
+      throw new UnauthorizedException('Account suspended');
     }
 
     return this.issueAuthResponse(await this.buildAuthUser(user));
@@ -408,7 +427,12 @@ export class AuthService {
 
   async validateUser(userId: string): Promise<AuthUser | null> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    return user ? this.buildAuthUser(user) : null;
+    // Server-authoritative session state: a suspended/banned user is rejected
+    // on EVERY authenticated request, even with a still-valid access token.
+    if (!user || isAccountInactive(user.status)) {
+      return null;
+    }
+    return this.buildAuthUser(user);
   }
 
   async validateRefreshToken(
@@ -421,7 +445,7 @@ export class AuthService {
       include: { user: true },
     });
 
-    if (!stored || stored.expiresAt < new Date()) {
+    if (!stored || stored.expiresAt < new Date() || isAccountInactive(stored.user.status)) {
       return null;
     }
 

@@ -15,6 +15,8 @@ function buildService(overrides?: {
   otpDevExpose?: string;
   nodeEnv?: string;
   storedOtp?: Record<string, unknown> | null;
+  storedUser?: Record<string, unknown> | null;
+  storedRefresh?: Record<string, unknown> | null;
 }) {
   const prisma = {
     phoneOtp: {
@@ -28,7 +30,14 @@ function buildService(overrides?: {
       ),
       update: jest.fn().mockResolvedValue({}),
     },
-    user: { findUnique: jest.fn(), update: jest.fn() },
+    user: {
+      findUnique: jest.fn().mockResolvedValue(overrides?.storedUser ?? null),
+      update: jest.fn(),
+    },
+    refreshToken: {
+      deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+      findFirst: jest.fn().mockResolvedValue(overrides?.storedRefresh ?? null),
+    },
   };
   const configGet = jest.fn((key: string) => {
     if (key === 'NODE_ENV') return overrides?.nodeEnv ?? 'test';
@@ -114,6 +123,57 @@ describe('AuthService security hardening', () => {
         BadRequestException,
       );
       expect(prisma.phoneOtp.findFirst).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('account suspension / ban revocation', () => {
+    it('login refuses a suspended account and revokes surviving refresh tokens', async () => {
+      const suspended = {
+        id: 'u-suspended',
+        email: 'suspended@example.com',
+        passwordHash: '$2b$12$abcdefghijklmnopqrstuv',
+        status: 'SUSPENDED',
+      };
+      const { service, prisma } = buildService({ storedUser: suspended });
+      await expect(
+        service.login({ email: 'suspended@example.com', password: 'x' } as never),
+      ).rejects.toThrow(UnauthorizedException);
+      expect(prisma.refreshToken.deleteMany).toHaveBeenCalledWith({
+        where: { userId: 'u-suspended' },
+      });
+    });
+
+    it('login refuses a banned account', async () => {
+      const banned = {
+        id: 'u-banned',
+        email: 'banned@example.com',
+        passwordHash: '$2b$12$abcdefghijklmnopqrstuv',
+        status: 'BANNED',
+      };
+      const { service } = buildService({ storedUser: banned });
+      await expect(
+        service.login({ email: 'banned@example.com', password: 'x' } as never),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('validateUser rejects an access token for a banned user immediately', async () => {
+      const { service } = buildService({
+        storedUser: { id: 'u1', name: '', email: null, phone: '0912', status: 'BANNED' },
+      });
+      await expect(service.validateUser('u1')).resolves.toBeNull();
+    });
+
+    it('validateRefreshToken rejects a stored token whose owner was suspended', async () => {
+      const { service } = buildService({
+        storedRefresh: {
+          id: 'rt1',
+          userId: 'u1',
+          token: 'hash',
+          expiresAt: new Date(Date.now() + 60_000),
+          user: { id: 'u1', name: '', email: null, phone: '0912', status: 'SUSPENDED' },
+        },
+      });
+      await expect(service.validateRefreshToken('u1', 'rt1', 'jwt-string')).resolves.toBeNull();
     });
   });
 });

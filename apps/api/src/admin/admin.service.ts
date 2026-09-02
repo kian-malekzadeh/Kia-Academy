@@ -1071,19 +1071,29 @@ export class AdminService {
       roleData.adminPanelAccess = Prisma.DbNull;
     }
 
-    const updated = await this.prisma.user.update({
-      where: { id },
-      data: roleData,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        role: true,
-        status: true,
-        createdAt: true,
-        adminPanelAccess: true,
-      },
+    // Privilege change must invalidate existing sessions: refresh tokens issued
+    // under the old role are revoked so the user re-authenticates with the new
+    // role. Access tokens pick the fresh role up on their next request anyway.
+    const roleChanged = user.role !== dto.role;
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const u = await tx.user.update({
+        where: { id },
+        data: roleData,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          role: true,
+          status: true,
+          createdAt: true,
+          adminPanelAccess: true,
+        },
+      });
+      if (roleChanged) {
+        await tx.refreshToken.deleteMany({ where: { userId: id } });
+      }
+      return u;
     });
 
     await this.audit.record({

@@ -56,6 +56,110 @@ describe('AdminService.getStats', () => {
   });
 });
 
+describe('AdminService.updateUserRole session revocation', () => {
+  it('deletes the target user refresh tokens when their role changes', async () => {
+    const deleteMany = jest.fn().mockResolvedValue({ count: 2 });
+    const prisma = {
+      user: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'u1',
+          name: 'Learner',
+          email: 'learner@kia.academy',
+          phone: '09120000001',
+          role: 'LEARNER',
+          status: 'ACTIVE',
+          createdAt: new Date(),
+          adminPanelAccess: null,
+        }),
+      },
+      role: { findUnique: jest.fn() },
+      $transaction: jest.fn(async (cb: (tx: never) => Promise<unknown>) =>
+        cb({
+          user: {
+            update: jest.fn().mockResolvedValue({
+              id: 'u1',
+              name: 'Learner',
+              email: 'learner@kia.academy',
+              phone: '09120000001',
+              role: 'ADMIN',
+              status: 'ACTIVE',
+              createdAt: new Date(),
+              adminPanelAccess: { users: ['read'] },
+            }),
+          },
+          refreshToken: { deleteMany },
+        } as never),
+      ),
+    };
+    const audit = { record: jest.fn().mockResolvedValue(undefined) };
+    const service = new AdminService(
+      prisma as never,
+      {
+        deleteByPublicUrl: jest.fn(),
+        clearLessonDir: jest.fn(),
+        saveLessonVideo: jest.fn(),
+      } as never,
+      { get: jest.fn().mockResolvedValue({ adminAccess: { users: ['read'] } }) } as never,
+      audit as never,
+    );
+
+    await service.updateUserRole('u1', { role: 'ADMIN' }, actor);
+    expect(deleteMany).toHaveBeenCalledWith({ where: { userId: 'u1' } });
+    expect(audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'user.role_change', before: { role: 'LEARNER' }, after: { role: 'ADMIN' } }),
+    );
+  });
+
+  it('keeps refresh tokens when the role is unchanged', async () => {
+    const deleteMany = jest.fn().mockResolvedValue({ count: 0 });
+    const prisma = {
+      user: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'u1',
+          name: 'Admin',
+          email: 'admin@kia.academy',
+          phone: '09120000000',
+          role: 'ADMIN',
+          status: 'ACTIVE',
+          createdAt: new Date(),
+          adminPanelAccess: null,
+        }),
+      },
+      role: { findUnique: jest.fn() },
+      $transaction: jest.fn(async (cb: (tx: never) => Promise<unknown>) =>
+        cb({
+          user: {
+            update: jest.fn().mockResolvedValue({
+              id: 'u1',
+              name: 'Admin',
+              email: 'admin@kia.academy',
+              phone: '09120000000',
+              role: 'ADMIN',
+              status: 'ACTIVE',
+              createdAt: new Date(),
+              adminPanelAccess: { users: ['read'] },
+            }),
+          },
+          refreshToken: { deleteMany },
+        } as never),
+      ),
+    };
+    const service = new AdminService(
+      prisma as never,
+      {
+        deleteByPublicUrl: jest.fn(),
+        clearLessonDir: jest.fn(),
+        saveLessonVideo: jest.fn(),
+      } as never,
+      { get: jest.fn().mockResolvedValue({ adminAccess: { users: ['read'] } }) } as never,
+      { record: jest.fn().mockResolvedValue(undefined) } as never,
+    );
+
+    await service.updateUserRole('u1', { role: 'ADMIN' }, actor);
+    expect(deleteMany).not.toHaveBeenCalled();
+  });
+});
+
 describe('AdminService.createLesson', () => {
   it('creates a lesson under a course slug', async () => {
     const prisma = {
