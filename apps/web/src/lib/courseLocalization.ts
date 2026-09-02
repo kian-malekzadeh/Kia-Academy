@@ -17,7 +17,10 @@ const persianCourses: Record<string, { title: string; description: string; lesso
 };
 
 export function localizeCourse<T extends CourseSummary>(course: T, locale: Locale): T {
-  if (locale !== 'fa') return course;
+  if (locale === 'en') {
+    // English mode: prefer the English description when the source content is Persian-first.
+    return course.descriptionEn ? { ...course, description: course.descriptionEn } : course;
+  }
   const translation = persianCourses[course.slug];
   return translation ? { ...course, title: translation.title, description: translation.description } : course;
 }

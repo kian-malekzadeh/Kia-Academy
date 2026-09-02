@@ -45,7 +45,7 @@ function LessonPlayerContent({
   lessonSlug: string;
 }) {
   const router = useRouter();
-  const { t, format } = useLanguage();
+  const { t, locale, format } = useLanguage();
   const [lesson, setLesson] = useState<LessonDetail | null>(null);
   const [lessons, setLessons] = useState<LessonSummary[]>([]);
   const [exams, setExams] = useState<CourseExamSummary[]>([]);
@@ -222,10 +222,12 @@ function LessonPlayerContent({
     );
   };
 
-  const parsedContent = useMemo(
-    () => (lesson ? parseLessonContent(lesson.content) : null),
-    [lesson],
-  );
+  const parsedContent = useMemo(() => {
+    if (!lesson) return null;
+    // English mode: use the English lesson body/playground when available.
+    const packed = locale === 'en' && lesson.contentEn ? lesson.contentEn : lesson.content;
+    return parseLessonContent(packed);
+  }, [lesson, locale]);
 
   const progressPct = useMemo(() => {
     if (!lessons.length) return 0;

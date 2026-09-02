@@ -7,6 +7,7 @@ const sampleCourse: CourseSummary = {
   slug: 'html',
   title: 'HTML',
   description: 'HTML اولین قدم برای ورود به دنیای طراحی وب است.',
+  descriptionEn: 'HTML is the first step into the world of web design.',
   icon: 'code',
   trackKey: 'web',
   lessonCount: 3,
@@ -44,6 +45,17 @@ describe('courseLocalization', () => {
   it('keeps English course and lesson content for en locale', () => {
     expect(localizeCourse(sampleCourse, 'en').title).toBe(sampleCourse.title);
     expect(localizeLesson(sampleLesson, 'html', 'en').title).toBe(sampleLesson.title);
+  });
+
+  it('uses the English description for en locale when available', () => {
+    const localized = localizeCourse(sampleCourse, 'en');
+    expect(localized.description).toBe(sampleCourse.descriptionEn);
+    expect(localized.title).toBe(sampleCourse.title);
+  });
+
+  it('falls back to the source description for en locale when no English one exists', () => {
+    const withoutEn = { ...sampleCourse, descriptionEn: null };
+    expect(localizeCourse(withoutEn, 'en').description).toBe(sampleCourse.description);
   });
 
   it('leaves db.json Persian-first courses unchanged for fa locale', () => {

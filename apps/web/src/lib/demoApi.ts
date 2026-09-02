@@ -188,6 +188,8 @@ interface DemoLesson {
   title: string;
   durationMin: number;
   content: string;
+  /** Packed English content (markdown + playground); null → fall back to `content`. */
+  contentEn?: string | null;
   sortOrder: number;
   videoUrl: string | null;
   comingSoon?: boolean;
@@ -198,6 +200,8 @@ interface DemoCourse {
   slug: string;
   title: string;
   description: string;
+  /** English description; null → fall back to `description`. */
+  descriptionEn?: string | null;
   icon: string;
   trackKey: string | null;
   sortOrder: number;
@@ -254,6 +258,7 @@ function defaultCourses(): DemoCourse[] {
       videoUrl: lesson.videoUrl,
       sortOrder: lesson.sortOrder,
       content: lesson.content,
+      contentEn: lesson.contentEn ?? null,
     })),
   }));
 
@@ -451,6 +456,7 @@ function toCourseSummary(course: DemoCourse): CourseSummary {
     slug: course.slug,
     title: course.title,
     description: course.description,
+    descriptionEn: course.descriptionEn ?? null,
     icon: course.icon,
     trackKey: course.trackKey,
     lessonCount: course.lessons.length,
@@ -1467,6 +1473,7 @@ export const demoApi = {
       hasVideo: Boolean(lesson.videoUrl),
       comingSoon: lesson.comingSoon ?? false,
       content: lesson.content,
+      contentEn: lesson.contentEn ?? null,
       videoUrl: lesson.videoUrl,
       courseSlug,
       courseTitle: course.title,

@@ -338,6 +338,8 @@ model Course {
   slug        String   @unique
   title       String
   description String
+  /** English description for en locale (null → fall back to `description`). */
+  descriptionEn String?
   icon        String   @default("book")
   trackKey    String?
   sortOrder   Int      @default(0)
@@ -409,6 +411,8 @@ model Lesson {
   slug        String
   title       String
   content     String
+  /** Packed English content (markdown + playground); null → fall back to `content`. */
+  contentEn   String?
   videoUrl    String?
   durationMin Int     @default(10)
   sortOrder   Int     @default(0)

@@ -10,6 +10,7 @@ import {
   MINI_IPIP_CITATION,
   MINI_IPIP_ITEMS,
   buildCourseCatalog,
+  buildCourseDbEnOverlay,
   createDefaultSiteSettings,
   defaultExamBanks,
   genericExamQuestions,
@@ -85,7 +86,7 @@ async function main() {
     },
   });
 
-  const catalog = buildCourseCatalog(loadCourseDb());
+  const catalog = buildCourseCatalog(loadCourseDb(), buildCourseDbEnOverlay());
   const seededCourses: { id: string; slug: string }[] = [];
 
   for (const course of catalog) {
@@ -94,6 +95,7 @@ async function main() {
       update: {
         title: course.title,
         description: course.description,
+        descriptionEn: course.descriptionEn,
         icon: course.icon,
         trackKey: course.trackKey,
         sortOrder: course.sortOrder,
@@ -103,6 +105,7 @@ async function main() {
         slug: course.slug,
         title: course.title,
         description: course.description,
+        descriptionEn: course.descriptionEn,
         icon: course.icon,
         trackKey: course.trackKey,
         sortOrder: course.sortOrder,
@@ -122,6 +125,7 @@ async function main() {
         update: {
           title: lesson.title,
           content: lesson.content,
+          contentEn: lesson.contentEn,
           durationMin: lesson.durationMin,
           sortOrder: lesson.sortOrder,
           videoUrl: lesson.videoUrl,
@@ -131,6 +135,7 @@ async function main() {
           slug: lesson.slug,
           title: lesson.title,
           content: lesson.content,
+          contentEn: lesson.contentEn,
           durationMin: lesson.durationMin,
           sortOrder: lesson.sortOrder,
           videoUrl: lesson.videoUrl,
