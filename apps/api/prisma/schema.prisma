@@ -234,15 +234,26 @@ model BootcampProfile {
 }
 
 model ChallengeSubmission {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  code      String
-  score     Int
-  topScore  Boolean
-  result    String
-  createdAt DateTime @default(now())
+  id          String             @id @default(cuid())
+  userId      String
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /** The challenge this submission is for — the DTO's challengeId (or default slug) is resolved and FK-enforced server-side. */
+  challengeId String
+  challenge   Challenge          @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  /** Challenge version snapshot used for scoring (matches the challenge row's version at submit time). */
+  challengeVersion Int           @default(1)
+  /** Source language; always "js" for the seeded bootcamp challenge. */
+  language    String             @default("js")
+  code        String
+  score       Int
+  topScore    Boolean
+  result      String
+  status      String             @default("scored")
+  executionTimeMs Int?
+  memoryUsageKb Int?
+  createdAt   DateTime           @default(now())
 
+  @@index([challengeId, createdAt])
   @@index([userId, createdAt])
 }
 
@@ -503,7 +514,11 @@ model Challenge {
   endsAt      DateTime
   active      Boolean  @default(true)
   starterCode String   @default("")
+  /** Monotonic content version — submissions pin the version they were scored against. */
+  version     Int      @default(1)
   createdAt   DateTime @default(now())
+
+  submissions ChallengeSubmission[]
 }
 
 model EmailLog {
