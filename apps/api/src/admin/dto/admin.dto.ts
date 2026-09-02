@@ -2,6 +2,7 @@ import {
   IsArray,
   IsBoolean,
   IsDateString,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -253,4 +254,104 @@ export class AdminUpdateLessonDto {
   @IsOptional()
   @IsBoolean()
   comingSoon?: boolean;
+}
+
+export class AdminReplyTicketDto {
+  @IsString()
+  body!: string;
+}
+
+export class AdminUpdateTicketDto {
+  @IsOptional()
+  @IsIn(['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'])
+  status?: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
+
+  @IsOptional()
+  @IsIn(['LOW', 'NORMAL', 'HIGH'])
+  priority?: 'LOW' | 'NORMAL' | 'HIGH';
+}
+
+export class AdminSendMessageDto {
+  @IsString()
+  userId!: string;
+
+  @IsString()
+  subject!: string;
+
+  @IsString()
+  body!: string;
+}
+
+export class AdminCreateCompetitionDto {
+  @IsString()
+  slug!: string;
+
+  @IsString()
+  title!: string;
+
+  @IsString()
+  description!: string;
+
+  @IsDateString()
+  startsAt!: string;
+
+  @IsDateString()
+  endsAt!: string;
+
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
+}
+
+export class AdminUpdateCompetitionDto {
+  @IsOptional()
+  @IsString()
+  slug?: string;
+
+  @IsOptional()
+  @IsString()
+  title?: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
+  @IsDateString()
+  startsAt?: string;
+
+  @IsOptional()
+  @IsDateString()
+  endsAt?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
+}
+
+export class AdminGrantEntitlementDto {
+  @IsString()
+  userId!: string;
+
+  @IsIn(['course', 'readiness_test', 'roadmap_bundle'])
+  resourceType!: string;
+
+  @IsString()
+  resourceId!: string;
+
+  @IsOptional()
+  @IsIn(['PURCHASE', 'CHALLENGE', 'BUNDLE', 'FREE'])
+  source?: 'PURCHASE' | 'CHALLENGE' | 'BUNDLE' | 'FREE';
+}
+
+export class AdminAdjustWalletDto {
+  @IsIn(['CREDIT', 'DEBIT'])
+  type!: 'CREDIT' | 'DEBIT';
+
+  @IsInt()
+  @Min(1)
+  amountCents!: number;
+
+  @IsString()
+  description!: string;
 }

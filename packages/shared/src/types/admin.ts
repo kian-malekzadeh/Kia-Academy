@@ -149,3 +149,159 @@ export interface AdminContactMessage {
   readAt: string | null;
   createdAt: string;
 }
+
+/* --- Support tickets (Admin → Tickets) ------------------------------------ */
+
+export type AdminTicketStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
+export type AdminTicketPriority = 'LOW' | 'NORMAL' | 'HIGH';
+
+export interface AdminTicketReply {
+  id: string;
+  body: string;
+  isStaff: boolean;
+  authorName: string;
+  createdAt: string;
+}
+
+export interface AdminTicketSummary {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string | null;
+  courseId: string | null;
+  courseTitle: string | null;
+  subject: string;
+  body: string;
+  category: string | null;
+  status: AdminTicketStatus;
+  priority: AdminTicketPriority;
+  replyCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminTicketDetail extends AdminTicketSummary {
+  replies: AdminTicketReply[];
+}
+
+export interface AdminTicketReplyDto {
+  body: string;
+}
+
+export interface AdminTicketUpdateDto {
+  status?: AdminTicketStatus;
+  priority?: AdminTicketPriority;
+}
+
+/* --- Learner inbox messages (Admin → Messages) ----------------------------- */
+
+export interface AdminLearnerMessage {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string | null;
+  subject: string;
+  body: string;
+  readAt: string | null;
+  createdBy: string | null;
+  createdAt: string;
+}
+
+export interface AdminSendMessageDto {
+  userId: string;
+  subject: string;
+  body: string;
+}
+
+/* --- Competitions (Admin → Competitions) ----------------------------------- */
+
+export interface AdminCompetition {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  startsAt: string;
+  endsAt: string;
+  active: boolean;
+  registrationCount: number;
+  createdAt: string;
+}
+
+export interface AdminCompetitionRegistration {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string | null;
+  createdAt: string;
+}
+
+export interface AdminCreateCompetitionDto {
+  slug: string;
+  title: string;
+  description: string;
+  startsAt: string;
+  endsAt: string;
+  active?: boolean;
+}
+
+export type AdminUpdateCompetitionDto = Partial<AdminCreateCompetitionDto>;
+
+/* --- Finance extensions (Admin → Finance) ----------------------------------- */
+
+export interface AdminOrder {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string | null;
+  status: string;
+  totalCents: number;
+  currency: string;
+  itemCount: number;
+  createdAt: string;
+}
+
+export interface AdminEntitlement {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string | null;
+  resourceType: string;
+  resourceId: string;
+  source: string;
+  createdAt: string;
+}
+
+export interface AdminGrantEntitlementDto {
+  userId: string;
+  resourceType: string;
+  resourceId: string;
+  source?: string;
+}
+
+export interface AdminWalletSummary {
+  userId: string;
+  userName: string;
+  userEmail: string | null;
+  balanceCents: number;
+  currency: string;
+  transactionCount: number;
+  lastTransactionAt: string | null;
+}
+
+export interface AdminWalletTransaction {
+  id: string;
+  type: 'CREDIT' | 'DEBIT';
+  amountCents: number;
+  description: string;
+  createdAt: string;
+}
+
+export interface AdminWalletDetail extends AdminWalletSummary {
+  transactions: AdminWalletTransaction[];
+}
+
+export interface AdminAdjustWalletDto {
+  type: 'CREDIT' | 'DEBIT';
+  amountCents: number;
+  description: string;
+}

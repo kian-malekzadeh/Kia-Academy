@@ -1,13 +1,22 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import type {
   AdminChallenge,
+  AdminCompetition,
+  AdminCompetitionRegistration,
   AdminContactMessage,
   AdminCourse,
+  AdminEntitlement,
   AdminLesson,
+  AdminLearnerMessage,
+  AdminOrder,
   AdminPayment,
   AdminRole,
   AdminStats,
+  AdminTicketDetail,
+  AdminTicketSummary,
   AdminUser,
+  AdminWalletDetail,
+  AdminWalletSummary,
   AuthUser,
   SiteAdminAccessSettings,
 } from '@kia-academy/shared';
@@ -22,15 +31,22 @@ import { MediaStorageService } from '../media/media-storage.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SiteSettingsService } from '../site-settings/site-settings.service';
 import {
+  AdminAdjustWalletDto,
   AdminCreateChallengeDto,
+  AdminCreateCompetitionDto,
   AdminCreateCourseDto,
   AdminCreateLessonDto,
   AdminCreateRoleDto,
   AdminCreateUserDto,
+  AdminGrantEntitlementDto,
+  AdminReplyTicketDto,
+  AdminSendMessageDto,
   AdminUpdateChallengeDto,
+  AdminUpdateCompetitionDto,
   AdminUpdateCourseDto,
   AdminUpdateLessonDto,
   AdminUpdateRoleDto,
+  AdminUpdateTicketDto,
   AdminUpdateUserAccessDto,
   AdminUpdateUserRoleDto,
 } from './dto/admin.dto';
@@ -912,5 +928,456 @@ export class AdminService {
       active: challenge.active,
       starterCode: challenge.starterCode,
     };
+  }
+
+  /* --- Support tickets ------------------------------------------------------ */
+
+  async listTickets(): Promise<AdminTicketSummary[]> {
+    const tickets = await this.prisma.supportTicket.findMany({
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        course: { select: { id: true, title: true } },
+        _count: { select: { replies: true } },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: 200,
+    });
+    return tickets.map((ticket) => ({
+      id: ticket.id,
+      userId: ticket.user.id,
+      userName: ticket.user.name,
+      userEmail: ticket.user.email,
+      courseId: ticket.courseId,
+      courseTitle: ticket.course?.title ?? null,
+      subject: ticket.subject,
+      body: ticket.body,
+      category: ticket.category,
+      status: ticket.status,
+      priority: ticket.priority,
+      replyCount: ticket._count.replies,
+      createdAt: ticket.createdAt.toISOString(),
+      updatedAt: ticket.updatedAt.toISOString(),
+    }));
+  }
+
+  async getTicket(id: string): Promise<AdminTicketDetail> {
+    const ticket = await this.prisma.supportTicket.findUnique({
+      where: { id },
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        course: { select: { id: true, title: true } },
+        replies: {
+          orderBy: { createdAt: 'asc' },
+          include: { author: { select: { name: true } } },
+        },
+      },
+    });
+    if (!ticket) {
+      throw new NotFoundException(`Ticket ${id} not found`);
+    }
+    return {
+      id: ticket.id,
+      userId: ticket.user.id,
+      userName: ticket.user.name,
+      userEmail: ticket.user.email,
+      courseId: ticket.courseId,
+      courseTitle: ticket.course?.title ?? null,
+      subject: ticket.subject,
+      body: ticket.body,
+      category: ticket.category,
+      status: ticket.status,
+      priority: ticket.priority,
+      replyCount: ticket.replies.length,
+      createdAt: ticket.createdAt.toISOString(),
+      updatedAt: ticket.updatedAt.toISOString(),
+      replies: ticket.replies.map((reply) => ({
+        id: reply.id,
+        body: reply.body,
+        isStaff: reply.isStaff,
+        authorName: reply.author.name,
+        createdAt: reply.createdAt.toISOString(),
+      })),
+    };
+  }
+
+  async replyToTicket(
+    id: string,
+    dto: AdminReplyTicketDto,
+    actor: AuthUser,
+  ): Promise<AdminTicketDetail> {
+    const ticket = await this.prisma.supportTicket.findUnique({ where: { id } });
+    if (!ticket) {
+      throw new NotFoundException(`Ticket ${id} not found`);
+    }
+    await this.prisma.ticketReply.create({
+      data: {
+        ticketId: id,
+        authorId: actor.id,
+        body: dto.body,
+        isStaff: true,
+      },
+    });
+    if (ticket.status === 'OPEN') {
+      await this.prisma.supportTicket.update({
+        where: { id },
+        data: { status: 'IN_PROGRESS' },
+      });
+    }
+    return this.getTicket(id);
+  }
+
+  async updateTicket(id: string, dto: AdminUpdateTicketDto): Promise<AdminTicketDetail> {
+    const ticket = await this.prisma.supportTicket.findUnique({ where: { id } });
+    if (!ticket) {
+      throw new NotFoundException(`Ticket ${id} not found`);
+    }
+    await this.prisma.supportTicket.update({
+      where: { id },
+      data: {
+        status: dto.status ?? undefined,
+        priority: dto.priority ?? undefined,
+      },
+    });
+    return this.getTicket(id);
+  }
+
+  /* --- Learner inbox messages ------------------------------------------------ */
+
+  async listMessages(): Promise<AdminLearnerMessage[]> {
+    const messages = await this.prisma.learnerMessage.findMany({
+      include: { user: { select: { id: true, name: true, email: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    });
+    return messages.map((message) => ({
+      id: message.id,
+      userId: message.user.id,
+      userName: message.user.name,
+      userEmail: message.user.email,
+      subject: message.subject,
+      body: message.body,
+      readAt: message.readAt?.toISOString() ?? null,
+      createdBy: message.createdBy,
+      createdAt: message.createdAt.toISOString(),
+    }));
+  }
+
+  async sendMessage(dto: AdminSendMessageDto, actor: AuthUser): Promise<AdminLearnerMessage> {
+    const user = await this.prisma.user.findUnique({ where: { id: dto.userId } });
+    if (!user) {
+      throw new NotFoundException(`User ${dto.userId} not found`);
+    }
+    const message = await this.prisma.learnerMessage.create({
+      data: {
+        userId: dto.userId,
+        subject: dto.subject,
+        body: dto.body,
+        createdBy: actor.email ?? actor.name ?? 'admin',
+      },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    });
+    return {
+      id: message.id,
+      userId: message.user.id,
+      userName: message.user.name,
+      userEmail: message.user.email,
+      subject: message.subject,
+      body: message.body,
+      readAt: message.readAt?.toISOString() ?? null,
+      createdBy: message.createdBy,
+      createdAt: message.createdAt.toISOString(),
+    };
+  }
+
+  async deleteMessage(id: string): Promise<void> {
+    const message = await this.prisma.learnerMessage.findUnique({ where: { id } });
+    if (!message) {
+      throw new NotFoundException(`Message ${id} not found`);
+    }
+    await this.prisma.learnerMessage.delete({ where: { id } });
+  }
+
+  /* --- Competitions ----------------------------------------------------------- */
+
+  async listCompetitions(): Promise<AdminCompetition[]> {
+    const competitions = await this.prisma.competition.findMany({
+      include: { _count: { select: { registrations: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+    return competitions.map((competition) => ({
+      id: competition.id,
+      slug: competition.slug,
+      title: competition.title,
+      description: competition.description,
+      startsAt: competition.startsAt.toISOString(),
+      endsAt: competition.endsAt.toISOString(),
+      active: competition.active,
+      registrationCount: competition._count.registrations,
+      createdAt: competition.createdAt.toISOString(),
+    }));
+  }
+
+  async createCompetition(dto: AdminCreateCompetitionDto): Promise<AdminCompetition> {
+    const existing = await this.prisma.competition.findUnique({ where: { slug: dto.slug } });
+    if (existing) {
+      throw new ConflictException(`Competition slug "${dto.slug}" already exists`);
+    }
+    const competition = await this.prisma.competition.create({
+      data: {
+        slug: dto.slug,
+        title: dto.title,
+        description: dto.description,
+        startsAt: new Date(dto.startsAt),
+        endsAt: new Date(dto.endsAt),
+        active: dto.active ?? true,
+      },
+    });
+    return {
+      id: competition.id,
+      slug: competition.slug,
+      title: competition.title,
+      description: competition.description,
+      startsAt: competition.startsAt.toISOString(),
+      endsAt: competition.endsAt.toISOString(),
+      active: competition.active,
+      registrationCount: 0,
+      createdAt: competition.createdAt.toISOString(),
+    };
+  }
+
+  async updateCompetition(id: string, dto: AdminUpdateCompetitionDto): Promise<AdminCompetition> {
+    const competition = await this.prisma.competition.findUnique({ where: { id } });
+    if (!competition) {
+      throw new NotFoundException(`Competition ${id} not found`);
+    }
+    if (dto.slug && dto.slug !== competition.slug) {
+      const existing = await this.prisma.competition.findUnique({ where: { slug: dto.slug } });
+      if (existing) {
+        throw new ConflictException(`Competition slug "${dto.slug}" already exists`);
+      }
+    }
+    const updated = await this.prisma.competition.update({
+      where: { id },
+      data: {
+        slug: dto.slug ?? undefined,
+        title: dto.title ?? undefined,
+        description: dto.description ?? undefined,
+        startsAt: dto.startsAt ? new Date(dto.startsAt) : undefined,
+        endsAt: dto.endsAt ? new Date(dto.endsAt) : undefined,
+        active: dto.active ?? undefined,
+      },
+      include: { _count: { select: { registrations: true } } },
+    });
+    return {
+      id: updated.id,
+      slug: updated.slug,
+      title: updated.title,
+      description: updated.description,
+      startsAt: updated.startsAt.toISOString(),
+      endsAt: updated.endsAt.toISOString(),
+      active: updated.active,
+      registrationCount: updated._count.registrations,
+      createdAt: updated.createdAt.toISOString(),
+    };
+  }
+
+  async deleteCompetition(id: string): Promise<void> {
+    const competition = await this.prisma.competition.findUnique({ where: { id } });
+    if (!competition) {
+      throw new NotFoundException(`Competition ${id} not found`);
+    }
+    await this.prisma.competition.delete({ where: { id } });
+  }
+
+  async listCompetitionRegistrations(id: string): Promise<AdminCompetitionRegistration[]> {
+    const competition = await this.prisma.competition.findUnique({ where: { id } });
+    if (!competition) {
+      throw new NotFoundException(`Competition ${id} not found`);
+    }
+    const registrations = await this.prisma.competitionRegistration.findMany({
+      where: { competitionId: id },
+      include: { user: { select: { id: true, name: true, email: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+    return registrations.map((registration) => ({
+      id: registration.id,
+      userId: registration.user.id,
+      userName: registration.user.name,
+      userEmail: registration.user.email,
+      createdAt: registration.createdAt.toISOString(),
+    }));
+  }
+
+  /* --- Orders ----------------------------------------------------------------- */
+
+  async listOrders(): Promise<AdminOrder[]> {
+    const orders = await this.prisma.order.findMany({
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        _count: { select: { items: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    });
+    return orders.map((order) => ({
+      id: order.id,
+      userId: order.user.id,
+      userName: order.user.name,
+      userEmail: order.user.email,
+      status: order.status,
+      totalCents: order.totalCents,
+      currency: order.currency,
+      itemCount: order._count.items,
+      createdAt: order.createdAt.toISOString(),
+    }));
+  }
+
+  /* --- Entitlements ------------------------------------------------------------ */
+
+  async listEntitlements(): Promise<AdminEntitlement[]> {
+    const entitlements = await this.prisma.entitlement.findMany({
+      include: { user: { select: { id: true, name: true, email: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    });
+    return entitlements.map((entitlement) => ({
+      id: entitlement.id,
+      userId: entitlement.user.id,
+      userName: entitlement.user.name,
+      userEmail: entitlement.user.email,
+      resourceType: entitlement.resourceType,
+      resourceId: entitlement.resourceId,
+      source: entitlement.source,
+      createdAt: entitlement.createdAt.toISOString(),
+    }));
+  }
+
+  async grantEntitlement(dto: AdminGrantEntitlementDto): Promise<AdminEntitlement> {
+    const user = await this.prisma.user.findUnique({ where: { id: dto.userId } });
+    if (!user) {
+      throw new NotFoundException(`User ${dto.userId} not found`);
+    }
+    const existing = await this.prisma.entitlement.findUnique({
+      where: {
+        userId_resourceType_resourceId: {
+          userId: dto.userId,
+          resourceType: dto.resourceType,
+          resourceId: dto.resourceId,
+        },
+      },
+    });
+    if (existing) {
+      throw new ConflictException('This entitlement already exists for the user');
+    }
+    const entitlement = await this.prisma.entitlement.create({
+      data: {
+        userId: dto.userId,
+        resourceType: dto.resourceType,
+        resourceId: dto.resourceId,
+        source: dto.source ?? 'FREE',
+      },
+    });
+    return {
+      id: entitlement.id,
+      userId: user.id,
+      userName: user.name,
+      userEmail: user.email,
+      resourceType: entitlement.resourceType,
+      resourceId: entitlement.resourceId,
+      source: entitlement.source,
+      createdAt: entitlement.createdAt.toISOString(),
+    };
+  }
+
+  async revokeEntitlement(id: string): Promise<void> {
+    const entitlement = await this.prisma.entitlement.findUnique({ where: { id } });
+    if (!entitlement) {
+      throw new NotFoundException(`Entitlement ${id} not found`);
+    }
+    await this.prisma.entitlement.delete({ where: { id } });
+  }
+
+  /* --- Wallets ------------------------------------------------------------------ */
+
+  async listWallets(): Promise<AdminWalletSummary[]> {
+    const wallets = await this.prisma.learnerWallet.findMany({
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        _count: { select: { transactions: true } },
+        transactions: { orderBy: { createdAt: 'desc' }, take: 1 },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+    return wallets.map((wallet) => ({
+      userId: wallet.user.id,
+      userName: wallet.user.name,
+      userEmail: wallet.user.email,
+      balanceCents: wallet.balanceCents,
+      currency: wallet.currency,
+      transactionCount: wallet._count.transactions,
+      lastTransactionAt: wallet.transactions[0]?.createdAt.toISOString() ?? null,
+    }));
+  }
+
+  async getWallet(userId: string): Promise<AdminWalletDetail> {
+    const wallet = await this.prisma.learnerWallet.findUnique({
+      where: { userId },
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        transactions: { orderBy: { createdAt: 'desc' }, take: 100 },
+      },
+    });
+    if (!wallet) {
+      throw new NotFoundException(`Wallet for user ${userId} not found`);
+    }
+    return {
+      userId: wallet.user.id,
+      userName: wallet.user.name,
+      userEmail: wallet.user.email,
+      balanceCents: wallet.balanceCents,
+      currency: wallet.currency,
+      transactionCount: wallet.transactions.length,
+      lastTransactionAt: wallet.transactions[0]?.createdAt.toISOString() ?? null,
+      transactions: wallet.transactions.map((transaction) => ({
+        id: transaction.id,
+        type: transaction.type,
+        amountCents: transaction.amountCents,
+        description: transaction.description,
+        createdAt: transaction.createdAt.toISOString(),
+      })),
+    };
+  }
+
+  async adjustWallet(userId: string, dto: AdminAdjustWalletDto): Promise<AdminWalletDetail> {
+    const wallet = await this.prisma.learnerWallet.findUnique({
+      where: { userId },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    });
+    if (!wallet) {
+      throw new NotFoundException(`Wallet for user ${userId} not found`);
+    }
+    if (dto.type === 'DEBIT' && wallet.balanceCents < dto.amountCents) {
+      throw new BadRequestException('Debit exceeds the current wallet balance');
+    }
+    await this.prisma.$transaction([
+      this.prisma.walletTransaction.create({
+        data: {
+          walletId: wallet.id,
+          type: dto.type,
+          amountCents: dto.amountCents,
+          description: dto.description,
+        },
+      }),
+      this.prisma.learnerWallet.update({
+        where: { id: wallet.id },
+        data: {
+          balanceCents:
+            dto.type === 'CREDIT'
+              ? wallet.balanceCents + dto.amountCents
+              : wallet.balanceCents - dto.amountCents,
+        },
+      }),
+    ]);
+    return this.getWallet(userId);
   }
 }

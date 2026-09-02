@@ -54,6 +54,17 @@ import type {
   AdminCreateUserDto,
   AdminUser,
   AdminPayment,
+  AdminTicketDetail,
+  AdminTicketStatus,
+  AdminTicketPriority,
+  AdminTicketSummary,
+  AdminLearnerMessage,
+  AdminCompetition,
+  AdminCompetitionRegistration,
+  AdminOrder,
+  AdminEntitlement,
+  AdminWalletDetail,
+  AdminWalletSummary,
   AssessmentBank,
   CreateRoleDto,
   UpdateRoleDto,
@@ -782,6 +793,145 @@ const liveApi = {
 
   adminListPayments(): Promise<AdminPayment[]> {
     return request<AdminPayment[]>('/admin/payments');
+  },
+
+  /* --- Support tickets -------------------------------------------------------- */
+
+  adminListTickets(): Promise<AdminTicketSummary[]> {
+    return request<AdminTicketSummary[]>('/admin/tickets');
+  },
+
+  adminGetTicket(id: string): Promise<AdminTicketDetail> {
+    return request<AdminTicketDetail>(`/admin/tickets/${id}`);
+  },
+
+  adminReplyTicket(id: string, body: string): Promise<AdminTicketDetail> {
+    return request<AdminTicketDetail>(`/admin/tickets/${id}/replies`, {
+      method: 'POST',
+      body: JSON.stringify({ body }),
+    });
+  },
+
+  adminUpdateTicket(
+    id: string,
+    dto: { status?: AdminTicketStatus; priority?: AdminTicketPriority },
+  ): Promise<AdminTicketDetail> {
+    return request<AdminTicketDetail>(`/admin/tickets/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(dto),
+    });
+  },
+
+  /* --- Learner inbox messages ---------------------------------------------------- */
+
+  adminListMessages(): Promise<AdminLearnerMessage[]> {
+    return request<AdminLearnerMessage[]>('/admin/messages');
+  },
+
+  adminSendMessage(dto: { userId: string; subject: string; body: string }): Promise<AdminLearnerMessage> {
+    return request<AdminLearnerMessage>('/admin/messages', {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    });
+  },
+
+  adminDeleteMessage(id: string): Promise<{ deleted: true }> {
+    return request<{ deleted: true }>(`/admin/messages/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  /* --- Competitions ----------------------------------------------------------------- */
+
+  adminListCompetitions(): Promise<AdminCompetition[]> {
+    return request<AdminCompetition[]>('/admin/competitions');
+  },
+
+  adminCreateCompetition(dto: {
+    slug: string;
+    title: string;
+    description: string;
+    startsAt: string;
+    endsAt: string;
+    active?: boolean;
+  }): Promise<AdminCompetition> {
+    return request<AdminCompetition>('/admin/competitions', {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    });
+  },
+
+  adminUpdateCompetition(
+    id: string,
+    dto: Partial<{
+      slug: string;
+      title: string;
+      description: string;
+      startsAt: string;
+      endsAt: string;
+      active: boolean;
+    }>,
+  ): Promise<AdminCompetition> {
+    return request<AdminCompetition>(`/admin/competitions/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(dto),
+    });
+  },
+
+  adminDeleteCompetition(id: string): Promise<{ deleted: true }> {
+    return request<{ deleted: true }>(`/admin/competitions/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  adminListCompetitionRegistrations(id: string): Promise<AdminCompetitionRegistration[]> {
+    return request<AdminCompetitionRegistration[]>(`/admin/competitions/${id}/registrations`);
+  },
+
+  /* --- Finance: orders / entitlements / wallets ----------------------------------------- */
+
+  adminListOrders(): Promise<AdminOrder[]> {
+    return request<AdminOrder[]>('/admin/orders');
+  },
+
+  adminListEntitlements(): Promise<AdminEntitlement[]> {
+    return request<AdminEntitlement[]>('/admin/entitlements');
+  },
+
+  adminGrantEntitlement(dto: {
+    userId: string;
+    resourceType: string;
+    resourceId: string;
+    source?: string;
+  }): Promise<AdminEntitlement> {
+    return request<AdminEntitlement>('/admin/entitlements', {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    });
+  },
+
+  adminRevokeEntitlement(id: string): Promise<{ deleted: true }> {
+    return request<{ deleted: true }>(`/admin/entitlements/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  adminListWallets(): Promise<AdminWalletSummary[]> {
+    return request<AdminWalletSummary[]>('/admin/wallets');
+  },
+
+  adminGetWallet(userId: string): Promise<AdminWalletDetail> {
+    return request<AdminWalletDetail>(`/admin/wallets/${userId}`);
+  },
+
+  adminAdjustWallet(
+    userId: string,
+    dto: { type: 'CREDIT' | 'DEBIT'; amountCents: number; description: string },
+  ): Promise<AdminWalletDetail> {
+    return request<AdminWalletDetail>(`/admin/wallets/${userId}/adjust`, {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    });
   },
 
   adminUpdateUserRole(userId: string, role: UserRole): Promise<AdminUser> {

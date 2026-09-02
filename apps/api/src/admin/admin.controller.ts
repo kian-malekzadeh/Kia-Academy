@@ -22,15 +22,22 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { MAX_LESSON_VIDEO_BYTES } from '../media/media-storage.service';
 import { AdminService } from './admin.service';
 import {
+  AdminAdjustWalletDto,
   AdminCreateChallengeDto,
+  AdminCreateCompetitionDto,
   AdminCreateCourseDto,
   AdminCreateLessonDto,
   AdminCreateRoleDto,
   AdminCreateUserDto,
+  AdminGrantEntitlementDto,
+  AdminReplyTicketDto,
+  AdminSendMessageDto,
   AdminUpdateChallengeDto,
+  AdminUpdateCompetitionDto,
   AdminUpdateCourseDto,
   AdminUpdateLessonDto,
   AdminUpdateRoleDto,
+  AdminUpdateTicketDto,
   AdminUpdateUserAccessDto,
   AdminUpdateUserRoleDto,
 } from './dto/admin.dto';
@@ -211,5 +218,131 @@ export class AdminController {
   @AdminAccess('payments', 'view')
   listPayments() {
     return this.adminService.listPayments();
+  }
+
+  /* --- Support tickets -------------------------------------------------------- */
+
+  @Get('tickets')
+  @AdminAccess('tickets', 'view')
+  listTickets() {
+    return this.adminService.listTickets();
+  }
+
+  @Get('tickets/:id')
+  @AdminAccess('tickets', 'view')
+  getTicket(@Param('id') id: string) {
+    return this.adminService.getTicket(id);
+  }
+
+  @Post('tickets/:id/replies')
+  @AdminAccess('tickets', 'edit')
+  replyToTicket(
+    @CurrentUser() actor: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: AdminReplyTicketDto,
+  ) {
+    return this.adminService.replyToTicket(id, dto, actor);
+  }
+
+  @Patch('tickets/:id')
+  @AdminAccess('tickets', 'edit')
+  updateTicket(@Param('id') id: string, @Body() dto: AdminUpdateTicketDto) {
+    return this.adminService.updateTicket(id, dto);
+  }
+
+  /* --- Learner inbox messages --------------------------------------------------- */
+
+  @Get('messages')
+  @AdminAccess('messages', 'view')
+  listMessages() {
+    return this.adminService.listMessages();
+  }
+
+  @Post('messages')
+  @AdminAccess('messages', 'manage')
+  sendMessage(@CurrentUser() actor: AuthUser, @Body() dto: AdminSendMessageDto) {
+    return this.adminService.sendMessage(dto, actor);
+  }
+
+  @Delete('messages/:id')
+  @AdminAccess('messages', 'manage')
+  deleteMessage(@Param('id') id: string) {
+    return this.adminService.deleteMessage(id);
+  }
+
+  /* --- Competitions --------------------------------------------------------------- */
+
+  @Get('competitions')
+  @AdminAccess('competitions', 'view')
+  listCompetitions() {
+    return this.adminService.listCompetitions();
+  }
+
+  @Post('competitions')
+  @AdminAccess('competitions', 'manage')
+  createCompetition(@Body() dto: AdminCreateCompetitionDto) {
+    return this.adminService.createCompetition(dto);
+  }
+
+  @Patch('competitions/:id')
+  @AdminAccess('competitions', 'edit')
+  updateCompetition(@Param('id') id: string, @Body() dto: AdminUpdateCompetitionDto) {
+    return this.adminService.updateCompetition(id, dto);
+  }
+
+  @Delete('competitions/:id')
+  @AdminAccess('competitions', 'manage')
+  deleteCompetition(@Param('id') id: string) {
+    return this.adminService.deleteCompetition(id);
+  }
+
+  @Get('competitions/:id/registrations')
+  @AdminAccess('competitions', 'view')
+  listCompetitionRegistrations(@Param('id') id: string) {
+    return this.adminService.listCompetitionRegistrations(id);
+  }
+
+  /* --- Finance: orders / entitlements / wallets ------------------------------------- */
+
+  @Get('orders')
+  @AdminAccess('payments', 'view')
+  listOrders() {
+    return this.adminService.listOrders();
+  }
+
+  @Get('entitlements')
+  @AdminAccess('payments', 'view')
+  listEntitlements() {
+    return this.adminService.listEntitlements();
+  }
+
+  @Post('entitlements')
+  @AdminAccess('payments', 'manage')
+  grantEntitlement(@Body() dto: AdminGrantEntitlementDto) {
+    return this.adminService.grantEntitlement(dto);
+  }
+
+  @Delete('entitlements/:id')
+  @AdminAccess('payments', 'manage')
+  revokeEntitlement(@Param('id') id: string) {
+    return this.adminService.revokeEntitlement(id);
+  }
+
+  @Get('wallets')
+  @AdminAccess('payments', 'view')
+  listWallets() {
+    return this.adminService.listWallets();
+  }
+
+  @Get('wallets/:userId')
+  @AdminAccess('payments', 'view')
+  getWallet(@Param('userId') userId: string) {
+    return this.adminService.getWallet(userId);
+  }
+
+  @Post('wallets/:userId/adjust')
+  @AdminAccess('payments', 'manage')
+  adjustWallet(@Param('userId') userId: string, @Body() dto: AdminAdjustWalletDto) {
+    return this.adminService.adjustWallet(userId, dto);
   }
 }

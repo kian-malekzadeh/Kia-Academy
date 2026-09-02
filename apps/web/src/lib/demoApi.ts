@@ -57,6 +57,17 @@ import type {
   AdminUser,
   AdminPayment,
   AdminRole,
+  AdminTicketDetail,
+  AdminTicketPriority,
+  AdminTicketStatus,
+  AdminTicketSummary,
+  AdminLearnerMessage,
+  AdminCompetition,
+  AdminCompetitionRegistration,
+  AdminOrder,
+  AdminEntitlement,
+  AdminWalletDetail,
+  AdminWalletSummary,
   CreateRoleDto,
   UpdateRoleDto,
   SiteAdminAccessSettings,
@@ -171,6 +182,96 @@ let demoAdminUsers: AdminUser[] = [
  * Seeded empty; created/edited/deleted via the admin UI.
  */
 let demoRoles: AdminRole[] = [];
+
+/* In-memory demo stores for the new admin sections (tickets/messages/etc). */
+const demoAdminTickets: AdminTicketDetail[] = [
+  {
+    id: 'demo-ticket-1',
+    userId: DEMO_LEARNER.id,
+    userName: DEMO_LEARNER.name,
+    userEmail: DEMO_LEARNER.email,
+    courseId: 'course-html',
+    courseTitle: 'HTML',
+    subject: 'Video playback issue in lesson 3',
+    body: 'The lesson video stops after a few seconds. Could you please check?',
+    category: 'technical',
+    status: 'OPEN',
+    priority: 'NORMAL',
+    replyCount: 0,
+    createdAt: DEMO_CREATED_AT,
+    updatedAt: DEMO_CREATED_AT,
+    replies: [],
+  },
+];
+let demoAdminMessages: AdminLearnerMessage[] = [
+  {
+    id: 'demo-msg-seed-1',
+    userId: DEMO_LEARNER.id,
+    userName: DEMO_LEARNER.name,
+    userEmail: DEMO_LEARNER.email,
+    subject: 'Welcome to Kia Academy',
+    body: 'We are glad to have you on board. Reach out any time you need help.',
+    readAt: null,
+    createdBy: DEMO_ADMIN.email,
+    createdAt: DEMO_CREATED_AT,
+  },
+];
+let demoAdminCompetitions: AdminCompetition[] = [
+  {
+    id: 'demo-comp-1',
+    slug: 'spring-code-sprint',
+    title: 'Spring Code Sprint',
+    description: 'A timed algorithm sprint for Kia learners.',
+    startsAt: '2026-03-10T08:00:00.000Z',
+    endsAt: '2026-03-12T20:00:00.000Z',
+    active: true,
+    registrationCount: 1,
+    createdAt: DEMO_CREATED_AT,
+  },
+];
+const demoAdminOrders: AdminOrder[] = [
+  {
+    id: 'demo-order-1',
+    userId: DEMO_LEARNER.id,
+    userName: DEMO_LEARNER.name,
+    userEmail: DEMO_LEARNER.email,
+    status: 'PAID',
+    totalCents: 2_490_000,
+    currency: 'irr',
+    itemCount: 1,
+    createdAt: DEMO_CREATED_AT,
+  },
+];
+let demoAdminEntitlements: AdminEntitlement[] = [
+  {
+    id: 'demo-ent-1',
+    userId: DEMO_LEARNER.id,
+    userName: DEMO_LEARNER.name,
+    userEmail: DEMO_LEARNER.email,
+    resourceType: 'course',
+    resourceId: 'html',
+    source: 'FREE',
+    createdAt: DEMO_CREATED_AT,
+  },
+];
+const demoAdminWallet: AdminWalletDetail = {
+  userId: DEMO_LEARNER.id,
+  userName: DEMO_LEARNER.name,
+  userEmail: DEMO_LEARNER.email,
+  balanceCents: 1_500_000,
+  currency: 'irr',
+  transactionCount: 1,
+  lastTransactionAt: DEMO_CREATED_AT,
+  transactions: [
+    {
+      id: 'demo-txn-seed-1',
+      type: 'CREDIT',
+      amountCents: 1_500_000,
+      description: 'Initial demo top-up',
+      createdAt: DEMO_CREATED_AT,
+    },
+  ],
+};
 
 function systemRolesSnapshot(): AdminRole[] {
   return SYSTEM_ROLES.map((r) => ({
@@ -2539,6 +2640,258 @@ export const demoApi = {
       readAt: new Date().toISOString(),
       createdAt: new Date().toISOString(),
     });
+  },
+
+  /* --- Support tickets -------------------------------------------------------- */
+
+  async adminListTickets(): Promise<AdminTicketSummary[]> {
+    requireUser();
+    return delay(demoAdminTickets.map((ticket) => ({ ...ticket, replies: undefined })));
+  },
+
+  async adminGetTicket(id: string): Promise<AdminTicketDetail> {
+    requireUser();
+    const ticket = demoAdminTickets.find((t) => t.id === id);
+    if (!ticket) throw new ApiError(`Ticket ${id} not found`, 404);
+    return delay({ ...ticket });
+  },
+
+  async adminReplyTicket(id: string, body: string): Promise<AdminTicketDetail> {
+    requireUser();
+    const ticket = demoAdminTickets.find((t) => t.id === id);
+    if (!ticket) throw new ApiError(`Ticket ${id} not found`, 404);
+    ticket.replies = [
+      ...ticket.replies,
+      {
+        id: `demo-reply-${Date.now()}`,
+        body,
+        isStaff: true,
+        authorName: DEMO_ADMIN.name,
+        createdAt: new Date().toISOString(),
+      },
+    ];
+    ticket.replyCount = ticket.replies.length;
+    ticket.status = ticket.status === 'OPEN' ? 'IN_PROGRESS' : ticket.status;
+    ticket.updatedAt = new Date().toISOString();
+    return delay({ ...ticket });
+  },
+
+  async adminUpdateTicket(
+    id: string,
+    dto: { status?: AdminTicketStatus; priority?: AdminTicketPriority },
+  ): Promise<AdminTicketDetail> {
+    requireUser();
+    const ticket = demoAdminTickets.find((t) => t.id === id);
+    if (!ticket) throw new ApiError(`Ticket ${id} not found`, 404);
+    if (dto.status) ticket.status = dto.status;
+    if (dto.priority) ticket.priority = dto.priority;
+    ticket.updatedAt = new Date().toISOString();
+    return delay({ ...ticket });
+  },
+
+  /* --- Learner inbox messages ----------------------------------------------------- */
+
+  async adminListMessages(): Promise<AdminLearnerMessage[]> {
+    requireUser();
+    return delay([...demoAdminMessages]);
+  },
+
+  async adminSendMessage(dto: {
+    userId: string;
+    subject: string;
+    body: string;
+  }): Promise<AdminLearnerMessage> {
+    requireUser();
+    const message: AdminLearnerMessage = {
+      id: `demo-msg-${Date.now()}`,
+      userId: dto.userId,
+      userName: DEMO_LEARNER.name,
+      userEmail: DEMO_LEARNER.email,
+      subject: dto.subject,
+      body: dto.body,
+      readAt: null,
+      createdBy: DEMO_ADMIN.email,
+      createdAt: new Date().toISOString(),
+    };
+    demoAdminMessages = [message, ...demoAdminMessages];
+    return delay({ ...message });
+  },
+
+  async adminDeleteMessage(id: string): Promise<{ deleted: true }> {
+    requireUser();
+    demoAdminMessages = demoAdminMessages.filter((message) => message.id !== id);
+    return delay({ deleted: true });
+  },
+
+  /* --- Competitions ------------------------------------------------------------------ */
+
+  async adminListCompetitions(): Promise<AdminCompetition[]> {
+    requireUser();
+    return delay([...demoAdminCompetitions]);
+  },
+
+  async adminCreateCompetition(dto: {
+    slug: string;
+    title: string;
+    description: string;
+    startsAt: string;
+    endsAt: string;
+    active?: boolean;
+  }): Promise<AdminCompetition> {
+    requireUser();
+    if (demoAdminCompetitions.some((c) => c.slug === dto.slug)) {
+      throw new ApiError(`Competition slug "${dto.slug}" already exists`, 409);
+    }
+    const competition: AdminCompetition = {
+      id: `demo-comp-admin-${Date.now()}`,
+      slug: dto.slug,
+      title: dto.title,
+      description: dto.description,
+      startsAt: dto.startsAt,
+      endsAt: dto.endsAt,
+      active: dto.active ?? true,
+      registrationCount: 0,
+      createdAt: new Date().toISOString(),
+    };
+    demoAdminCompetitions = [competition, ...demoAdminCompetitions];
+    return delay({ ...competition });
+  },
+
+  async adminUpdateCompetition(
+    id: string,
+    dto: Partial<{
+      slug: string;
+      title: string;
+      description: string;
+      startsAt: string;
+      endsAt: string;
+      active: boolean;
+    }>,
+  ): Promise<AdminCompetition> {
+    requireUser();
+    const competition = demoAdminCompetitions.find((c) => c.id === id);
+    if (!competition) throw new ApiError(`Competition ${id} not found`, 404);
+    Object.assign(competition, dto);
+    return delay({ ...competition });
+  },
+
+  async adminDeleteCompetition(id: string): Promise<{ deleted: true }> {
+    requireUser();
+    demoAdminCompetitions = demoAdminCompetitions.filter((c) => c.id !== id);
+    return delay({ deleted: true });
+  },
+
+  async adminListCompetitionRegistrations(id: string): Promise<AdminCompetitionRegistration[]> {
+    requireUser();
+    const competition = demoAdminCompetitions.find((c) => c.id === id);
+    if (!competition) throw new ApiError(`Competition ${id} not found`, 404);
+    return delay(
+      Array.from({ length: competition.registrationCount }, (_, index) => ({
+        id: `${id}-reg-${index + 1}`,
+        userId: DEMO_LEARNER.id,
+        userName: DEMO_LEARNER.name,
+        userEmail: DEMO_LEARNER.email,
+        createdAt: competition.createdAt,
+      })),
+    );
+  },
+
+  /* --- Finance: orders / entitlements / wallets ------------------------------------------ */
+
+  async adminListOrders(): Promise<AdminOrder[]> {
+    requireUser();
+    return delay([...demoAdminOrders]);
+  },
+
+  async adminListEntitlements(): Promise<AdminEntitlement[]> {
+    requireUser();
+    return delay([...demoAdminEntitlements]);
+  },
+
+  async adminGrantEntitlement(dto: {
+    userId: string;
+    resourceType: string;
+    resourceId: string;
+    source?: string;
+  }): Promise<AdminEntitlement> {
+    requireUser();
+    if (
+      demoAdminEntitlements.some(
+        (item) =>
+          item.userId === dto.userId &&
+          item.resourceType === dto.resourceType &&
+          item.resourceId === dto.resourceId,
+      )
+    ) {
+      throw new ApiError('This entitlement already exists for the user', 409);
+    }
+    const entitlement: AdminEntitlement = {
+      id: `demo-ent-${Date.now()}`,
+      userId: dto.userId,
+      userName: DEMO_LEARNER.name,
+      userEmail: DEMO_LEARNER.email,
+      resourceType: dto.resourceType,
+      resourceId: dto.resourceId,
+      source: dto.source ?? 'FREE',
+      createdAt: new Date().toISOString(),
+    };
+    demoAdminEntitlements = [entitlement, ...demoAdminEntitlements];
+    return delay({ ...entitlement });
+  },
+
+  async adminRevokeEntitlement(id: string): Promise<{ deleted: true }> {
+    requireUser();
+    demoAdminEntitlements = demoAdminEntitlements.filter((item) => item.id !== id);
+    return delay({ deleted: true });
+  },
+
+  async adminListWallets(): Promise<AdminWalletSummary[]> {
+    requireUser();
+    return delay([
+      {
+        userId: DEMO_LEARNER.id,
+        userName: DEMO_LEARNER.name,
+        userEmail: DEMO_LEARNER.email,
+        balanceCents: demoAdminWallet.balanceCents,
+        currency: demoAdminWallet.currency,
+        transactionCount: demoAdminWallet.transactions.length,
+        lastTransactionAt: demoAdminWallet.transactions[0]?.createdAt ?? null,
+      },
+    ]);
+  },
+
+  async adminGetWallet(userId: string): Promise<AdminWalletDetail> {
+    requireUser();
+    if (userId !== DEMO_LEARNER.id) {
+      throw new ApiError(`Wallet for user ${userId} not found`, 404);
+    }
+    return delay({ ...demoAdminWallet, transactions: [...demoAdminWallet.transactions] });
+  },
+
+  async adminAdjustWallet(
+    userId: string,
+    dto: { type: 'CREDIT' | 'DEBIT'; amountCents: number; description: string },
+  ): Promise<AdminWalletDetail> {
+    requireUser();
+    if (userId !== DEMO_LEARNER.id) {
+      throw new ApiError(`Wallet for user ${userId} not found`, 404);
+    }
+    if (dto.type === 'DEBIT' && demoAdminWallet.balanceCents < dto.amountCents) {
+      throw new ApiError('Debit exceeds the current wallet balance', 400);
+    }
+    const transaction = {
+      id: `demo-txn-${Date.now()}`,
+      type: dto.type,
+      amountCents: dto.amountCents,
+      description: dto.description,
+      createdAt: new Date().toISOString(),
+    };
+    demoAdminWallet.transactions = [transaction, ...demoAdminWallet.transactions];
+    demoAdminWallet.balanceCents =
+      dto.type === 'CREDIT'
+        ? demoAdminWallet.balanceCents + dto.amountCents
+        : demoAdminWallet.balanceCents - dto.amountCents;
+    return delay({ ...demoAdminWallet, transactions: [...demoAdminWallet.transactions] });
   },
 
   async getSettings(): Promise<SiteSettings> {

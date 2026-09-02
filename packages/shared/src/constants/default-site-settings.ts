@@ -98,6 +98,9 @@ export function createDefaultSiteSettings(): SiteSettings {
       users: createSectionPermission(false, false, false),
       payments: createSectionPermission(true, false, false),
       tests: createSectionPermission(true, true, true),
+      tickets: createSectionPermission(true, true, true),
+      messages: createSectionPermission(true, true, true),
+      competitions: createSectionPermission(true, true, false),
     },
   };
 }
@@ -142,6 +145,12 @@ export function mergeSiteSettings(
           users: { ...base.adminAccess.users, ...patch.adminAccess.users },
           payments: { ...base.adminAccess.payments, ...patch.adminAccess.payments },
           tests: { ...base.adminAccess.tests, ...patch.adminAccess.tests },
+          tickets: { ...base.adminAccess.tickets, ...patch.adminAccess.tickets },
+          messages: { ...base.adminAccess.messages, ...patch.adminAccess.messages },
+          competitions: {
+            ...base.adminAccess.competitions,
+            ...patch.adminAccess.competitions,
+          },
         }
       : base.adminAccess,
   };
