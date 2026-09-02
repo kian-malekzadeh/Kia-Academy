@@ -2,6 +2,8 @@ export type {
   CatalogCourseSeed,
   CatalogLessonSeed,
   CourseDbCourse,
+  CourseDbEnLesson,
+  CourseDbEnOverlay,
   CourseDbFile,
   CourseDbLesson,
   CourseDbPlayground,
@@ -15,3 +17,4 @@ export {
   resolvePlayground,
   slugifyLabel,
 } from './transform';
+export { buildCourseDbEnOverlay } from './en-content';

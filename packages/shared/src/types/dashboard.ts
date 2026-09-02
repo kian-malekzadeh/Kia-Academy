@@ -116,6 +116,8 @@ export interface LearnerProgressPoint {
 export interface LearnerProgressActivity {
   id: string;
   text: string;
+  /** English variant when available. */
+  textEn?: string;
   createdAt: string;
 }
 

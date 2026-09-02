@@ -40,11 +40,29 @@ export type CourseDbFile = {
   user_notes?: unknown[];
 };
 
+/** English overlay for a single lesson (keyed by the db.json lesson id). */
+export type CourseDbEnLesson = {
+  description: string;
+  /** Optional English playground starter (only needed when the fa one contains Persian text). */
+  playground?: CourseDbPlayground | null;
+};
+
+/**
+ * English overlay used to build localized (en) seed content on top of the
+ * Persian-first `db.json`. Keyed by the numeric source ids of db.json.
+ */
+export type CourseDbEnOverlay = {
+  courses: Record<number, string>;
+  lessons: Record<number, CourseDbEnLesson>;
+};
+
 export type CatalogCourseSeed = {
   sourceId: number;
   slug: string;
   title: string;
   description: string;
+  /** English description (null → fall back to `description`). */
+  descriptionEn: string | null;
   icon: string;
   trackKey: string;
   sortOrder: number;
@@ -56,6 +74,8 @@ export type CatalogLessonSeed = {
   slug: string;
   title: string;
   content: string;
+  /** Packed English markdown + playground (null → fall back to `content`). */
+  contentEn: string | null;
   videoUrl: string | null;
   durationMin: number;
   sortOrder: number;

@@ -1,6 +1,7 @@
 import type {
   CatalogCourseSeed,
   CatalogLessonSeed,
+  CourseDbEnOverlay,
   CourseDbFile,
   CourseDbLesson,
   CourseDbPlayground,
@@ -101,8 +102,11 @@ function uniqueSlug(base: string, used: Set<string>): string {
   return next;
 }
 
-/** Transform root `db.json` into seed/catalog course records. */
-export function buildCourseCatalog(db: CourseDbFile): CatalogCourseSeed[] {
+/** Transform root `db.json` (plus an optional English overlay) into seed/catalog course records. */
+export function buildCourseCatalog(
+  db: CourseDbFile,
+  en?: CourseDbEnOverlay,
+): CatalogCourseSeed[] {
   const courses = [...db.courses].sort((a, b) => a.order_index - b.order_index);
   const lessonsByCourse = new Map<number, CourseDbLesson[]>();
   for (const lesson of db.lessons) {
@@ -123,11 +127,18 @@ export function buildCourseCatalog(db: CourseDbFile): CatalogCourseSeed[] {
     const lessons: CatalogLessonSeed[] = rawLessons.map((lesson) => {
       const playground = resolvePlayground(lesson);
       const lessonSlug = uniqueSlug(lessonSlugFromTitle(lesson.title, lesson.id), usedLessonSlugs);
+      const enLesson = en?.lessons[lesson.id];
+      const enPlayground = enLesson?.playground
+        ? normalizePlayground(enLesson.playground)
+        : playground;
       return {
         sourceId: lesson.id,
         slug: lessonSlug,
         title: lesson.title,
         content: packLessonContent(lesson.description, playground),
+        contentEn: enLesson
+          ? packLessonContent(enLesson.description, enPlayground)
+          : null,
         videoUrl: lesson.video_url,
         durationMin: lesson.duration_minutes && lesson.duration_minutes > 0 ? lesson.duration_minutes : 5,
         sortOrder: lesson.order_index,
@@ -140,6 +151,7 @@ export function buildCourseCatalog(db: CourseDbFile): CatalogCourseSeed[] {
       slug,
       title: course.title,
       description: (course.description ?? '').trim() || course.title,
+      descriptionEn: en?.courses[course.id] ?? null,
       icon: COURSE_ICONS[slug] ?? 'book',
       trackKey: 'web',
       sortOrder: course.order_index,

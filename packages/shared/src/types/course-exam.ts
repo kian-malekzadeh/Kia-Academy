@@ -54,7 +54,11 @@ export interface CourseExamSummary {
   courseSlug: string;
   courseTitle: string;
   title: string;
+  /** English title when available (null → fall back to `title`). */
+  titleEn?: string | null;
   description: string;
+  /** English description when available (null → fall back to `description`). */
+  descriptionEn?: string | null;
   passScore: number;
   durationMin: number;
   published: boolean;
@@ -70,6 +74,8 @@ export interface CourseExamAttemptSession {
   attemptId: string;
   examId: string;
   examTitle: string;
+  /** English exam title when available. */
+  examTitleEn?: string | null;
   courseSlug: string;
   kind: CourseExamKind;
   durationMin: number;
@@ -92,6 +98,8 @@ export interface CourseExamSubmitResult {
   attemptId: string;
   examId: string;
   examTitle: string;
+  /** English exam title when available. */
+  examTitleEn?: string | null;
   courseSlug: string;
   score: number;
   passed: boolean;

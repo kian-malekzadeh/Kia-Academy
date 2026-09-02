@@ -14,6 +14,8 @@ export interface CourseSummary {
   slug: string;
   title: string;
   description: string;
+  /** English description when available (null → fall back to `description`). */
+  descriptionEn?: string | null;
   icon: string;
   trackKey: string | null;
   lessonCount: number;
@@ -27,6 +29,8 @@ export interface CourseSummary {
 
 export interface LessonDetail extends LessonSummary {
   content: string;
+  /** Packed English content (markdown + playground) when available. */
+  contentEn?: string | null;
   videoUrl: string | null;
   courseSlug: string;
   courseTitle: string;

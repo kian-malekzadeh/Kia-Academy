@@ -31,6 +31,8 @@ export type WalletTxnKind = 'credit' | 'debit';
 export interface WalletTransactionDto {
   id: string;
   description: string;
+  /** English description when available (null → fall back to `description`). */
+  descriptionEn?: string | null;
   /** Signed amount in IRR (positive credit, negative debit). */
   amountCents: number;
   type: WalletTxnKind;
