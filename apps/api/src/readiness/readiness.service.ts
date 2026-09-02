@@ -96,7 +96,11 @@ export class ReadinessService {
     });
 
     if (existing) {
-      if (existing.endsAt.getTime() <= Date.now()) {
+      const isExpired = existing.endsAt.getTime() <= Date.now();
+      // Attempt has finished its time budget — stop it and let START create a
+      // fresh attempt; the DB partial-unique index guarantees only one active
+      // (IN_PROGRESS/PROCESSING) attempt per user at a time, race-proof.
+      if (isExpired) {
         await this.expireAttempt(existing.id);
       } else {
         return await this.toSession(existing);
@@ -107,18 +111,34 @@ export class ReadinessService {
     const startedAt = new Date();
     const endsAt = new Date(startedAt.getTime() + EXAM_DURATION_SEC * 1000);
 
-    const record = await this.prisma.examAttempt.create({
-      data: {
-        userId,
-        roadmapId: resolvedRoadmapId,
-        blueprintVersion: EXAM_BLUEPRINT_VERSION,
-        status: 'IN_PROGRESS',
-        questionIds: JSON.stringify(questions.map((q) => q.id)),
-        answers: '{}',
-        startedAt,
-        endsAt,
-      },
-    });
+    let record: Awaited<ReturnType<typeof this.prisma.examAttempt.create>>;
+    try {
+      record = await this.prisma.examAttempt.create({
+        data: {
+          userId,
+          roadmapId: resolvedRoadmapId,
+          blueprintVersion: EXAM_BLUEPRINT_VERSION,
+          status: 'IN_PROGRESS',
+          questionIds: JSON.stringify(questions.map((q) => q.id)),
+          answers: '{}',
+          startedAt,
+          endsAt,
+        },
+      });
+    } catch (err) {
+      // Race with an in-flight START from another tab/device: enforce the
+      // one-active-attempt invariant by returning the existing attempt.
+      if ((err as { code?: string } | null)?.code === 'P2002') {
+        const active = await this.prisma.examAttempt.findFirst({
+          where: { userId, status: { in: ['IN_PROGRESS', 'PROCESSING'] } },
+          orderBy: { startedAt: 'desc' },
+        });
+        if (active) {
+          return this.toSession(active);
+        }
+      }
+      throw err;
+    }
 
     return await this.toSession(record);
   }
@@ -165,6 +185,31 @@ export class ReadinessService {
     }
 
     if (attempt.status !== 'IN_PROGRESS' && attempt.status !== 'EXPIRED') {
+      throw new BadRequestException('Exam attempt cannot be submitted');
+    }
+
+    // Server-authoritative expiration: a submission after endsAt is rejected,
+    // even if the client never saw the countdown finish. First claim to flip
+    // IN_PROGRESS→PROCESSING wins; duplicate/concurrent submissions are ignored.
+    const claimedAt = new Date();
+    const expired = attempt.endsAt.getTime() <= claimedAt.getTime();
+    const claimed = await this.prisma.examAttempt.updateMany({
+      where: { id: attemptId, userId, status: 'IN_PROGRESS' },
+      data: {
+        status: 'PROCESSING',
+        ...(expired ? {} : { submittedAt: claimedAt }),
+      },
+    });
+    if (claimed.count === 0) {
+      if (expired) {
+        await this.expireAttempt(attemptId);
+      }
+      const current = await this.prisma.examAttempt.findFirst({
+        where: { id: attemptId, userId },
+      });
+      if (current?.status === 'SUBMITTED' && current.outcome && current.verdict) {
+        return this.toSubmitResult(current);
+      }
       throw new BadRequestException('Exam attempt cannot be submitted');
     }
 
@@ -607,8 +652,10 @@ export class ReadinessService {
   }
 
   private async expireAttempt(id: string) {
-    await this.prisma.examAttempt.update({
-      where: { id },
+    // Atomic no-op if already terminal; releasing the one-active-attempt slot
+    // for a subsequent START.
+    await this.prisma.examAttempt.updateMany({
+      where: { id, status: { in: ['IN_PROGRESS', 'PROCESSING'] } },
       data: { status: 'EXPIRED' },
     });
   }

@@ -182,6 +182,20 @@ export class CourseExamsService {
 
     const attempt = await this.prisma.courseExamAttempt.create({
       data: { examId: exam.id, userId, status: 'IN_PROGRESS' },
+    }).catch(async (err: unknown) => {
+      // Race with an in-flight START from another tab/device: the DB invariant
+      // (one active attempt per user/exam) rejects the second create — return
+      // the existing active attempt instead.
+      if ((err as { code?: string } | null)?.code === 'P2002') {
+        const active = await this.prisma.courseExamAttempt.findFirst({
+          where: { userId, examId, status: { in: ['IN_PROGRESS', 'PROCESSING'] } },
+          orderBy: { startedAt: 'desc' },
+        });
+        if (active) {
+          return active;
+        }
+      }
+      throw err;
     });
     const endsAt = new Date(attempt.startedAt.getTime() + durationMin * 60_000);
     return {
@@ -337,6 +351,35 @@ export class CourseExamsService {
       return this.toSubmitResult(exam, attempt, parseQuestions(exam.questions));
     }
     if (attempt.status !== 'IN_PROGRESS' && attempt.status !== 'EXPIRED') {
+      throw new BadRequestException('Attempt cannot be submitted');
+    }
+
+    // Server-authoritative expiration + single-winner atomic claim. The attempt
+    // flips IN_PROGRESS→PROCESSING exactly once; concurrent duplicate
+    // submissions are ignored, and an attempt past its deadline is expired.
+    const claimedAt = new Date();
+    const endsAt = new Date(attempt.startedAt.getTime() + exam.durationMin * 60_000);
+    const expired = endsAt.getTime() <= claimedAt.getTime();
+    const claimed = await this.prisma.courseExamAttempt.updateMany({
+      where: { id: attempt.id, userId, status: 'IN_PROGRESS' },
+      data: {
+        status: 'PROCESSING',
+        ...(expired ? {} : { submittedAt: claimedAt }),
+      },
+    });
+    if (claimed.count === 0) {
+      if (expired) {
+        await this.prisma.courseExamAttempt.updateMany({
+          where: { id: attempt.id, userId, status: 'IN_PROGRESS' },
+          data: { status: 'EXPIRED' },
+        });
+      }
+      const current = await this.prisma.courseExamAttempt.findFirst({
+        where: { id: attempt.id, userId },
+      });
+      if (current?.status === 'SUBMITTED' && current.score !== null) {
+        return this.toSubmitResult(exam, current, parseQuestions(exam.questions));
+      }
       throw new BadRequestException('Attempt cannot be submitted');
     }
 

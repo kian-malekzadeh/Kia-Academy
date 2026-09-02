@@ -127,6 +127,20 @@ model RefreshToken {
   @@index([userId])
 }
 
+enum ExamAttemptStatus {
+  IN_PROGRESS
+  PROCESSING
+  SUBMITTED
+  EXPIRED
+}
+
+enum CourseExamAttemptStatus {
+  IN_PROGRESS
+  PROCESSING
+  SUBMITTED
+  EXPIRED
+}
+
 model Assessment {
   id        String   @id @default(cuid())
   userId    String
@@ -188,15 +202,15 @@ model PersonalityResult {
 
 /** Server-graded timed digital readiness exam attempt. */
 model ExamAttempt {
-  id               String    @id @default(cuid())
+  id               String            @id @default(cuid())
   userId           String
-  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   roadmapId        String?
   blueprintVersion String
-  status           String    @default("IN_PROGRESS")
+  status           ExamAttemptStatus @default(IN_PROGRESS)
   questionIds      String
-  answers          String    @default("{}")
-  startedAt        DateTime  @default(now())
+  answers          String            @default("{}")
+  startedAt        DateTime          @default(now())
   endsAt           DateTime
   submittedAt      DateTime?
   average          Int?
@@ -205,8 +219,8 @@ model ExamAttempt {
   percentages      String?
   outcome          String?
   verdict          String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
   @@index([userId, status])
 }
@@ -416,13 +430,13 @@ model CourseExam {
 }
 
 model CourseExamAttempt {
-  id          String     @id @default(cuid())
+  id          String                 @id @default(cuid())
   examId      String
-  exam        CourseExam @relation(fields: [examId], references: [id], onDelete: Cascade)
+  exam        CourseExam             @relation(fields: [examId], references: [id], onDelete: Cascade)
   userId      String
-  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  status      String     @default("IN_PROGRESS")
-  startedAt   DateTime   @default(now())
+  user        User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status      CourseExamAttemptStatus @default(IN_PROGRESS)
+  startedAt   DateTime               @default(now())
   submittedAt DateTime?
   answers     String?
   score       Int?

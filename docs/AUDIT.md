@@ -35,10 +35,10 @@ flood caps, bcrypt cost 12, throttled auth endpoints.
 ### Exams
 | ID | Severity | Finding | Status |
 | --- | --- | --- | --- |
-| EXAM-1 | P0 | `submitExam` accepts submissions after `endsAt` (no expiration check on the submit path) | fixed (Phase 5) |
-| EXAM-2 | P0 | No DB constraint enforcing one active attempt per user/exam — race can create parallel attempts | fixed (Phase 5) |
+| EXAM-1 | P0 | `submitExam` accepts submissions after `endsAt` (no expiration check on the submit path) | **fixed (Phase 5)** — server-authoritative: `endsAt < now` expires the attempt and rejects the submission; verified on both readiness and course exams |
+| EXAM-2 | P0 | No DB constraint enforcing one active attempt per user/exam — race can create parallel attempts | **fixed (Phase 5)** — partial unique indexes (`status IN (IN_PROGRESS, PROCESSING)`) + atomic IN_PROGRESS→PROCESSING claim; app handles the P2002 race by returning the existing attempt |
 | EXAM-3 | P1 | Exam questions stored as JSON strings without version pinning on the attempt | backlog |
-| EXAM-4 | P1 | `CourseExamAttempt` allows unlimited attempts with no constraint | backlog |
+| EXAM-4 | P1 | `CourseExamAttempt` allows unlimited attempts with no constraint | backlog (product policy) |
 
 ### Challenges
 | ID | Severity | Finding | Status |
