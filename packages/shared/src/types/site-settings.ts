@@ -126,7 +126,8 @@ export type AdminAccessSection =
   | 'tests'
   | 'tickets'
   | 'messages'
-  | 'competitions';
+  | 'competitions'
+  | 'audit';
 
 /** What regular ADMIN users may access. SUPER_ADMIN always has full access. */
 export type SiteAdminAccessSettings = Record<AdminAccessSection, AdminSectionPermission>;
@@ -168,6 +169,7 @@ export function normalizeAdminAccess(raw: unknown): SiteAdminAccessSettings {
     tickets: normalizeAdminSectionPermission(source.tickets),
     messages: normalizeAdminSectionPermission(source.messages),
     competitions: normalizeAdminSectionPermission(source.competitions),
+    audit: normalizeAdminSectionPermission(source.audit),
   };
 }
 

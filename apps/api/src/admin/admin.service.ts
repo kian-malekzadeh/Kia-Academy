@@ -15,6 +15,8 @@ import type {
   AdminTicketDetail,
   AdminTicketSummary,
   AdminUser,
+  AdminUserList,
+  AdminUserListParams,
   AdminWalletDetail,
   AdminWalletSummary,
   AuthUser,
@@ -49,10 +51,23 @@ import {
   AdminUpdateTicketDto,
   AdminUpdateUserAccessDto,
   AdminUpdateUserRoleDto,
+  AdminUpdateUserStatusDto,
 } from './dto/admin.dto';
+import { AdminAuditService } from './audit.service';
 import { Prisma } from '../generated/prisma/client';
 
 const BCRYPT_ROUNDS = 12;
+
+/** Per-request metadata captured by the controller for audit logging. */
+export interface AdminRequestMeta {
+  ip?: string | null;
+  userAgent?: string | null;
+  requestId?: string | null;
+}
+
+/** Valid account statuses for admin-managed users. */
+const USER_STATUSES = ['ACTIVE', 'SUSPENDED', 'BANNED'] as const;
+type UserStatus = (typeof USER_STATUSES)[number];
 
 const SYSTEM_ROLE_DEFS = [
   { key: 'LEARNER', isSystem: true },
@@ -74,6 +89,7 @@ export class AdminService {
     private readonly prisma: PrismaService,
     private readonly mediaStorage: MediaStorageService,
     private readonly siteSettings: SiteSettingsService,
+    private readonly audit: AdminAuditService,
   ) {}
 
   async getStats(): Promise<AdminStats> {
@@ -115,7 +131,11 @@ export class AdminService {
     return courses.map((course) => this.toAdminCourse(course));
   }
 
-  async createCourse(dto: AdminCreateCourseDto): Promise<AdminCourse> {
+  async createCourse(
+    dto: AdminCreateCourseDto,
+    actor: AuthUser,
+    requestMeta: AdminRequestMeta = {},
+  ): Promise<AdminCourse> {
     const existing = await this.prisma.course.findUnique({
       where: { slug: dto.slug },
     });
@@ -189,10 +209,26 @@ export class AdminService {
       });
     }
 
+    await this.audit.record({
+      actor,
+      action: 'course.create',
+      section: 'courses',
+      entityType: 'Course',
+      entityId: course.id,
+      target: course.title,
+      after: { slug: course.slug, lessonCount: course.lessons.length },
+      ...requestMeta,
+    });
+
     return this.toAdminCourse(course);
   }
 
-  async updateCourse(slug: string, dto: AdminUpdateCourseDto): Promise<AdminCourse> {
+  async updateCourse(
+    slug: string,
+    dto: AdminUpdateCourseDto,
+    actor: AuthUser,
+    requestMeta: AdminRequestMeta = {},
+  ): Promise<AdminCourse> {
     const course = await this.ensureCourseBySlug(slug);
 
     if (dto.slug && dto.slug !== course.slug) {
@@ -219,10 +255,26 @@ export class AdminService {
       include: { lessons: { orderBy: { sortOrder: 'asc' } } },
     });
 
+    await this.audit.record({
+      actor,
+      action: 'course.update',
+      section: 'courses',
+      entityType: 'Course',
+      entityId: course.id,
+      target: updated.title,
+      before: { slug: course.slug, published: course.published, comingSoon: course.comingSoon },
+      after: { slug: updated.slug, published: updated.published, comingSoon: updated.comingSoon },
+      ...requestMeta,
+    });
+
     return this.toAdminCourse(updated);
   }
 
-  async deleteCourse(slug: string): Promise<{ deleted: true }> {
+  async deleteCourse(
+    slug: string,
+    actor: AuthUser,
+    requestMeta: AdminRequestMeta = {},
+  ): Promise<{ deleted: true }> {
     const course = await this.ensureCourseBySlug(slug);
     const lessons = await this.prisma.lesson.findMany({
       where: { courseId: course.id },
@@ -233,10 +285,25 @@ export class AdminService {
       this.mediaStorage.clearLessonDir(lesson.id);
     }
     await this.prisma.course.delete({ where: { id: course.id } });
+    await this.audit.record({
+      actor,
+      action: 'course.delete',
+      section: 'courses',
+      entityType: 'Course',
+      entityId: course.id,
+      target: course.title,
+      before: { slug: course.slug, lessonCount: lessons.length },
+      ...requestMeta,
+    });
     return { deleted: true };
   }
 
-  async createLesson(courseSlug: string, dto: AdminCreateLessonDto): Promise<AdminLesson> {
+  async createLesson(
+    courseSlug: string,
+    dto: AdminCreateLessonDto,
+    actor: AuthUser,
+    requestMeta: AdminRequestMeta = {},
+  ): Promise<AdminLesson> {
     const course = await this.ensureCourseBySlug(courseSlug);
 
     const conflict = await this.prisma.lesson.findFirst({
@@ -263,6 +330,17 @@ export class AdminService {
       },
     });
 
+    await this.audit.record({
+      actor,
+      action: 'lesson.create',
+      section: 'courses',
+      entityType: 'Lesson',
+      entityId: lesson.id,
+      target: lesson.title,
+      after: { slug: lesson.slug, courseId: course.id },
+      ...requestMeta,
+    });
+
     return this.toAdminLesson(lesson);
   }
 
@@ -270,6 +348,8 @@ export class AdminService {
     courseSlug: string,
     lessonSlug: string,
     dto: AdminUpdateLessonDto,
+    actor: AuthUser,
+    requestMeta: AdminRequestMeta = {},
   ): Promise<AdminLesson> {
     const course = await this.ensureCourseBySlug(courseSlug);
     const lesson = await this.prisma.lesson.findFirst({
@@ -300,10 +380,27 @@ export class AdminService {
       },
     });
 
+    await this.audit.record({
+      actor,
+      action: 'lesson.update',
+      section: 'courses',
+      entityType: 'Lesson',
+      entityId: lesson.id,
+      target: updated.title,
+      before: { slug: lesson.slug, contentLength: lesson.content.length },
+      after: { slug: updated.slug, contentLength: updated.content.length },
+      ...requestMeta,
+    });
+
     return this.toAdminLesson(updated);
   }
 
-  async deleteLesson(courseSlug: string, lessonSlug: string): Promise<{ deleted: true }> {
+  async deleteLesson(
+    courseSlug: string,
+    lessonSlug: string,
+    actor: AuthUser,
+    requestMeta: AdminRequestMeta = {},
+  ): Promise<{ deleted: true }> {
     const course = await this.ensureCourseBySlug(courseSlug);
     const lesson = await this.prisma.lesson.findFirst({
       where: { courseId: course.id, slug: lessonSlug },
@@ -314,6 +411,16 @@ export class AdminService {
     this.mediaStorage.deleteByPublicUrl(lesson.videoUrl);
     this.mediaStorage.clearLessonDir(lesson.id);
     await this.prisma.lesson.delete({ where: { id: lesson.id } });
+    await this.audit.record({
+      actor,
+      action: 'lesson.delete',
+      section: 'courses',
+      entityType: 'Lesson',
+      entityId: lesson.id,
+      target: lesson.title,
+      before: { slug: lesson.slug, courseId: course.id },
+      ...requestMeta,
+    });
     return { deleted: true };
   }
 
@@ -321,6 +428,8 @@ export class AdminService {
     courseSlug: string,
     lessonSlug: string,
     file: Express.Multer.File,
+    actor: AuthUser,
+    requestMeta: AdminRequestMeta = {},
   ): Promise<AdminLesson> {
     const course = await this.ensureCourseBySlug(courseSlug);
     const lesson = await this.prisma.lesson.findFirst({
@@ -336,10 +445,25 @@ export class AdminService {
       where: { id: lesson.id },
       data: { videoUrl },
     });
+    await this.audit.record({
+      actor,
+      action: 'lesson.video_upload',
+      section: 'courses',
+      entityType: 'Lesson',
+      entityId: lesson.id,
+      target: lesson.title,
+      after: { fileName: file.originalname, sizeBytes: file.size, mimeType: file.mimetype },
+      ...requestMeta,
+    });
     return this.toAdminLesson(updated);
   }
 
-  async deleteLessonVideo(courseSlug: string, lessonSlug: string): Promise<AdminLesson> {
+  async deleteLessonVideo(
+    courseSlug: string,
+    lessonSlug: string,
+    actor: AuthUser,
+    requestMeta: AdminRequestMeta = {},
+  ): Promise<AdminLesson> {
     const course = await this.ensureCourseBySlug(courseSlug);
     const lesson = await this.prisma.lesson.findFirst({
       where: { courseId: course.id, slug: lessonSlug },
@@ -354,6 +478,15 @@ export class AdminService {
       where: { id: lesson.id },
       data: { videoUrl: null },
     });
+    await this.audit.record({
+      actor,
+      action: 'lesson.video_delete',
+      section: 'courses',
+      entityType: 'Lesson',
+      entityId: lesson.id,
+      target: lesson.title,
+      ...requestMeta,
+    });
     return this.toAdminLesson(updated);
   }
 
@@ -364,7 +497,11 @@ export class AdminService {
     return challenges.map((challenge) => this.toAdminChallenge(challenge));
   }
 
-  async createChallenge(dto: AdminCreateChallengeDto): Promise<AdminChallenge> {
+  async createChallenge(
+    dto: AdminCreateChallengeDto,
+    actor: AuthUser,
+    requestMeta: AdminRequestMeta = {},
+  ): Promise<AdminChallenge> {
     const existing = await this.prisma.challenge.findUnique({
       where: { slug: dto.slug },
     });
@@ -385,10 +522,26 @@ export class AdminService {
       },
     });
 
+    await this.audit.record({
+      actor,
+      action: 'challenge.create',
+      section: 'challenges',
+      entityType: 'Challenge',
+      entityId: challenge.id,
+      target: challenge.title,
+      after: { slug: challenge.slug, points: challenge.points },
+      ...requestMeta,
+    });
+
     return this.toAdminChallenge(challenge);
   }
 
-  async updateChallenge(slug: string, dto: AdminUpdateChallengeDto): Promise<AdminChallenge> {
+  async updateChallenge(
+    slug: string,
+    dto: AdminUpdateChallengeDto,
+    actor: AuthUser,
+    requestMeta: AdminRequestMeta = {},
+  ): Promise<AdminChallenge> {
     const challenge = await this.ensureChallengeBySlug(slug);
 
     if (dto.slug && dto.slug !== challenge.slug) {
@@ -414,44 +567,210 @@ export class AdminService {
       },
     });
 
+    await this.audit.record({
+      actor,
+      action: 'challenge.update',
+      section: 'challenges',
+      entityType: 'Challenge',
+      entityId: challenge.id,
+      target: updated.title,
+      before: { slug: challenge.slug, active: challenge.active, points: challenge.points },
+      after: { slug: updated.slug, active: updated.active, points: updated.points },
+      ...requestMeta,
+    });
+
     return this.toAdminChallenge(updated);
   }
 
-  async deleteChallenge(slug: string): Promise<{ deleted: true }> {
+  async deleteChallenge(
+    slug: string,
+    actor: AuthUser,
+    requestMeta: AdminRequestMeta = {},
+  ): Promise<{ deleted: true }> {
     const challenge = await this.ensureChallengeBySlug(slug);
     await this.prisma.challenge.delete({ where: { id: challenge.id } });
+    await this.audit.record({
+      actor,
+      action: 'challenge.delete',
+      section: 'challenges',
+      entityType: 'Challenge',
+      entityId: challenge.id,
+      target: challenge.title,
+      before: { slug: challenge.slug },
+      ...requestMeta,
+    });
     return { deleted: true };
   }
 
-  async listUsers(): Promise<AdminUser[]> {
-    const users = await this.prisma.user.findMany({
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        role: true,
-        createdAt: true,
-        adminPanelAccess: true,
-      },
-      orderBy: { createdAt: 'desc' },
+  async listUsers(params: AdminUserListParams): Promise<AdminUserList> {
+    const page = Math.max(1, Math.floor(params.page ?? 1));
+    const limit = Math.min(100, Math.max(1, Math.floor(params.limit ?? 20)));
+
+    const where: Prisma.UserWhereInput = {};
+    const search = params.search?.trim();
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { phone: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+    if (params.role) {
+      where.role = params.role;
+    }
+    if (params.status) {
+      where.status = params.status;
+    }
+
+    const [total, users] = await Promise.all([
+      this.prisma.user.count({ where }),
+      this.prisma.user.findMany({
+        where,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          role: true,
+          status: true,
+          createdAt: true,
+          adminPanelAccess: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+    ]);
+
+    return {
+      items: users.map((user) => this.toAdminUser(user)),
+      total,
+      page,
+      limit,
+      hasNext: page * limit < total,
+    };
+  }
+
+  /**
+   * Activate / suspend / ban a user account.
+   *
+   * Rules enforced server-side:
+   * - Cannot change your own status (no accidental self-lockout).
+   * - SUPER_ADMIN accounts can never be suspended or banned.
+   * - Moderators may only manage LEARNER accounts; staff accounts require a super admin.
+   * - Suspending/banning requires a reason and revokes all refresh tokens (force logout).
+   */
+  async updateUserStatus(
+    id: string,
+    dto: AdminUpdateUserStatusDto,
+    actor: AuthUser,
+    requestMeta: AdminRequestMeta = {},
+  ): Promise<AdminUser> {
+    if (!USER_STATUSES.includes(dto.status as UserStatus)) {
+      throw new BadRequestException(`Invalid status "${dto.status}"`);
+    }
+    const target = (dto.status === 'ACTIVE' ? 'ACTIVE' : dto.status) as UserStatus;
+
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      throw new NotFoundException(`User ${id} not found`);
+    }
+    if (user.id === actor.id) {
+      throw new BadRequestException('You cannot change your own account status');
+    }
+    if (user.role === 'SUPER_ADMIN' && target !== 'ACTIVE') {
+      throw new BadRequestException('Super admin accounts cannot be suspended or banned');
+    }
+    if (actor.role !== 'SUPER_ADMIN' && user.role !== 'LEARNER') {
+      throw new ForbiddenException('Only super admins can change staff account status');
+    }
+
+    const reason = dto.reason?.trim() ?? '';
+    if (target !== 'ACTIVE' && !reason) {
+      throw new BadRequestException('A reason is required when suspending or banning a user');
+    }
+    if (user.status === target) {
+      return this.toAdminUser(user);
+    }
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const row = await tx.user.update({
+        where: { id },
+        data:
+          target === 'ACTIVE'
+            ? { status: 'ACTIVE', suspendedAt: null, suspendedReason: null }
+            : {
+                status: target,
+                suspendedAt: new Date(),
+                suspendedReason: reason,
+              },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          role: true,
+          status: true,
+          createdAt: true,
+          adminPanelAccess: true,
+          suspendedReason: true,
+        },
+      });
+      // Force logout: suspended/banned users lose every active session immediately.
+      if (target !== 'ACTIVE') {
+        await tx.refreshToken.deleteMany({ where: { userId: id } });
+      }
+      return row;
     });
 
-    return users.map((user) => ({
+    await this.audit.record({
+      actor,
+      action: 'user.status_change',
+      section: 'users',
+      entityType: 'User',
+      entityId: id,
+      target: updated.email ?? updated.name,
+      before: { status: user.status },
+      after: { status: updated.status, suspendedReason: updated.suspendedReason },
+      reason: reason || null,
+      ...requestMeta,
+    });
+
+    return this.toAdminUser(updated);
+  }
+
+  private toAdminUser(user: {
+    id: string;
+    name: string;
+    email: string | null;
+    phone?: string | null;
+    role: string;
+    status: string;
+    createdAt: Date;
+    adminPanelAccess: unknown;
+  }): AdminUser {
+    return {
       id: user.id,
       name: user.name,
       email: user.email,
-      phone: user.phone,
-      role: user.role,
+      phone: user.phone ?? null,
+      role: user.role as AdminUser['role'],
+      status: (USER_STATUSES as readonly string[]).includes(user.status)
+        ? (user.status as AdminUser['status'])
+        : 'ACTIVE',
       createdAt: user.createdAt.toISOString(),
       adminPanelAccess:
         isStaffRole(user.role) && user.role !== 'SUPER_ADMIN'
           ? normalizeAdminAccess(user.adminPanelAccess)
           : null,
-    }));
+    };
   }
 
-  async createUser(dto: AdminCreateUserDto, actor: AuthUser): Promise<AdminUser> {
+  async createUser(
+    dto: AdminCreateUserDto,
+    actor: AuthUser,
+    requestMeta: AdminRequestMeta = {},
+  ): Promise<AdminUser> {
     const email = dto.email.trim().toLowerCase();
     if (!email.includes('@')) {
       throw new BadRequestException('Invalid email');
@@ -526,23 +845,24 @@ export class AdminService {
         email: true,
         phone: true,
         role: true,
+        status: true,
         createdAt: true,
         adminPanelAccess: true,
       },
     });
 
-    return {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      role: user.role,
-      createdAt: user.createdAt.toISOString(),
-      adminPanelAccess:
-        isStaffRole(user.role) && user.role !== 'SUPER_ADMIN'
-          ? normalizeAdminAccess(user.adminPanelAccess)
-          : null,
-    };
+    await this.audit.record({
+      actor,
+      action: 'user.create',
+      section: 'users',
+      entityType: 'User',
+      entityId: user.id,
+      target: user.email ?? user.name,
+      after: { role: user.role },
+      ...requestMeta,
+    });
+
+    return this.toAdminUser(user);
   }
 
   async listRoles(): Promise<AdminRole[]> {
@@ -574,7 +894,11 @@ export class AdminService {
     ];
   }
 
-  async createRole(dto: AdminCreateRoleDto): Promise<AdminRole> {
+  async createRole(
+    dto: AdminCreateRoleDto,
+    actor: AuthUser,
+    requestMeta: AdminRequestMeta = {},
+  ): Promise<AdminRole> {
     const key = dto.key.trim();
     if (!key) {
       throw new BadRequestException('Role key is required');
@@ -597,6 +921,17 @@ export class AdminService {
       },
     });
 
+    await this.audit.record({
+      actor,
+      action: 'role.create',
+      section: 'users',
+      entityType: 'Role',
+      entityId: role.id,
+      target: role.key,
+      after: { name: role.name, access: dto.access ?? null },
+      ...requestMeta,
+    });
+
     return {
       id: role.id,
       key: role.key,
@@ -606,7 +941,12 @@ export class AdminService {
     };
   }
 
-  async updateRole(id: string, dto: AdminUpdateRoleDto): Promise<AdminRole> {
+  async updateRole(
+    id: string,
+    dto: AdminUpdateRoleDto,
+    actor: AuthUser,
+    requestMeta: AdminRequestMeta = {},
+  ): Promise<AdminRole> {
     const role = await this.prisma.role.findUnique({ where: { id } });
     if (!role) {
       throw new NotFoundException(`Role ${id} not found`);
@@ -628,6 +968,18 @@ export class AdminService {
       },
     });
 
+    await this.audit.record({
+      actor,
+      action: 'role.update',
+      section: 'users',
+      entityType: 'Role',
+      entityId: id,
+      target: updated.key,
+      before: { name: role.name, access: role.access },
+      after: { name: updated.name, access: updated.access },
+      ...requestMeta,
+    });
+
     return {
       id: updated.id,
       key: updated.key,
@@ -637,7 +989,11 @@ export class AdminService {
     };
   }
 
-  async deleteRole(id: string): Promise<{ deleted: true }> {
+  async deleteRole(
+    id: string,
+    actor: AuthUser,
+    requestMeta: AdminRequestMeta = {},
+  ): Promise<{ deleted: true }> {
     const role = await this.prisma.role.findUnique({ where: { id } });
     if (!role) {
       throw new NotFoundException(`Role ${id} not found`);
@@ -654,6 +1010,16 @@ export class AdminService {
     }
 
     await this.prisma.role.delete({ where: { id } });
+    await this.audit.record({
+      actor,
+      action: 'role.delete',
+      section: 'users',
+      entityType: 'Role',
+      entityId: id,
+      target: role.key,
+      before: { name: role.name, access: role.access },
+      ...requestMeta,
+    });
     return { deleted: true };
   }
 
@@ -661,6 +1027,7 @@ export class AdminService {
     id: string,
     dto: AdminUpdateUserRoleDto,
     actor: AuthUser,
+    requestMeta: AdminRequestMeta = {},
   ): Promise<AdminUser> {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) {
@@ -713,29 +1080,32 @@ export class AdminService {
         email: true,
         phone: true,
         role: true,
+        status: true,
         createdAt: true,
         adminPanelAccess: true,
       },
     });
 
-    return {
-      id: updated.id,
-      name: updated.name,
-      email: updated.email,
-      phone: updated.phone,
-      role: updated.role,
-      createdAt: updated.createdAt.toISOString(),
-      adminPanelAccess:
-        updated.role === 'ADMIN' || isStaffRole(updated.role)
-          ? normalizeAdminAccess(updated.adminPanelAccess)
-          : null,
-    };
+    await this.audit.record({
+      actor,
+      action: 'user.role_change',
+      section: 'users',
+      entityType: 'User',
+      entityId: id,
+      target: updated.email ?? updated.name,
+      before: { role: user.role },
+      after: { role: updated.role },
+      ...requestMeta,
+    });
+
+    return this.toAdminUser(updated);
   }
 
   async updateUserAdminAccess(
     id: string,
     dto: AdminUpdateUserAccessDto,
     actor: AuthUser,
+    requestMeta: AdminRequestMeta = {},
   ): Promise<AdminUser> {
     if (actor.role !== 'SUPER_ADMIN') {
       throw new ForbiddenException('Only super admins can configure moderator access');
@@ -760,20 +1130,25 @@ export class AdminService {
         email: true,
         phone: true,
         role: true,
+        status: true,
         createdAt: true,
         adminPanelAccess: true,
       },
     });
 
-    return {
-      id: updated.id,
-      name: updated.name,
-      email: updated.email,
-      phone: updated.phone,
-      role: updated.role,
-      createdAt: updated.createdAt.toISOString(),
-      adminPanelAccess: normalizeAdminAccess(updated.adminPanelAccess),
-    };
+    await this.audit.record({
+      actor,
+      action: 'user.access_change',
+      section: 'users',
+      entityType: 'User',
+      entityId: id,
+      target: updated.email ?? updated.name,
+      before: { adminPanelAccess: user.adminPanelAccess },
+      after: { adminPanelAccess: updated.adminPanelAccess },
+      ...requestMeta,
+    });
+
+    return this.toAdminUser(updated);
   }
 
   async listContactMessages(): Promise<AdminContactMessage[]> {
@@ -1004,6 +1379,7 @@ export class AdminService {
     id: string,
     dto: AdminReplyTicketDto,
     actor: AuthUser,
+    requestMeta: AdminRequestMeta = {},
   ): Promise<AdminTicketDetail> {
     const ticket = await this.prisma.supportTicket.findUnique({ where: { id } });
     if (!ticket) {
@@ -1023,10 +1399,25 @@ export class AdminService {
         data: { status: 'IN_PROGRESS' },
       });
     }
+    await this.audit.record({
+      actor,
+      action: 'ticket.reply',
+      section: 'tickets',
+      entityType: 'SupportTicket',
+      entityId: id,
+      target: ticket.subject,
+      after: { replied: true },
+      ...requestMeta,
+    });
     return this.getTicket(id);
   }
 
-  async updateTicket(id: string, dto: AdminUpdateTicketDto): Promise<AdminTicketDetail> {
+  async updateTicket(
+    id: string,
+    dto: AdminUpdateTicketDto,
+    actor: AuthUser,
+    requestMeta: AdminRequestMeta = {},
+  ): Promise<AdminTicketDetail> {
     const ticket = await this.prisma.supportTicket.findUnique({ where: { id } });
     if (!ticket) {
       throw new NotFoundException(`Ticket ${id} not found`);
@@ -1037,6 +1428,17 @@ export class AdminService {
         status: dto.status ?? undefined,
         priority: dto.priority ?? undefined,
       },
+    });
+    await this.audit.record({
+      actor,
+      action: 'ticket.update',
+      section: 'tickets',
+      entityType: 'SupportTicket',
+      entityId: id,
+      target: ticket.subject,
+      before: { status: ticket.status, priority: ticket.priority },
+      after: { status: dto.status ?? ticket.status, priority: dto.priority ?? ticket.priority },
+      ...requestMeta,
     });
     return this.getTicket(id);
   }
@@ -1062,7 +1464,11 @@ export class AdminService {
     }));
   }
 
-  async sendMessage(dto: AdminSendMessageDto, actor: AuthUser): Promise<AdminLearnerMessage> {
+  async sendMessage(
+    dto: AdminSendMessageDto,
+    actor: AuthUser,
+    requestMeta: AdminRequestMeta = {},
+  ): Promise<AdminLearnerMessage> {
     const user = await this.prisma.user.findUnique({ where: { id: dto.userId } });
     if (!user) {
       throw new NotFoundException(`User ${dto.userId} not found`);
@@ -1075,6 +1481,16 @@ export class AdminService {
         createdBy: actor.email ?? actor.name ?? 'admin',
       },
       include: { user: { select: { id: true, name: true, email: true } } },
+    });
+    await this.audit.record({
+      actor,
+      action: 'message.send',
+      section: 'messages',
+      entityType: 'LearnerMessage',
+      entityId: message.id,
+      target: message.user.email ?? message.user.name,
+      after: { subject: message.subject },
+      ...requestMeta,
     });
     return {
       id: message.id,
@@ -1089,12 +1505,25 @@ export class AdminService {
     };
   }
 
-  async deleteMessage(id: string): Promise<void> {
+  async deleteMessage(
+    id: string,
+    actor: AuthUser,
+    requestMeta: AdminRequestMeta = {},
+  ): Promise<void> {
     const message = await this.prisma.learnerMessage.findUnique({ where: { id } });
     if (!message) {
       throw new NotFoundException(`Message ${id} not found`);
     }
     await this.prisma.learnerMessage.delete({ where: { id } });
+    await this.audit.record({
+      actor,
+      action: 'message.delete',
+      section: 'messages',
+      entityType: 'LearnerMessage',
+      entityId: id,
+      target: message.subject,
+      ...requestMeta,
+    });
   }
 
   /* --- Competitions ----------------------------------------------------------- */
@@ -1117,7 +1546,11 @@ export class AdminService {
     }));
   }
 
-  async createCompetition(dto: AdminCreateCompetitionDto): Promise<AdminCompetition> {
+  async createCompetition(
+    dto: AdminCreateCompetitionDto,
+    actor: AuthUser,
+    requestMeta: AdminRequestMeta = {},
+  ): Promise<AdminCompetition> {
     const existing = await this.prisma.competition.findUnique({ where: { slug: dto.slug } });
     if (existing) {
       throw new ConflictException(`Competition slug "${dto.slug}" already exists`);
@@ -1132,6 +1565,16 @@ export class AdminService {
         active: dto.active ?? true,
       },
     });
+    await this.audit.record({
+      actor,
+      action: 'competition.create',
+      section: 'competitions',
+      entityType: 'Competition',
+      entityId: competition.id,
+      target: competition.title,
+      after: { slug: competition.slug, active: competition.active },
+      ...requestMeta,
+    });
     return {
       id: competition.id,
       slug: competition.slug,
@@ -1145,7 +1588,12 @@ export class AdminService {
     };
   }
 
-  async updateCompetition(id: string, dto: AdminUpdateCompetitionDto): Promise<AdminCompetition> {
+  async updateCompetition(
+    id: string,
+    dto: AdminUpdateCompetitionDto,
+    actor: AuthUser,
+    requestMeta: AdminRequestMeta = {},
+  ): Promise<AdminCompetition> {
     const competition = await this.prisma.competition.findUnique({ where: { id } });
     if (!competition) {
       throw new NotFoundException(`Competition ${id} not found`);
@@ -1168,6 +1616,17 @@ export class AdminService {
       },
       include: { _count: { select: { registrations: true } } },
     });
+    await this.audit.record({
+      actor,
+      action: 'competition.update',
+      section: 'competitions',
+      entityType: 'Competition',
+      entityId: id,
+      target: updated.title,
+      before: { active: competition.active, startsAt: competition.startsAt, endsAt: competition.endsAt },
+      after: { active: updated.active, startsAt: updated.startsAt, endsAt: updated.endsAt },
+      ...requestMeta,
+    });
     return {
       id: updated.id,
       slug: updated.slug,
@@ -1181,12 +1640,26 @@ export class AdminService {
     };
   }
 
-  async deleteCompetition(id: string): Promise<void> {
+  async deleteCompetition(
+    id: string,
+    actor: AuthUser,
+    requestMeta: AdminRequestMeta = {},
+  ): Promise<void> {
     const competition = await this.prisma.competition.findUnique({ where: { id } });
     if (!competition) {
       throw new NotFoundException(`Competition ${id} not found`);
     }
     await this.prisma.competition.delete({ where: { id } });
+    await this.audit.record({
+      actor,
+      action: 'competition.delete',
+      section: 'competitions',
+      entityType: 'Competition',
+      entityId: id,
+      target: competition.title,
+      before: { slug: competition.slug },
+      ...requestMeta,
+    });
   }
 
   async listCompetitionRegistrations(id: string): Promise<AdminCompetitionRegistration[]> {
@@ -1252,7 +1725,11 @@ export class AdminService {
     }));
   }
 
-  async grantEntitlement(dto: AdminGrantEntitlementDto): Promise<AdminEntitlement> {
+  async grantEntitlement(
+    dto: AdminGrantEntitlementDto,
+    actor: AuthUser,
+    requestMeta: AdminRequestMeta = {},
+  ): Promise<AdminEntitlement> {
     const user = await this.prisma.user.findUnique({ where: { id: dto.userId } });
     if (!user) {
       throw new NotFoundException(`User ${dto.userId} not found`);
@@ -1277,6 +1754,20 @@ export class AdminService {
         source: dto.source ?? 'FREE',
       },
     });
+    await this.audit.record({
+      actor,
+      action: 'entitlement.grant',
+      section: 'payments',
+      entityType: 'Entitlement',
+      entityId: entitlement.id,
+      target: user.email ?? user.name,
+      ...requestMeta,
+      after: {
+        resourceType: entitlement.resourceType,
+        resourceId: entitlement.resourceId,
+        source: entitlement.source,
+      },
+    });
     return {
       id: entitlement.id,
       userId: user.id,
@@ -1289,12 +1780,33 @@ export class AdminService {
     };
   }
 
-  async revokeEntitlement(id: string): Promise<void> {
-    const entitlement = await this.prisma.entitlement.findUnique({ where: { id } });
+  async revokeEntitlement(
+    id: string,
+    actor: AuthUser,
+    requestMeta: AdminRequestMeta = {},
+  ): Promise<void> {
+    const entitlement = await this.prisma.entitlement.findUnique({
+      where: { id },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    });
     if (!entitlement) {
       throw new NotFoundException(`Entitlement ${id} not found`);
     }
     await this.prisma.entitlement.delete({ where: { id } });
+    await this.audit.record({
+      actor,
+      action: 'entitlement.revoke',
+      section: 'payments',
+      entityType: 'Entitlement',
+      entityId: id,
+      target: entitlement.user.email ?? entitlement.user.name,
+      ...requestMeta,
+      before: {
+        resourceType: entitlement.resourceType,
+        resourceId: entitlement.resourceId,
+        source: entitlement.source,
+      },
+    });
   }
 
   /* --- Wallets ------------------------------------------------------------------ */
@@ -1348,7 +1860,12 @@ export class AdminService {
     };
   }
 
-  async adjustWallet(userId: string, dto: AdminAdjustWalletDto): Promise<AdminWalletDetail> {
+  async adjustWallet(
+    userId: string,
+    dto: AdminAdjustWalletDto,
+    actor: AuthUser,
+    requestMeta: AdminRequestMeta = {},
+  ): Promise<AdminWalletDetail> {
     const wallet = await this.prisma.learnerWallet.findUnique({
       where: { userId },
       include: { user: { select: { id: true, name: true, email: true } } },
@@ -1359,13 +1876,20 @@ export class AdminService {
     if (dto.type === 'DEBIT' && wallet.balanceCents < dto.amountCents) {
       throw new BadRequestException('Debit exceeds the current wallet balance');
     }
+
+    const reason = dto.reason?.trim() ?? '';
+    if (!reason) {
+      throw new BadRequestException('An adjustment reason is required');
+    }
+    const description = dto.description?.trim() ? `${dto.description.trim()} — ${reason}` : reason;
+
     await this.prisma.$transaction([
       this.prisma.walletTransaction.create({
         data: {
           walletId: wallet.id,
           type: dto.type,
           amountCents: dto.amountCents,
-          description: dto.description,
+          description,
         },
       }),
       this.prisma.learnerWallet.update({
@@ -1378,6 +1902,27 @@ export class AdminService {
         },
       }),
     ]);
+
+    await this.audit.record({
+      actor,
+      action: 'wallet.adjust',
+      section: 'payments',
+      entityType: 'LearnerWallet',
+      entityId: wallet.id,
+      target: wallet.user.email ?? wallet.user.name,
+      before: { balanceCents: wallet.balanceCents },
+      after: {
+        balanceCents:
+          dto.type === 'CREDIT'
+            ? wallet.balanceCents + dto.amountCents
+            : wallet.balanceCents - dto.amountCents,
+        type: dto.type,
+        amountCents: dto.amountCents,
+      },
+      reason,
+      ...requestMeta,
+    });
+
     return this.getWallet(userId);
   }
 }

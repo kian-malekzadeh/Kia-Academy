@@ -53,6 +53,11 @@ import type {
   AdminContactMessage,
   AdminCreateUserDto,
   AdminUser,
+  AdminUserList,
+  AdminUserListParams,
+  AdminUpdateUserStatusDto,
+  AdminAuditLogList,
+  AdminAuditLogParams,
   AdminPayment,
   AdminTicketDetail,
   AdminTicketStatus,
@@ -780,8 +785,36 @@ const liveApi = {
     return request<void>(`/admin/challenges/${slug}`, { method: 'DELETE' });
   },
 
-  adminListUsers(): Promise<AdminUser[]> {
-    return request<AdminUser[]>('/admin/users');
+  adminListUsers(params: AdminUserListParams = {}): Promise<AdminUserList> {
+    const qs = new URLSearchParams();
+    if (params.page) qs.set('page', String(params.page));
+    if (params.limit) qs.set('limit', String(params.limit));
+    if (params.search) qs.set('search', params.search);
+    if (params.role) qs.set('role', params.role);
+    if (params.status) qs.set('status', params.status);
+    const query = qs.toString();
+    return request<AdminUserList>(`/admin/users${query ? `?${query}` : ''}`);
+  },
+
+  adminUpdateUserStatus(id: string, dto: AdminUpdateUserStatusDto): Promise<AdminUser> {
+    return request<AdminUser>(`/admin/users/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify(dto),
+    });
+  },
+
+  adminListAuditLogs(params: AdminAuditLogParams = {}): Promise<AdminAuditLogList> {
+    const qs = new URLSearchParams();
+    if (params.page) qs.set('page', String(params.page));
+    if (params.limit) qs.set('limit', String(params.limit));
+    if (params.section) qs.set('section', params.section);
+    if (params.action) qs.set('action', params.action);
+    if (params.actorId) qs.set('actorId', params.actorId);
+    if (params.search) qs.set('search', params.search);
+    if (params.from) qs.set('from', params.from);
+    if (params.to) qs.set('to', params.to);
+    const query = qs.toString();
+    return request<AdminAuditLogList>(`/admin/audit-logs${query ? `?${query}` : ''}`);
   },
 
   adminCreateUser(dto: AdminCreateUserDto): Promise<AdminUser> {

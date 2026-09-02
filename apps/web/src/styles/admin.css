@@ -1345,3 +1345,52 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Admin pagination controls (users list, audit log, …). */
+.admin-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.admin-pagination span {
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
+/* Audit log expandable detail rows. */
+.admin-audit-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.5rem 0.25rem;
+}
+
+.admin-audit-detail-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.admin-audit-detail-label {
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: capitalize;
+}
+
+.admin-audit-json {
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  background: var(--color-surface-muted, rgba(127, 127, 127, 0.08));
+  font-size: var(--fs-small);
+  overflow-x: auto;
+  direction: ltr;
+  text-align: left;
+  max-width: 100%;
+}
+

@@ -229,6 +229,16 @@ export class AdminUpdateUserAccessDto {
   adminPanelAccess!: SiteAdminAccessDto;
 }
 
+export class AdminUpdateUserStatusDto {
+  @IsIn(['ACTIVE', 'SUSPENDED', 'BANNED'])
+  status!: 'ACTIVE' | 'SUSPENDED' | 'BANNED';
+
+  /** Required (server-side) when the new status is SUSPENDED or BANNED. */
+  @IsOptional()
+  @IsString()
+  reason?: string;
+}
+
 export class AdminUpdateLessonDto {
   @IsOptional()
   @IsString()
@@ -352,6 +362,11 @@ export class AdminAdjustWalletDto {
   @Min(1)
   amountCents!: number;
 
+  @IsOptional()
   @IsString()
-  description!: string;
+  description?: string;
+
+  /** Required (server-side) — every manual money movement must state why. */
+  @IsString()
+  reason!: string;
 }

@@ -65,10 +65,18 @@ model User {
   role            String    @default("LEARNER")
   emailVerified   Boolean   @default(false)
   profileComplete Boolean   @default(false)
+  /** Account status: ACTIVE (default), SUSPENDED (temporary), BANNED (permanent). */
+  status          String    @default("ACTIVE")
+  suspendedAt     DateTime?
+  /** Admin-provided reason stored when a user is suspended or banned. */
+  suspendedReason String?
   /** Per-moderator admin panel permissions (ADMIN role). Null → site default template. */
   adminPanelAccess Json?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+
+  @@index([status])
+  @@index([role, createdAt])
 
   refreshTokens        RefreshToken[]
   assessments          Assessment[]
@@ -667,4 +675,34 @@ model CourseAttachment {
   createdAt DateTime @default(now())
 
   @@index([courseId, sortOrder])
+}
+
+/**
+ * Immutable admin audit trail. Written by AdminAuditService on sensitive admin
+ * mutations. There is intentionally NO update/delete API or Prisma cascade —
+ * audit history must not be modifiable from the panel.
+ */
+model AdminAuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actorName  String   @default("")
+  actorRole  String   @default("")
+  action     String
+  section    String
+  entityType String
+  entityId   String?
+  /** Human-readable target label (course title, user email, …). */
+  target     String   @default("")
+  before     Json?
+  after      Json?
+  reason     String?
+  ip         String?
+  userAgent  String?
+  requestId  String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([actorId, createdAt])
+  @@index([section, action])
+  @@index([entityType, entityId])
 }

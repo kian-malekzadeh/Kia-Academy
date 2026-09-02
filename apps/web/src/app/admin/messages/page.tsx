@@ -22,8 +22,8 @@ export default function AdminMessagesPage() {
     Promise.all([api.adminListMessages(), api.adminListUsers()])
       .then(([nextMessages, nextUsers]) => {
         setMessages(nextMessages);
-        setUsers(nextUsers);
-        setUserId((current) => current || nextUsers[0]?.id || '');
+        setUsers(nextUsers.items);
+        setUserId((current) => current || nextUsers.items[0]?.id || '');
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : t('admin.messages.error')))
       .finally(() => setLoading(false));

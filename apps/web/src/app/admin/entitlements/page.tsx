@@ -26,8 +26,8 @@ export default function AdminEntitlementsPage() {
     Promise.all([api.adminListEntitlements(), api.adminListUsers()])
       .then(([nextEntitlements, nextUsers]) => {
         setEntitlements(nextEntitlements);
-        setUsers(nextUsers);
-        setUserId((current) => current || nextUsers[0]?.id || '');
+        setUsers(nextUsers.items);
+        setUserId((current) => current || nextUsers.items[0]?.id || '');
       })
       .catch((err) =>
         setError(err instanceof ApiError ? err.message : t('admin.entitlements.error')),

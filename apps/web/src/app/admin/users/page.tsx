@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { Check, Loader2, Plus, X } from 'lucide-react';
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   createDefaultSiteSettings,
   normalizeAdminAccess,
   isStaffRole,
   type AdminRole,
+  type AdminUserStatus,
   type SiteAdminAccessSettings,
   type UserRole,
 } from '@kia-academy/shared';
@@ -16,6 +17,14 @@ import { useAuth } from '@/context/AuthProvider';
 import { useLanguage } from '@/context/LanguageProvider';
 import { api, ApiError } from '@/lib/api';
 import type { AdminUser } from '@kia-academy/shared';
+
+const USERS_PAGE_SIZE = 20;
+
+const statusBadgeTone: Record<AdminUserStatus, string> = {
+  ACTIVE: 'ok',
+  SUSPENDED: 'warning',
+  BANNED: 'danger',
+};
 
 function roleLabel(role: UserRole, t: (key: string) => string, customNames?: Map<string, string>): string {
   if (role === 'SUPER_ADMIN') return t('domain.roles.superAdmin');
@@ -43,19 +52,43 @@ export default function AdminUsersPage() {
   const [feedback, setFeedback] = useState<Record<string, 'success' | 'error'>>({});
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'' | AdminUserStatus>('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [hasNext, setHasNext] = useState(false);
+  const [statusTarget, setStatusTarget] = useState<{
+    user: AdminUser;
+    status: Exclude<AdminUserStatus, 'ACTIVE'>;
+  } | null>(null);
+  const [statusActivateUser, setStatusActivateUser] = useState<AdminUser | null>(null);
+  const [statusReason, setStatusReason] = useState('');
+  const [statusBusy, setStatusBusy] = useState(false);
+  const [statusDialogError, setStatusDialogError] = useState('');
 
-  useEffect(() => {
-    Promise.all([
-      api.adminListUsers(),
-      api.adminListRoles().catch(() => [] as AdminRole[]),
-    ])
-      .then(([list, roleList]) => {
-        setUsers(list);
+  const load = useCallback(
+    async (targetPage: number) => {
+      setLoading(true);
+      setError('');
+      try {
+        const [list, roleList] = await Promise.all([
+          api.adminListUsers({
+            page: targetPage,
+            limit: USERS_PAGE_SIZE,
+            search: search.trim() || undefined,
+            role: roleFilter || undefined,
+            status: statusFilter || undefined,
+          }),
+          api.adminListRoles().catch(() => [] as AdminRole[]),
+        ]);
+        setUsers(list.items);
         setRoles(roleList);
-        setDraftRoles(Object.fromEntries(list.map((u) => [u.id, u.role])));
+        setTotal(list.total);
+        setPage(list.page);
+        setHasNext(list.hasNext);
+        setDraftRoles(Object.fromEntries(list.items.map((u) => [u.id, u.role])));
         setDraftAccess(
           Object.fromEntries(
-            list.map((u) => [
+            list.items.map((u) => [
               u.id,
               u.role === 'ADMIN' || (u.role !== 'LEARNER' && u.role !== 'SUPER_ADMIN')
                 ? normalizeAdminAccess(u.adminPanelAccess ?? defaultModeratorAccess())
@@ -63,12 +96,23 @@ export default function AdminUsersPage() {
             ]),
           ),
         );
-      })
-      .catch((err) => {
+      } catch (err) {
         setError(err instanceof ApiError ? err.message : t('admin.users.loadError'));
-      })
-      .finally(() => setLoading(false));
-  }, [t]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [search, roleFilter, statusFilter, t],
+  );
+
+  useEffect(() => {
+    void load(1);
+  }, [roleFilter, statusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(total / USERS_PAGE_SIZE));
+
+  const canManageStatus = (user: AdminUser) =>
+    user.id !== me?.id && user.role !== 'SUPER_ADMIN';
 
   const customRoleNames = useMemo(
     () =>
@@ -76,21 +120,38 @@ export default function AdminUsersPage() {
     [roles],
   );
 
-  const filteredUsers = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return users.filter((user) => {
-      if (roleFilter && user.role !== roleFilter) return false;
-      if (!q) return true;
-      const roleText = roleLabel(user.role, t, customRoleNames).toLowerCase();
-      return (
-        user.name.toLowerCase().includes(q) ||
-        (user.email ?? '').toLowerCase().includes(q) ||
-        (user.phone ?? '').toLowerCase().includes(q) ||
-        user.role.toLowerCase().includes(q) ||
-        roleText.includes(q)
+  const applyUserStatus = async () => {
+    const activateUser = statusActivateUser;
+    const target = statusTarget;
+    if (!activateUser && !target) return;
+    const user = activateUser ?? target!.user;
+    const nextStatus: AdminUserStatus = activateUser ? 'ACTIVE' : target!.status;
+    if (nextStatus !== 'ACTIVE' && !statusReason.trim()) {
+      setStatusDialogError(t('admin.users.statusReason'));
+      return;
+    }
+
+    setStatusBusy(true);
+    setStatusDialogError('');
+    setError('');
+    try {
+      const updated = await api.adminUpdateUserStatus(user.id, {
+        status: nextStatus,
+        reason: nextStatus === 'ACTIVE' ? undefined : statusReason.trim(),
+      });
+      setUsers((prev) => prev.map((u) => (u.id === user.id ? updated : u)));
+      setStatusTarget(null);
+      setStatusActivateUser(null);
+      setStatusReason('');
+      setFeedback((prev) => ({ ...prev, [user.id]: 'success' }));
+    } catch (err) {
+      setStatusDialogError(
+        err instanceof ApiError ? err.message : t('admin.users.statusError'),
       );
-    });
-  }, [users, search, roleFilter, t, customRoleNames]);
+    } finally {
+      setStatusBusy(false);
+    }
+  };
 
   const saveRole = async (user: AdminUser) => {
     const nextRole = draftRoles[user.id];
@@ -182,8 +243,24 @@ export default function AdminUsersPage() {
             className="admin-input"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') void load(1);
+            }}
             placeholder={t('admin.users.searchPlaceholder')}
           />
+        </label>
+        <label className="form-field" style={{ flex: '0 1 180px', margin: 0 }}>
+          <span className="sr-only">{t('admin.users.col.status')}</span>
+          <select
+            className="admin-select"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as '' | AdminUserStatus)}
+          >
+            <option value="">{t('admin.users.allStatuses')}</option>
+            <option value="ACTIVE">{t('admin.users.status.ACTIVE')}</option>
+            <option value="SUSPENDED">{t('admin.users.status.SUSPENDED')}</option>
+            <option value="BANNED">{t('admin.users.status.BANNED')}</option>
+          </select>
         </label>
         <label className="form-field" style={{ flex: '0 1 180px', margin: 0 }}>
           <span className="sr-only">{t('admin.users.col.role')}</span>
@@ -214,12 +291,13 @@ export default function AdminUsersPage() {
               <th>{t('admin.users.col.name')}</th>
               <th>{t('admin.users.col.email')}</th>
               <th>{t('admin.users.col.role')}</th>
+              <th>{t('admin.users.col.status')}</th>
               <th>{t('admin.users.col.joined')}</th>
               <th>{t('admin.users.col.actions')}</th>
             </tr>
           </thead>
           <tbody>
-            {filteredUsers.map((user) => {
+            {users.map((user) => {
               const draft = draftRoles[user.id] ?? user.role;
               const dirty = draft !== user.role;
               const rowFeedback = feedback[user.id];
@@ -241,6 +319,11 @@ export default function AdminUsersPage() {
                       </span>
                     </td>
                     <td>{format.date(user.createdAt)}</td>
+                    <td>
+                      <span className={`admin-badge ${statusBadgeTone[user.status]}`}>
+                        {t(`admin.users.status.${user.status}`)}
+                      </span>
+                    </td>
                     <td>
                       <div className="admin-role-save-row">
                         <label className="admin-role-picker">
@@ -296,11 +379,55 @@ export default function AdminUsersPage() {
                           </span>
                         )}
                       </div>
+                      <div className="admin-role-save-row">
+                        {canManageStatus(user) &&
+                          (user.status === 'ACTIVE' ? (
+                            <>
+                              <button
+                                type="button"
+                                className="btn-next admin-btn"
+                                disabled={statusBusy}
+                                onClick={() => {
+                                  setStatusTarget({ user, status: 'SUSPENDED' });
+                                  setStatusReason('');
+                                  setStatusDialogError('');
+                                }}
+                              >
+                                {t('admin.users.suspend')}
+                              </button>
+                              <button
+                                type="button"
+                                className="btn-next admin-btn"
+                                disabled={statusBusy}
+                                onClick={() => {
+                                  setStatusTarget({ user, status: 'BANNED' });
+                                  setStatusReason('');
+                                  setStatusDialogError('');
+                                }}
+                              >
+                                {t('admin.users.ban')}
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              className="btn-next admin-btn"
+                              disabled={statusBusy}
+                              onClick={() => {
+                                setStatusActivateUser(user);
+                                setStatusReason('');
+                                setStatusDialogError('');
+                              }}
+                            >
+                              {t('admin.users.activate')}
+                            </button>
+                          ))}
+                      </div>
                     </td>
                   </tr>
                   {showAccess && (
                     <tr key={`${user.id}-access`}>
-                      <td colSpan={5}>
+                      <td colSpan={6}>
                         <div className="admin-moderator-access">
                           <h3 className="admin-sub" style={{ marginTop: 0 }}>
                             {t('admin.users.accessFor', { name: user.name })}
@@ -335,6 +462,102 @@ export default function AdminUsersPage() {
           </tbody>
         </table>
       </div>
+
+      <div className="admin-pagination">
+        <button
+          type="button"
+          className="btn-next admin-btn"
+          disabled={page <= 1 || loading}
+          onClick={() => void load(page - 1)}
+        >
+          {t('admin.users.prev')}
+        </button>
+        <span>{t('admin.users.pageInfo', { page, total: totalPages })}</span>
+        <button
+          type="button"
+          className="btn-next admin-btn"
+          disabled={!hasNext || loading}
+          onClick={() => void load(page + 1)}
+        >
+          {t('admin.users.next')}
+        </button>
+        <span className="admin-sub">{t('admin.users.total', { count: total })}</span>
+      </div>
+
+      {(statusTarget || statusActivateUser) && (
+        <div
+          className="modal-overlay active"
+          role="presentation"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !statusBusy) {
+              setStatusTarget(null);
+              setStatusActivateUser(null);
+            }
+          }}
+        >
+          <div className="modal" role="dialog" aria-modal="true">
+            {(() => {
+              const user = statusActivateUser ?? statusTarget!.user;
+              const nextStatus = statusActivateUser ? 'ACTIVE' : statusTarget!.status;
+              return (
+                <>
+                  <h4>{t('admin.users.statusConfirmTitle')}</h4>
+                  <p>
+                    {t('admin.users.statusConfirmBody', {
+                      name: user.name,
+                      status: t(`admin.users.status.${nextStatus}`),
+                    })}
+                  </p>
+                  {nextStatus !== 'ACTIVE' && (
+                    <p className="form-error">{t('admin.users.statusConfirmWarning')}</p>
+                  )}
+                  <label className="form-field" style={{ width: '100%', textAlign: 'start' }}>
+                    <span>{t('admin.users.statusReason')}</span>
+                    <textarea
+                      className="admin-input"
+                      rows={3}
+                      value={statusReason}
+                      disabled={statusBusy}
+                      placeholder={t('admin.users.statusReasonPlaceholder')}
+                      onChange={(e) => setStatusReason(e.target.value)}
+                    />
+                  </label>
+                  {statusDialogError && <p className="form-error">{statusDialogError}</p>}
+                  <div
+                    style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}
+                  >
+                    <button
+                      type="button"
+                      className="cta-primary"
+                      disabled={statusBusy}
+                      onClick={() => void applyUserStatus()}
+                    >
+                      {statusBusy ? (
+                        <>
+                          <Loader2 size={14} className="spin" /> {t('admin.users.updating')}
+                        </>
+                      ) : (
+                        t('admin.users.statusConfirm')
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-next admin-btn"
+                      disabled={statusBusy}
+                      onClick={() => {
+                        setStatusTarget(null);
+                        setStatusActivateUser(null);
+                      }}
+                    >
+                      {t('admin.users.statusCancel')}
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

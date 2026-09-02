@@ -6,14 +6,16 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
-import type { AuthUser } from '@kia-academy/shared';
+import type { AuthUser, AdminUserListParams } from '@kia-academy/shared';
 import { AdminAccess } from '../common/decorators/admin-access.decorator';
+import { AuditMeta, type AuditRequestMeta } from '../common/decorators/audit-meta.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { AdminAccessGuard } from '../common/guards/admin-access.guard';
@@ -21,6 +23,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { MAX_LESSON_VIDEO_BYTES } from '../media/media-storage.service';
 import { AdminService } from './admin.service';
+import { AdminAuditService } from './audit.service';
 import {
   AdminAdjustWalletDto,
   AdminCreateChallengeDto,
@@ -40,13 +43,17 @@ import {
   AdminUpdateTicketDto,
   AdminUpdateUserAccessDto,
   AdminUpdateUserRoleDto,
+  AdminUpdateUserStatusDto,
 } from './dto/admin.dto';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard, AdminAccessGuard)
 @Roles('ADMIN')
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly audit: AdminAuditService,
+  ) {}
 
   @Get('stats')
   @AdminAccess('stats', 'view')
@@ -62,42 +69,67 @@ export class AdminController {
 
   @Post('courses')
   @AdminAccess('courses', 'manage')
-  createCourse(@Body() dto: AdminCreateCourseDto) {
-    return this.adminService.createCourse(dto);
+  createCourse(
+    @CurrentUser() actor: AuthUser,
+    @AuditMeta() auditMeta: AuditRequestMeta,
+    @Body() dto: AdminCreateCourseDto,
+  ) {
+    return this.adminService.createCourse(dto, actor, auditMeta);
   }
 
   @Patch('courses/:slug')
   @AdminAccess('courses', 'edit')
-  updateCourse(@Param('slug') slug: string, @Body() dto: AdminUpdateCourseDto) {
-    return this.adminService.updateCourse(slug, dto);
+  updateCourse(
+    @CurrentUser() actor: AuthUser,
+    @AuditMeta() auditMeta: AuditRequestMeta,
+    @Param('slug') slug: string,
+    @Body() dto: AdminUpdateCourseDto,
+  ) {
+    return this.adminService.updateCourse(slug, dto, actor, auditMeta);
   }
 
   @Delete('courses/:slug')
   @AdminAccess('courses', 'manage')
-  deleteCourse(@Param('slug') slug: string) {
-    return this.adminService.deleteCourse(slug);
+  deleteCourse(
+    @CurrentUser() actor: AuthUser,
+    @AuditMeta() auditMeta: AuditRequestMeta,
+    @Param('slug') slug: string,
+  ) {
+    return this.adminService.deleteCourse(slug, actor, auditMeta);
   }
 
   @Post('courses/:slug/lessons')
   @AdminAccess('courses', 'manage')
-  createLesson(@Param('slug') slug: string, @Body() dto: AdminCreateLessonDto) {
-    return this.adminService.createLesson(slug, dto);
+  createLesson(
+    @CurrentUser() actor: AuthUser,
+    @AuditMeta() auditMeta: AuditRequestMeta,
+    @Param('slug') slug: string,
+    @Body() dto: AdminCreateLessonDto,
+  ) {
+    return this.adminService.createLesson(slug, dto, actor, auditMeta);
   }
 
   @Patch('courses/:slug/lessons/:lessonSlug')
   @AdminAccess('courses', 'edit')
   updateLesson(
+    @CurrentUser() actor: AuthUser,
+    @AuditMeta() auditMeta: AuditRequestMeta,
     @Param('slug') slug: string,
     @Param('lessonSlug') lessonSlug: string,
     @Body() dto: AdminUpdateLessonDto,
   ) {
-    return this.adminService.updateLesson(slug, lessonSlug, dto);
+    return this.adminService.updateLesson(slug, lessonSlug, dto, actor, auditMeta);
   }
 
   @Delete('courses/:slug/lessons/:lessonSlug')
   @AdminAccess('courses', 'manage')
-  deleteLesson(@Param('slug') slug: string, @Param('lessonSlug') lessonSlug: string) {
-    return this.adminService.deleteLesson(slug, lessonSlug);
+  deleteLesson(
+    @CurrentUser() actor: AuthUser,
+    @AuditMeta() auditMeta: AuditRequestMeta,
+    @Param('slug') slug: string,
+    @Param('lessonSlug') lessonSlug: string,
+  ) {
+    return this.adminService.deleteLesson(slug, lessonSlug, actor, auditMeta);
   }
 
   @Post('courses/:slug/lessons/:lessonSlug/video')
@@ -109,17 +141,24 @@ export class AdminController {
     }),
   )
   uploadLessonVideo(
+    @CurrentUser() actor: AuthUser,
+    @AuditMeta() auditMeta: AuditRequestMeta,
     @Param('slug') slug: string,
     @Param('lessonSlug') lessonSlug: string,
     @UploadedFile() file: Express.Multer.File,
   ) {
-    return this.adminService.uploadLessonVideo(slug, lessonSlug, file);
+    return this.adminService.uploadLessonVideo(slug, lessonSlug, file, actor, auditMeta);
   }
 
   @Delete('courses/:slug/lessons/:lessonSlug/video')
   @AdminAccess('courses', 'edit')
-  deleteLessonVideo(@Param('slug') slug: string, @Param('lessonSlug') lessonSlug: string) {
-    return this.adminService.deleteLessonVideo(slug, lessonSlug);
+  deleteLessonVideo(
+    @CurrentUser() actor: AuthUser,
+    @AuditMeta() auditMeta: AuditRequestMeta,
+    @Param('slug') slug: string,
+    @Param('lessonSlug') lessonSlug: string,
+  ) {
+    return this.adminService.deleteLessonVideo(slug, lessonSlug, actor, auditMeta);
   }
 
   @Get('challenges')
@@ -130,52 +169,94 @@ export class AdminController {
 
   @Post('challenges')
   @AdminAccess('challenges', 'manage')
-  createChallenge(@Body() dto: AdminCreateChallengeDto) {
-    return this.adminService.createChallenge(dto);
+  createChallenge(
+    @CurrentUser() actor: AuthUser,
+    @AuditMeta() auditMeta: AuditRequestMeta,
+    @Body() dto: AdminCreateChallengeDto,
+  ) {
+    return this.adminService.createChallenge(dto, actor, auditMeta);
   }
 
   @Patch('challenges/:slug')
   @AdminAccess('challenges', 'edit')
-  updateChallenge(@Param('slug') slug: string, @Body() dto: AdminUpdateChallengeDto) {
-    return this.adminService.updateChallenge(slug, dto);
+  updateChallenge(
+    @CurrentUser() actor: AuthUser,
+    @AuditMeta() auditMeta: AuditRequestMeta,
+    @Param('slug') slug: string,
+    @Body() dto: AdminUpdateChallengeDto,
+  ) {
+    return this.adminService.updateChallenge(slug, dto, actor, auditMeta);
   }
 
   @Delete('challenges/:slug')
   @AdminAccess('challenges', 'manage')
-  deleteChallenge(@Param('slug') slug: string) {
-    return this.adminService.deleteChallenge(slug);
+  deleteChallenge(
+    @CurrentUser() actor: AuthUser,
+    @AuditMeta() auditMeta: AuditRequestMeta,
+    @Param('slug') slug: string,
+  ) {
+    return this.adminService.deleteChallenge(slug, actor, auditMeta);
   }
 
   @Get('users')
   @AdminAccess('users', 'view')
-  listUsers() {
-    return this.adminService.listUsers();
+  listUsers(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+    @Query('role') role?: string,
+    @Query('status') status?: string,
+  ) {
+    return this.adminService.listUsers({
+      page: page ? Number(page) : undefined,
+      limit: limit ? Number(limit) : undefined,
+      search,
+      role,
+      status: (status ?? '') as AdminUserListParams['status'],
+    });
+  }
+
+  @Patch('users/:id/status')
+  @AdminAccess('users', 'edit')
+  updateUserStatus(
+    @CurrentUser() actor: AuthUser,
+    @AuditMeta() auditMeta: AuditRequestMeta,
+    @Param('id') id: string,
+    @Body() dto: AdminUpdateUserStatusDto,
+  ) {
+    return this.adminService.updateUserStatus(id, dto, actor, auditMeta);
   }
 
   @Post('users')
   @AdminAccess('users', 'manage')
-  createUser(@CurrentUser() actor: AuthUser, @Body() dto: AdminCreateUserDto) {
-    return this.adminService.createUser(dto, actor);
+  createUser(
+    @CurrentUser() actor: AuthUser,
+    @AuditMeta() auditMeta: AuditRequestMeta,
+    @Body() dto: AdminCreateUserDto,
+  ) {
+    return this.adminService.createUser(dto, actor, auditMeta);
   }
 
   @Patch('users/:id/role')
   @AdminAccess('users', 'edit')
   updateUserRole(
     @CurrentUser() actor: AuthUser,
+    @AuditMeta() auditMeta: AuditRequestMeta,
     @Param('id') id: string,
     @Body() dto: AdminUpdateUserRoleDto,
   ) {
-    return this.adminService.updateUserRole(id, dto, actor);
+    return this.adminService.updateUserRole(id, dto, actor, auditMeta);
   }
 
   @Patch('users/:id/access')
   @AdminAccess('users', 'edit')
   updateUserAccess(
     @CurrentUser() actor: AuthUser,
+    @AuditMeta() auditMeta: AuditRequestMeta,
     @Param('id') id: string,
     @Body() dto: AdminUpdateUserAccessDto,
   ) {
-    return this.adminService.updateUserAdminAccess(id, dto, actor);
+    return this.adminService.updateUserAdminAccess(id, dto, actor, auditMeta);
   }
 
   @Get('roles')
@@ -186,20 +267,33 @@ export class AdminController {
 
   @Post('roles')
   @AdminAccess('users', 'manage')
-  createRole(@Body() dto: AdminCreateRoleDto) {
-    return this.adminService.createRole(dto);
+  createRole(
+    @CurrentUser() actor: AuthUser,
+    @AuditMeta() auditMeta: AuditRequestMeta,
+    @Body() dto: AdminCreateRoleDto,
+  ) {
+    return this.adminService.createRole(dto, actor, auditMeta);
   }
 
   @Patch('roles/:id')
   @AdminAccess('users', 'edit')
-  updateRole(@Param('id') id: string, @Body() dto: AdminUpdateRoleDto) {
-    return this.adminService.updateRole(id, dto);
+  updateRole(
+    @CurrentUser() actor: AuthUser,
+    @AuditMeta() auditMeta: AuditRequestMeta,
+    @Param('id') id: string,
+    @Body() dto: AdminUpdateRoleDto,
+  ) {
+    return this.adminService.updateRole(id, dto, actor, auditMeta);
   }
 
   @Delete('roles/:id')
   @AdminAccess('users', 'manage')
-  deleteRole(@Param('id') id: string) {
-    return this.adminService.deleteRole(id);
+  deleteRole(
+    @CurrentUser() actor: AuthUser,
+    @AuditMeta() auditMeta: AuditRequestMeta,
+    @Param('id') id: string,
+  ) {
+    return this.adminService.deleteRole(id, actor, auditMeta);
   }
 
   @Get('contact')
@@ -238,16 +332,22 @@ export class AdminController {
   @AdminAccess('tickets', 'edit')
   replyToTicket(
     @CurrentUser() actor: AuthUser,
+    @AuditMeta() auditMeta: AuditRequestMeta,
     @Param('id') id: string,
     @Body() dto: AdminReplyTicketDto,
   ) {
-    return this.adminService.replyToTicket(id, dto, actor);
+    return this.adminService.replyToTicket(id, dto, actor, auditMeta);
   }
 
   @Patch('tickets/:id')
   @AdminAccess('tickets', 'edit')
-  updateTicket(@Param('id') id: string, @Body() dto: AdminUpdateTicketDto) {
-    return this.adminService.updateTicket(id, dto);
+  updateTicket(
+    @CurrentUser() actor: AuthUser,
+    @AuditMeta() auditMeta: AuditRequestMeta,
+    @Param('id') id: string,
+    @Body() dto: AdminUpdateTicketDto,
+  ) {
+    return this.adminService.updateTicket(id, dto, actor, auditMeta);
   }
 
   /* --- Learner inbox messages --------------------------------------------------- */
@@ -260,14 +360,22 @@ export class AdminController {
 
   @Post('messages')
   @AdminAccess('messages', 'manage')
-  sendMessage(@CurrentUser() actor: AuthUser, @Body() dto: AdminSendMessageDto) {
-    return this.adminService.sendMessage(dto, actor);
+  sendMessage(
+    @CurrentUser() actor: AuthUser,
+    @AuditMeta() auditMeta: AuditRequestMeta,
+    @Body() dto: AdminSendMessageDto,
+  ) {
+    return this.adminService.sendMessage(dto, actor, auditMeta);
   }
 
   @Delete('messages/:id')
   @AdminAccess('messages', 'manage')
-  deleteMessage(@Param('id') id: string) {
-    return this.adminService.deleteMessage(id);
+  deleteMessage(
+    @CurrentUser() actor: AuthUser,
+    @AuditMeta() auditMeta: AuditRequestMeta,
+    @Param('id') id: string,
+  ) {
+    return this.adminService.deleteMessage(id, actor, auditMeta);
   }
 
   /* --- Competitions --------------------------------------------------------------- */
@@ -280,20 +388,33 @@ export class AdminController {
 
   @Post('competitions')
   @AdminAccess('competitions', 'manage')
-  createCompetition(@Body() dto: AdminCreateCompetitionDto) {
-    return this.adminService.createCompetition(dto);
+  createCompetition(
+    @CurrentUser() actor: AuthUser,
+    @AuditMeta() auditMeta: AuditRequestMeta,
+    @Body() dto: AdminCreateCompetitionDto,
+  ) {
+    return this.adminService.createCompetition(dto, actor, auditMeta);
   }
 
   @Patch('competitions/:id')
   @AdminAccess('competitions', 'edit')
-  updateCompetition(@Param('id') id: string, @Body() dto: AdminUpdateCompetitionDto) {
-    return this.adminService.updateCompetition(id, dto);
+  updateCompetition(
+    @CurrentUser() actor: AuthUser,
+    @AuditMeta() auditMeta: AuditRequestMeta,
+    @Param('id') id: string,
+    @Body() dto: AdminUpdateCompetitionDto,
+  ) {
+    return this.adminService.updateCompetition(id, dto, actor, auditMeta);
   }
 
   @Delete('competitions/:id')
   @AdminAccess('competitions', 'manage')
-  deleteCompetition(@Param('id') id: string) {
-    return this.adminService.deleteCompetition(id);
+  deleteCompetition(
+    @CurrentUser() actor: AuthUser,
+    @AuditMeta() auditMeta: AuditRequestMeta,
+    @Param('id') id: string,
+  ) {
+    return this.adminService.deleteCompetition(id, actor, auditMeta);
   }
 
   @Get('competitions/:id/registrations')
@@ -318,14 +439,22 @@ export class AdminController {
 
   @Post('entitlements')
   @AdminAccess('payments', 'manage')
-  grantEntitlement(@Body() dto: AdminGrantEntitlementDto) {
-    return this.adminService.grantEntitlement(dto);
+  grantEntitlement(
+    @CurrentUser() actor: AuthUser,
+    @AuditMeta() auditMeta: AuditRequestMeta,
+    @Body() dto: AdminGrantEntitlementDto,
+  ) {
+    return this.adminService.grantEntitlement(dto, actor, auditMeta);
   }
 
   @Delete('entitlements/:id')
   @AdminAccess('payments', 'manage')
-  revokeEntitlement(@Param('id') id: string) {
-    return this.adminService.revokeEntitlement(id);
+  revokeEntitlement(
+    @CurrentUser() actor: AuthUser,
+    @AuditMeta() auditMeta: AuditRequestMeta,
+    @Param('id') id: string,
+  ) {
+    return this.adminService.revokeEntitlement(id, actor, auditMeta);
   }
 
   @Get('wallets')
@@ -342,7 +471,38 @@ export class AdminController {
 
   @Post('wallets/:userId/adjust')
   @AdminAccess('payments', 'manage')
-  adjustWallet(@Param('userId') userId: string, @Body() dto: AdminAdjustWalletDto) {
-    return this.adminService.adjustWallet(userId, dto);
+  adjustWallet(
+    @CurrentUser() actor: AuthUser,
+    @AuditMeta() auditMeta: AuditRequestMeta,
+    @Param('userId') userId: string,
+    @Body() dto: AdminAdjustWalletDto,
+  ) {
+    return this.adminService.adjustWallet(userId, dto, actor, auditMeta);
+  }
+
+  /* --- Audit log (read-only; immutable) --------------------------------------------- */
+
+  @Get('audit-logs')
+  @AdminAccess('audit', 'view')
+  listAuditLogs(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('section') section?: string,
+    @Query('action') action?: string,
+    @Query('actorId') actorId?: string,
+    @Query('search') search?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.audit.list({
+      page: page ? Number(page) : undefined,
+      limit: limit ? Number(limit) : undefined,
+      section,
+      action,
+      actorId,
+      search,
+      from,
+      to,
+    });
   }
 }

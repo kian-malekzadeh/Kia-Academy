@@ -101,6 +101,7 @@ export function createDefaultSiteSettings(): SiteSettings {
       tickets: createSectionPermission(true, true, true),
       messages: createSectionPermission(true, true, true),
       competitions: createSectionPermission(true, true, false),
+      audit: createSectionPermission(true, false, false),
     },
   };
 }
@@ -151,6 +152,7 @@ export function mergeSiteSettings(
             ...base.adminAccess.competitions,
             ...patch.adminAccess.competitions,
           },
+          audit: { ...base.adminAccess.audit, ...patch.adminAccess.audit },
         }
       : base.adminAccess,
   };

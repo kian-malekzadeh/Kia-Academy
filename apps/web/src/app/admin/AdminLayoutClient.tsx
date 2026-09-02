@@ -13,6 +13,7 @@ import {
   LineChart,
   Mail,
   Menu,
+  ScrollText,
   Settings,
   Ticket,
   Trophy,
@@ -132,6 +133,14 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             key: 'users',
           },
         ],
+      },
+      {
+        id: 'audit',
+        href: '/admin/audit',
+        label: t('admin.nav.audit'),
+        icon: ScrollText,
+        exact: true,
+        key: 'audit',
       },
       {
         id: 'courses',

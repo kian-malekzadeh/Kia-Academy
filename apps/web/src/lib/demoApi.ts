@@ -55,6 +55,13 @@ import type {
   AdminContactMessage,
   AdminCreateUserDto,
   AdminUser,
+  AdminUserList,
+  AdminUserListParams,
+  AdminUserStatus,
+  AdminUpdateUserStatusDto,
+  AdminAuditLog,
+  AdminAuditLogList,
+  AdminAuditLogParams,
   AdminPayment,
   AdminRole,
   AdminTicketDetail,
@@ -165,6 +172,7 @@ let demoAdminUsers: AdminUser[] = [
     email: DEMO_LEARNER.email,
     phone: DEMO_LEARNER.phone,
     role: DEMO_LEARNER.role,
+    status: 'ACTIVE',
     createdAt: DEMO_CREATED_AT,
   },
   {
@@ -173,9 +181,87 @@ let demoAdminUsers: AdminUser[] = [
     email: DEMO_ADMIN.email,
     phone: DEMO_ADMIN.phone,
     role: DEMO_ADMIN.role,
+    status: 'ACTIVE',
     createdAt: DEMO_CREATED_AT,
   },
 ];
+
+/**
+ * In-memory demo audit trail (Admin → Audit). Seeded with a few entries so the
+ * read-only audit page has content in demo mode; never editable or deletable.
+ */
+let demoAuditLogs: AdminAuditLog[] = [
+  {
+    id: 'demo-audit-1',
+    actorId: DEMO_ADMIN.id,
+    actorName: DEMO_ADMIN.name,
+    actorRole: DEMO_ADMIN.role,
+    action: 'user.create',
+    section: 'users',
+    entityType: 'User',
+    entityId: DEMO_LEARNER.id,
+    target: DEMO_LEARNER.email ?? '',
+    before: null,
+    after: { role: DEMO_LEARNER.role },
+    reason: null,
+    ip: '127.0.0.1',
+    userAgent: 'DemoAgent/1.0',
+    requestId: 'demo-req-1',
+    createdAt: DEMO_CREATED_AT,
+  },
+  {
+    id: 'demo-audit-2',
+    actorId: DEMO_ADMIN.id,
+    actorName: DEMO_ADMIN.name,
+    actorRole: DEMO_ADMIN.role,
+    action: 'settings.update',
+    section: 'settings',
+    entityType: 'SiteSettings',
+    entityId: null,
+    target: 'site',
+    before: null,
+    after: null,
+    reason: null,
+    ip: '127.0.0.1',
+    userAgent: 'DemoAgent/1.0',
+    requestId: 'demo-req-2',
+    createdAt: DEMO_CREATED_AT,
+  },
+];
+
+function recordDemoAudit(entry: {
+  action: string;
+  section: string;
+  entityType: string;
+  entityId: string | null;
+  target: string;
+  before?: unknown;
+  after?: unknown;
+  reason?: string | null;
+}) {
+  const actor = DEMO_ADMIN;
+  demoAuditLogs = [
+    {
+      id: `demo-audit-${Date.now()}`,
+      actorId: actor.id,
+      actorName: actor.name,
+      actorRole: actor.role,
+      action: entry.action,
+      section: entry.section,
+      entityType: entry.entityType,
+      entityId: entry.entityId,
+      target: entry.target,
+      before: entry.before ?? null,
+      after: entry.after ?? null,
+      reason: entry.reason ?? null,
+      ip: '127.0.0.1',
+      userAgent: 'DemoAgent/1.0',
+      requestId: `demo-req-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+    },
+    ...demoAuditLogs,
+  ];
+}
 
 /**
  * In-memory store for custom (admin-created) roles in demo mode.
@@ -2461,9 +2547,92 @@ export const demoApi = {
     await delay(undefined);
   },
 
-  async adminListUsers(): Promise<AdminUser[]> {
+  async adminListUsers(params: AdminUserListParams = {}): Promise<AdminUserList> {
     requireUser();
-    return delay(demoAdminUsers.map((u) => ({ ...u })));
+    const page = Math.max(1, params.page ?? 1);
+    const limit = Math.max(1, params.limit ?? 20);
+    const search = params.search?.trim().toLowerCase();
+    let rows = demoAdminUsers.map((u) => ({ ...u }));
+    if (search) {
+      rows = rows.filter(
+        (u) =>
+          (u.name ?? '').toLowerCase().includes(search) ||
+          (u.email ?? '').toLowerCase().includes(search) ||
+          (u.phone ?? '').includes(search),
+      );
+    }
+    if (params.role) rows = rows.filter((u) => u.role === params.role);
+    if (params.status) rows = rows.filter((u) => u.status === params.status);
+    const total = rows.length;
+    const start = (page - 1) * limit;
+    const items = rows.slice(start, start + limit);
+    return delay({
+      items,
+      total,
+      page,
+      limit,
+      hasNext: start + limit < total,
+    });
+  },
+
+  async adminUpdateUserStatus(id: string, dto: AdminUpdateUserStatusDto): Promise<AdminUser> {
+    requireUser();
+    const index = demoAdminUsers.findIndex((u) => u.id === id);
+    if (index < 0) throw new ApiError('User not found', 404);
+    if (dto.status === 'SUSPENDED' && !dto.reason?.trim()) {
+      throw new ApiError('Reason is required', 400);
+    }
+    if (dto.status !== 'ACTIVE' && demoAdminUsers[index].role === 'SUPER_ADMIN') {
+      throw new ApiError('Super admins cannot be suspended or banned', 403);
+    }
+    const updated: AdminUser = {
+      ...demoAdminUsers[index],
+      status: dto.status as AdminUserStatus,
+    };
+    const previousStatus = demoAdminUsers[index].status;
+    demoAdminUsers = demoAdminUsers.map((u, i) => (i === index ? updated : u));
+    recordDemoAudit({
+      action: 'user.status',
+      section: 'users',
+      entityType: 'User',
+      entityId: id,
+      target: updated.email ?? updated.name,
+      before: { status: previousStatus },
+      after: { status: updated.status },
+      reason: dto.reason ?? null,
+    });
+    return delay({ ...updated });
+  },
+
+  async adminListAuditLogs(params: AdminAuditLogParams = {}): Promise<AdminAuditLogList> {
+    requireUser();
+    const page = Math.max(1, params.page ?? 1);
+    const limit = Math.max(1, params.limit ?? 20);
+    const search = params.search?.trim().toLowerCase();
+    let rows = demoAuditLogs.map((l) => ({ ...l }));
+    if (search) {
+      rows = rows.filter(
+        (l) =>
+          l.actorName.toLowerCase().includes(search) ||
+          l.target.toLowerCase().includes(search) ||
+          (l.reason ?? '').toLowerCase().includes(search),
+      );
+    }
+    if (params.section) rows = rows.filter((l) => l.section === params.section);
+    if (params.action) rows = rows.filter((l) => l.action === params.action);
+    if (params.actorId) rows = rows.filter((l) => l.actorId === params.actorId);
+    if (params.from) rows = rows.filter((l) => l.createdAt >= params.from!);
+    if (params.to) rows = rows.filter((l) => l.createdAt <= `${params.to!}T23:59:59.999Z`);
+    const total = rows.length;
+    const start = (page - 1) * limit;
+    const items = rows.slice(start, start + limit);
+    return delay({
+      items,
+      total,
+      page,
+      limit,
+      hasNext: start + limit < total,
+    });
   },
 
   async adminCreateUser(dto: AdminCreateUserDto): Promise<AdminUser> {
@@ -2491,6 +2660,7 @@ export const demoApi = {
       email,
       phone,
       role,
+      status: 'ACTIVE',
       createdAt: new Date().toISOString(),
       adminPanelAccess:
         role === 'ADMIN'

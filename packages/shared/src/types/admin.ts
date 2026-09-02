@@ -56,7 +56,77 @@ export interface AdminUser {
   phone?: string | null;
   role: UserRole;
   createdAt: string;
+  /** Account status: ACTIVE by default; SUSPENDED/BANNED users cannot sign in. */
+  status: AdminUserStatus;
   adminPanelAccess?: SiteAdminAccessSettings | null;
+}
+
+/** Learner/staff account status managed from the admin panel. */
+export type AdminUserStatus = 'ACTIVE' | 'SUSPENDED' | 'BANNED';
+
+export type AdminUpdateUserStatusDto = {
+  status: AdminUserStatus;
+  /** Required when suspending or banning — stored on the user and in the audit log. */
+  reason?: string;
+};
+
+/** Server-paginated users list (admin). */
+export interface AdminUserList {
+  items: AdminUser[];
+  total: number;
+  page: number;
+  limit: number;
+  hasNext: boolean;
+}
+
+export interface AdminUserListParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  role?: string;
+  status?: AdminUserStatus | '';
+}
+
+/* --- Audit log (Admin → Audit) ---------------------------------------------- */
+
+/** Immutable admin audit trail entry. Written by the API; never editable via the panel. */
+export interface AdminAuditLog {
+  id: string;
+  actorId: string | null;
+  actorName: string;
+  actorRole: string;
+  action: string;
+  section: string;
+  entityType: string;
+  entityId: string | null;
+  /** Human-readable target label, e.g. course title or user email. */
+  target: string;
+  before: unknown;
+  after: unknown;
+  reason: string | null;
+  ip: string | null;
+  userAgent: string | null;
+  requestId: string | null;
+  createdAt: string;
+}
+
+export interface AdminAuditLogList {
+  items: AdminAuditLog[];
+  total: number;
+  page: number;
+  limit: number;
+  hasNext: boolean;
+}
+
+export interface AdminAuditLogParams {
+  page?: number;
+  limit?: number;
+  section?: string;
+  action?: string;
+  actorId?: string;
+  search?: string;
+  from?: string;
+  to?: string;
 }
 
 /** A role definition: system roles are built-in, custom roles are admin-managed. */

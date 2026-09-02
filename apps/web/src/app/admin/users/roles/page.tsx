@@ -45,11 +45,11 @@ export default function AdminUserRolesPage() {
   );
 
   useEffect(() => {
-    Promise.all([api.adminListRoles(), api.adminListUsers().catch(() => [])])
-      .then(([roleList, users]) => {
+    Promise.all([api.adminListRoles(), api.adminListUsers().catch(() => null)])
+      .then(([roleList, userPage]) => {
         setRoles(roleList);
         const counts: Record<string, number> = {};
-        for (const user of users) {
+        for (const user of userPage?.items ?? []) {
           counts[user.role] = (counts[user.role] ?? 0) + 1;
         }
         setMemberCounts(counts);

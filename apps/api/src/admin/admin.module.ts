@@ -3,12 +3,13 @@ import { AdminAccessGuard } from '../common/guards/admin-access.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { MediaModule } from '../media/media.module';
 import { SiteSettingsModule } from '../site-settings/site-settings.module';
+import { AdminAuditService } from './audit.service';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
 
 @Module({
   imports: [MediaModule, SiteSettingsModule],
   controllers: [AdminController],
-  providers: [AdminService, RolesGuard, AdminAccessGuard],
+  providers: [AdminService, AdminAuditService, RolesGuard, AdminAccessGuard],
 })
 export class AdminModule {}
