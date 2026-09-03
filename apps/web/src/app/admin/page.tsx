@@ -1,11 +1,38 @@
 'use client';
 
 import Link from 'next/link';
-import { BookOpen, Loader2, Trophy, Users, Wallet } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
-import type { AdminPayment, AdminStats } from '@kia-academy/shared';
+import {
+  BookOpen,
+  ClipboardList,
+  CreditCard,
+  GraduationCap,
+  LineChart,
+  Mail,
+  ScrollText,
+  Settings,
+  Trophy,
+  Users,
+  Wallet,
+  Zap,
+} from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type {
+  AdminAuditLog,
+  AdminPayment,
+  AdminStats,
+} from '@kia-academy/shared';
 import { useLanguage } from '@/context/LanguageProvider';
 import { api, ApiError } from '@/lib/api';
+import { AdminErrorState, AdminSkeleton } from '@/components/admin/AdminStates';
+import { useAdminAccess } from '@/components/admin/useAdminAccess';
+
+/** Executive dashboard payload — every field comes from a REAL admin API. */
+type DashboardData = {
+  stats: AdminStats;
+  payments: AdminPayment[];
+  audit: AdminAuditLog[];
+  openTickets: number;
+};
 
 function weekdayLabel(date: Date, locale: string): string {
   return new Intl.DateTimeFormat(locale === 'fa' ? 'fa-IR' : 'en-US', { weekday: 'short' }).format(
@@ -13,25 +40,68 @@ function weekdayLabel(date: Date, locale: string): string {
   );
 }
 
+function activityIcon(action: string) {
+  if (action.startsWith('user.')) return Users;
+  if (action.startsWith('course.') || action.startsWith('lesson.')) return BookOpen;
+  if (action.startsWith('message.')) return Mail;
+  if (action.startsWith('wallet.') || action.startsWith('entitlement.')) return Wallet;
+  if (action.startsWith('settings.')) return Settings;
+  if (action.startsWith('ticket.')) return ClipboardList;
+  return ScrollText;
+}
+
+function activityTone(action: string): '' | 'ok' | 'warning' | 'danger' {
+  if (action.includes('delete')) return 'danger';
+  if (action.includes('create') || action.includes('video_upload')) return 'ok';
+  if (action.startsWith('settings.')) return 'warning';
+  return '';
+}
+
 export default function AdminStatsPage() {
   const { t, format, locale } = useLanguage();
-  const [stats, setStats] = useState<AdminStats | null>(null);
-  const [payments, setPayments] = useState<AdminPayment[]>([]);
+  const { can } = useAdminAccess();
+  const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    Promise.all([api.adminStats(), api.adminListPayments().catch(() => [] as AdminPayment[])])
-      .then(([nextStats, nextPayments]) => {
-        setStats(nextStats);
-        setPayments(nextPayments);
-      })
+  const load = useCallback(() => {
+    setLoading(true);
+    setError('');
+    Promise.all([
+      api.adminStats(),
+      can('payments', 'view')
+        ? api.adminListPayments().catch(() => [] as AdminPayment[])
+        : Promise.resolve([] as AdminPayment[]),
+      can('audit', 'view')
+        ? api
+            .adminListAuditLogs({ page: 1, limit: 8 })
+            .then((result) => result.items)
+            .catch(() => [] as AdminAuditLog[])
+        : Promise.resolve([] as AdminAuditLog[]),
+      can('tickets', 'view')
+        ? api
+            .adminListTickets()
+            .then((tickets) =>
+              tickets.filter((ticket) => ticket.status === 'OPEN' || ticket.status === 'IN_PROGRESS')
+                .length,
+            )
+            .catch(() => 0)
+        : Promise.resolve(0),
+    ])
+      .then(([stats, payments, audit, openTickets]) =>
+        setData({ stats, payments, audit, openTickets }),
+      )
       .catch((err) => {
         setError(err instanceof ApiError ? err.message : t('admin.stats.error'));
       })
       .finally(() => setLoading(false));
-  }, [t]);
+  }, [can, t]);
 
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  /* 7-day revenue trend derived from real completed payments. */
   const chart = useMemo(() => {
     const days = Array.from({ length: 7 }, (_, index) => {
       const date = new Date();
@@ -41,7 +111,7 @@ export default function AdminStatsPage() {
     });
     const totals = days.map((day) => {
       const key = day.toISOString().slice(0, 10);
-      const sum = payments
+      const sum = (data?.payments ?? [])
         .filter((payment) => payment.status === 'COMPLETED' && payment.createdAt.slice(0, 10) === key)
         .reduce((acc, payment) => acc + payment.amountCents, 0);
       return { label: weekdayLabel(day, locale), value: sum };
@@ -51,235 +121,290 @@ export default function AdminStatsPage() {
       ...item,
       pct: Math.max(8, Math.round((item.value / max) * 100)),
     }));
-  }, [payments, locale]);
+  }, [data, locale]);
 
-  const recentPayments = useMemo(() => payments.slice(0, 5), [payments]);
+  const statusCounts = useMemo(() => {
+    const payments = data?.payments ?? [];
+    return {
+      completed: payments.filter((payment) => payment.status === 'COMPLETED').length,
+      pending: payments.filter((payment) => payment.status === 'PENDING').length,
+      failed: payments.filter((payment) => payment.status === 'FAILED').length,
+    };
+  }, [data]);
 
   if (loading) {
     return (
-      <div className="admin-content auth-loading">
-        <Loader2 size={24} className="spin" /> {t('admin.stats.loading')}
+      <div className="admin-content">
+        <div className="admin-kpi-grid">
+          {Array.from({ length: 6 }, (_, index) => (
+            <AdminSkeleton key={index} className="admin-skeleton-stat" />
+          ))}
+        </div>
+        <div className="admin-grid admin-grid-2">
+          <AdminSkeleton className="admin-skeleton-row" />
+          <AdminSkeleton className="admin-skeleton-row" />
+        </div>
       </div>
     );
   }
 
-  if (error || !stats) {
+  if (error || !data) {
     return (
       <div className="admin-content">
-        <p className="form-error">{error || t('admin.stats.none')}</p>
+        <div className="admin-card">
+          <AdminErrorState message={error || t('admin.stats.none')} onRetry={load} />
+        </div>
       </div>
     );
   }
+
+  const { stats } = data;
+
+  const kpis = [
+    {
+      id: 'users',
+      label: t('admin.kpi.users'),
+      value: format.number(stats.users),
+      href: '/admin/users',
+      icon: Users,
+      enabled: can('users', 'view'),
+      highlight: false,
+    },
+    {
+      id: 'courses',
+      label: t('admin.kpi.courses'),
+      value: format.number(stats.courses),
+      href: '/admin/courses',
+      icon: BookOpen,
+      enabled: can('courses', 'view'),
+      highlight: false,
+    },
+    {
+      id: 'enrollments',
+      label: t('admin.kpi.enrollments'),
+      value: format.number(stats.enrollments),
+      href: '/admin/analytics',
+      icon: GraduationCap,
+      enabled: can('stats', 'view'),
+      highlight: false,
+    },
+    {
+      id: 'revenue',
+      label: t('admin.kpi.revenue'),
+      value: format.currency(stats.revenueCents),
+      href: '/admin/finance',
+      icon: Wallet,
+      enabled: can('payments', 'view'),
+      highlight: true,
+    },
+    {
+      id: 'payments',
+      label: t('admin.kpi.payments'),
+      value: format.number(stats.payments),
+      href: '/admin/payments',
+      icon: CreditCard,
+      enabled: can('payments', 'view'),
+      highlight: false,
+    },
+    {
+      id: 'challenges',
+      label: t('admin.kpi.activeChallenges'),
+      value: format.number(stats.activeChallenges),
+      href: '/admin/challenges',
+      icon: Trophy,
+      enabled: can('challenges', 'view'),
+      highlight: false,
+    },
+    {
+      id: 'pending',
+      label: t('admin.kpi.pendingItems'),
+      value: format.number(data.openTickets),
+      href: '/admin/tickets',
+      icon: Zap,
+      enabled: can('tickets', 'view'),
+      highlight: false,
+    },
+  ].filter((kpi) => kpi.enabled);
 
   return (
     <div className="admin-content">
-      <div className="admin-stat-grid">
-        <div className="admin-stat-card">
-          <div className="admin-stat-row">
-            <div>
-              <span className="admin-stat-label">{t('admin.stats.users')}</span>
-              <div className="admin-stat-value">{format.number(stats.users)}</div>
-            </div>
-            <span className="admin-stat-icon">
-              <Users size={18} />
-            </span>
-          </div>
-        </div>
-        <div className="admin-stat-card highlight">
-          <div className="admin-stat-row">
-            <div>
-              <span className="admin-stat-label">{t('admin.stats.revenue')}</span>
-              <div className="admin-stat-value">{format.currency(stats.revenueCents)}</div>
-            </div>
-            <span className="admin-stat-icon">
-              <Wallet size={18} />
-            </span>
-          </div>
-        </div>
-        <div className="admin-stat-card">
-          <div className="admin-stat-row">
-            <div>
-              <span className="admin-stat-label">{t('admin.stats.payments')}</span>
-              <div className="admin-stat-value">{format.number(stats.payments)}</div>
-            </div>
-            <span className="admin-stat-icon">
-              <BookOpen size={18} />
-            </span>
-          </div>
-        </div>
-        <div className="admin-stat-card">
-          <div className="admin-stat-row">
-            <div>
-              <span className="admin-stat-label">{t('admin.stats.activeChallenges')}</span>
-              <div className="admin-stat-value">{format.number(stats.activeChallenges)}</div>
-            </div>
-            <span className="admin-stat-icon">
-              <Trophy size={18} />
-            </span>
-          </div>
-        </div>
+      {/* Executive KPI grid */}
+      <div className="admin-kpi-grid">
+        {kpis.map((kpi) => {
+          const Icon = kpi.icon;
+          return (
+            <Link
+              key={kpi.id}
+              href={kpi.href}
+              className={`admin-stat-card${kpi.highlight ? ' highlight' : ''}`}
+            >
+              <div className="admin-stat-row">
+                <div>
+                  <span className="admin-stat-label">{kpi.label}</span>
+                  <div className="admin-stat-value">{kpi.value}</div>
+                </div>
+                <span className="admin-stat-icon">
+                  <Icon size={18} />
+                </span>
+              </div>
+              <span className="admin-stat-hint">
+                {t('admin.kpi.view')} <span aria-hidden>→</span>
+              </span>
+            </Link>
+          );
+        })}
       </div>
 
-      <div className="admin-grid admin-grid-3" style={{ marginBottom: '1.5rem' }}>
-        <article className="admin-card admin-span-2">
+      <div className="admin-grid admin-grid-2">
+        {/* Revenue trend (real completed payments) */}
+        <article className="admin-card">
           <div className="admin-section-head">
             <div>
-              <h2>{t('admin.stats.weeklyRevenue')}</h2>
-              <p>{t('admin.stats.weeklyRevenueSub')}</p>
+              <h2>{t('admin.analytics.revenueTrend')}</h2>
+              <p className="admin-sub" style={{ marginBottom: 0 }}>
+                {t('admin.analytics.revenueTrendSub')}
+              </p>
             </div>
-            <Link href="/admin/finance" className="admin-link">
-              {t('admin.stats.fullReport')}
+            <Link href="/admin/analytics" className="admin-link">
+              {t('admin.activity.viewAll')}
             </Link>
           </div>
-          <div className="admin-chart" aria-label={t('admin.stats.weeklyRevenue')}>
-            {chart.map((bar) => (
-              <span
-                key={bar.label}
+          <div className="admin-chart" role="img" aria-label={t('admin.analytics.revenueTrend')}>
+            {chart.map((item) => (
+              <div
+                key={item.label}
                 className="admin-chart-bar"
-                style={{ ['--value' as string]: `${bar.pct}%` }}
-                data-label={bar.label}
-                title={format.currency(bar.value)}
+                style={{ '--value': `${item.pct}%` } as React.CSSProperties}
+                data-label={item.label}
               />
             ))}
           </div>
+          {can('payments', 'view') ? (
+            <div
+              className="admin-quick-links"
+              style={{ marginTop: 'var(--space-5)', marginBottom: 0 }}
+            >
+              <span className="admin-badge ok">
+                {format.number(statusCounts.completed)} {t('admin.analytics.completed')}
+              </span>
+              <span className="admin-badge warning">
+                {format.number(statusCounts.pending)} {t('admin.analytics.pending')}
+              </span>
+              <span className="admin-badge danger">
+                {format.number(statusCounts.failed)} {t('admin.analytics.failed')}
+              </span>
+            </div>
+          ) : null}
         </article>
 
+        {/* Recent activity — real audit log */}
         <article className="admin-card">
           <div className="admin-section-head">
             <div>
-              <h2>{t('admin.stats.snapshot')}</h2>
-              <p>{t('admin.stats.snapshotSub')}</p>
+              <h2>{t('admin.activity.title')}</h2>
+              <p className="admin-sub" style={{ marginBottom: 0 }}>
+                {t('admin.activity.sub')}
+              </p>
             </div>
+            {can('audit', 'view') ? (
+              <Link href="/admin/audit" className="admin-link">
+                {t('admin.activity.viewAll')}
+              </Link>
+            ) : null}
           </div>
-          <div className="admin-list">
-            <div className="admin-list-item">
-              <div className="admin-list-copy">
-                <strong>{t('admin.stats.courses')}</strong>
-                <small>{format.number(stats.courses)}</small>
-              </div>
-            </div>
-            <div className="admin-list-item">
-              <div className="admin-list-copy">
-                <strong>{t('admin.stats.lessons')}</strong>
-                <small>{format.number(stats.lessons)}</small>
-              </div>
-            </div>
-            <div className="admin-list-item">
-              <div className="admin-list-copy">
-                <strong>{t('admin.stats.enrollments')}</strong>
-                <small>{format.number(stats.enrollments)}</small>
-              </div>
-            </div>
-            <div className="admin-list-item">
-              <div className="admin-list-copy">
-                <strong>{t('admin.stats.challenges')}</strong>
-                <small>{format.number(stats.challenges)}</small>
-              </div>
-            </div>
-          </div>
+          {data.audit.length === 0 ? (
+            <p className="admin-dropdown-empty">{t('admin.activity.empty')}</p>
+          ) : (
+            <ul className="admin-activity-feed">
+              {data.audit.map((entry) => {
+                const Icon = activityIcon(entry.action);
+                const tone = activityTone(entry.action);
+                const actionLabel = t(`admin.audit.action.${entry.action}`);
+                return (
+                  <li key={entry.id} className="admin-activity-item">
+                    <span className={`admin-activity-icon ${tone}`.trim()} aria-hidden>
+                      <Icon size={14} />
+                    </span>
+                    <span className="admin-activity-body">
+                      <strong>
+                        {actionLabel !== `admin.audit.action.${entry.action}`
+                          ? actionLabel
+                          : entry.action}
+                      </strong>
+                      <small>
+                        {entry.actorName} · {entry.target}
+                      </small>
+                      <time dateTime={entry.createdAt}>{format.date(entry.createdAt)}</time>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </article>
       </div>
 
-      <div className="admin-grid admin-grid-2" style={{ marginBottom: '1.5rem' }}>
-        <article className="admin-card">
-          <div className="admin-section-head">
-            <div>
-              <h2>{t('admin.stats.recentPayments')}</h2>
-              <p>{t('admin.stats.recentPaymentsSub')}</p>
-            </div>
-            <Link href="/admin/payments" className="admin-link">
-              {t('admin.stats.viewAll')}
-            </Link>
+      {/* Quick actions — permission-aware */}
+      <article className="admin-card">
+        <div className="admin-section-head">
+          <div>
+            <h2>{t('admin.quick.title')}</h2>
+            <p className="admin-sub" style={{ marginBottom: 0 }}>
+              {t('admin.quick.sub')}
+            </p>
           </div>
-          <div className="admin-table-wrap" style={{ marginBottom: 0 }}>
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>{t('admin.payments.col.user')}</th>
-                  <th>{t('admin.payments.col.amount')}</th>
-                  <th>{t('admin.payments.col.status')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentPayments.length === 0 ? (
-                  <tr>
-                    <td colSpan={3}>{t('admin.payments.empty')}</td>
-                  </tr>
-                ) : (
-                  recentPayments.map((payment) => (
-                    <tr key={payment.id}>
-                      <td>{payment.userName || payment.userEmail || payment.userId}</td>
-                      <td>{format.currency(payment.amountCents)}</td>
-                      <td>
-                        <span
-                          className={`admin-badge ${payment.status === 'COMPLETED' ? 'ok' : 'warning'}`}
-                        >
-                          {payment.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </article>
-
-        <article className="admin-card">
-          <div className="admin-section-head">
-            <div>
-              <h2>{t('admin.stats.quickLinks')}</h2>
-              <p>{t('admin.stats.quickLinksSub')}</p>
-            </div>
-          </div>
-          <div className="admin-quick-links" style={{ gridTemplateColumns: '1fr 1fr' }}>
-            <Link href="/admin/users" className="admin-card">
-              <div className="admin-stat-row">
-                <div>
-                  <strong>{t('admin.nav.users')}</strong>
-                  <p className="admin-stat-label">{format.number(stats.users)}</p>
-                </div>
-                <span className="admin-stat-icon">
-                  <Users size={16} />
-                </span>
-              </div>
+        </div>
+        <div className="admin-quick-tiles">
+          {can('users', 'view') ? (
+            <Link href="/admin/users" className="admin-quick-tile">
+              <Users size={18} aria-hidden />
+              {t('admin.quick.users')}
             </Link>
-            <Link href="/admin/courses" className="admin-card">
-              <div className="admin-stat-row">
-                <div>
-                  <strong>{t('admin.nav.courses')}</strong>
-                  <p className="admin-stat-label">{format.number(stats.courses)}</p>
-                </div>
-                <span className="admin-stat-icon">
-                  <BookOpen size={16} />
-                </span>
-              </div>
+          ) : null}
+          {can('courses', 'manage') ? (
+            <Link href="/admin/courses/new" className="admin-quick-tile">
+              <BookOpen size={18} aria-hidden />
+              {t('admin.quick.createCourse')}
             </Link>
-            <Link href="/admin/finance" className="admin-card">
-              <div className="admin-stat-row">
-                <div>
-                  <strong>{t('admin.nav.finance')}</strong>
-                  <p className="admin-stat-label">{format.currency(stats.revenueCents)}</p>
-                </div>
-                <span className="admin-stat-icon">
-                  <Wallet size={16} />
-                </span>
-              </div>
+          ) : null}
+          {can('payments', 'view') ? (
+            <Link href="/admin/payments" className="admin-quick-tile">
+              <CreditCard size={18} aria-hidden />
+              {t('admin.quick.payments')}
             </Link>
-            <Link href="/admin/analytics" className="admin-card">
-              <div className="admin-stat-row">
-                <div>
-                  <strong>{t('admin.nav.analytics')}</strong>
-                  <p className="admin-stat-label">{format.number(stats.payments)}</p>
-                </div>
-                <span className="admin-stat-icon">
-                  <Trophy size={16} />
-                </span>
-              </div>
+          ) : null}
+          {can('payments', 'view') ? (
+            <Link href="/admin/orders" className="admin-quick-tile">
+              <ClipboardList size={18} aria-hidden />
+              {t('admin.quick.orders')}
             </Link>
-          </div>
-        </article>
-      </div>
+          ) : null}
+          {can('tickets', 'view') ? (
+            <Link href="/admin/tickets" className="admin-quick-tile">
+              <Zap size={18} aria-hidden />
+              {t('admin.quick.tickets')}
+            </Link>
+          ) : null}
+          {can('messages', 'view') ? (
+            <Link href="/admin/messages" className="admin-quick-tile">
+              <Mail size={18} aria-hidden />
+              {t('admin.quick.messages')}
+            </Link>
+          ) : null}
+          {can('audit', 'view') ? (
+            <Link href="/admin/audit" className="admin-quick-tile">
+              <ScrollText size={18} aria-hidden />
+              {t('admin.quick.audit')}
+            </Link>
+          ) : null}
+          {can('stats', 'view') ? (
+            <Link href="/admin/analytics" className="admin-quick-tile">
+              <LineChart size={18} aria-hidden />
+              {t('admin.quick.analytics')}
+            </Link>
+          ) : null}
+        </div>
+      </article>
     </div>
   );
 }
