@@ -23,7 +23,6 @@ function makeService(prisma: unknown) {
     } as never,
     { get: jest.fn() } as never,
     { record: jest.fn().mockResolvedValue(undefined) } as never,
-    { creditWallet: jest.fn(), debitWallet: jest.fn() } as never,
   );
 }
 
@@ -102,7 +101,6 @@ describe('AdminService.updateUserRole session revocation', () => {
       } as never,
       { get: jest.fn().mockResolvedValue({ adminAccess: { users: ['read'] } }) } as never,
       audit as never,
-      { creditWallet: jest.fn(), debitWallet: jest.fn() } as never,
     );
 
     await service.updateUserRole('u1', { role: 'ADMIN' }, actor);
@@ -155,7 +153,6 @@ describe('AdminService.updateUserRole session revocation', () => {
       } as never,
       { get: jest.fn().mockResolvedValue({ adminAccess: { users: ['read'] } }) } as never,
       { record: jest.fn().mockResolvedValue(undefined) } as never,
-      { creditWallet: jest.fn(), debitWallet: jest.fn() } as never,
     );
 
     await service.updateUserRole('u1', { role: 'ADMIN' }, actor);
