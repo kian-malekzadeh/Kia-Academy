@@ -68,3 +68,7 @@ nohup.out
 
 # Generated Prisma client (apps/api)
 apps/api/src/generated/
+
+# Local tool artifacts
+.freebuff/
+
