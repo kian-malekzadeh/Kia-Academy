@@ -346,13 +346,95 @@ export class PaymentsService {
     return this.verifyGatewayCallback(null, dto);
   }
 
-  async getPaymentForUser(userId: string, paymentId: string): Promise<PaymentResponse> {
+    async getPaymentForUser(userId: string, paymentId: string): Promise<PaymentResponse> {
     const payment = await this.prisma.payment.findUnique({ where: { id: paymentId } });
     if (!payment || payment.userId !== userId) {
       throw new NotFoundException(`Payment ${paymentId} not found`);
     }
     return this.toResponse(payment);
   }
+
+  /**
+   * Admin-initiated refund (full or partial). Validates the payment state machine,
+   * transitions the payment, and records a wallet CREDIT inside a single DB
+   * transaction so the ledger and balance stay consistent.
+   */
+    async refundPayment(
+    paymentId: string,
+    amountCents?: number,
+    _reason?: string,
+  ): Promise<PaymentResponse> {
+    const payment = await this.prisma.payment.findUnique({
+      where: { id: paymentId },
+      include: { user: true, order: { include: { items: true } } },
+    });
+    if (!payment) {
+      throw new NotFoundException(`Payment ${paymentId} not found`);
+    }
+
+    // Only COMPLETED payments may be refunded.
+    assertValidPaymentTransition(payment.status, 'REFUNDED', 'refundPayment');
+
+    const refundAmount = amountCents ?? payment.amountCents;
+    if (refundAmount > payment.amountCents) {
+      throw new BadRequestException('Refund amount cannot exceed the payment total');
+    }
+    if (refundAmount <= 0) {
+      throw new BadRequestException('Refund amount must be positive');
+    }
+
+    const isPartial = refundAmount < payment.amountCents;
+    const newStatus = isPartial ? 'PARTIALLY_REFUNDED' : 'REFUNDED';
+
+    if (isPartial) {
+      assertValidPaymentTransition(payment.status, 'PARTIALLY_REFUNDED', 'refundPayment');
+    }
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      // Atomic single-winner: only COMPLETED may transition; lost-update on a
+      // concurrent refund is rejected by the conditional claim.
+      const claimed = await tx.payment.updateMany({
+        where: { id: paymentId, status: payment.status },
+        data: { status: newStatus },
+      });
+      if (claimed.count === 0) {
+        const current = await tx.payment.findUnique({ where: { id: paymentId } });
+        throw new BadRequestException(
+          `Payment ${paymentId} is in state ${(current?.status ?? 'unknown')} — cannot refund`,
+        );
+      }
+
+      // Record wallet CREDIT for the refunded amount.
+      await this.recordWalletCreditTx(
+        tx,
+        {
+          id: payment.id,
+          userId: payment.userId,
+          amountCents: payment.amountCents,
+          productType: payment.productType,
+          productRef: payment.productRef,
+        },
+        refundAmount,
+      );
+
+      // Update order status for full refunds.
+      if (!isPartial && payment.orderId) {
+        await tx.order.updateMany({
+          where: { id: payment.orderId, status: 'PAID' },
+          data: { status: 'REFUNDED' },
+        });
+      }
+
+      return tx.payment.findUnique({ where: { id: paymentId } });
+    });
+
+    if (!updated) {
+      throw new NotFoundException(`Payment ${paymentId} not found after refund`);
+    }
+
+    return this.toResponse(updated);
+  }
+
 
   async handleStripeWebhook(
     rawBody: Buffer,
@@ -491,10 +573,88 @@ export class PaymentsService {
     };
   }
 
-  async getWalletTransactions(userId: string, limit = 5): Promise<WalletTransactionDto[]> {
+    async getWalletTransactions(userId: string, limit = 5): Promise<WalletTransactionDto[]> {
     const summary = await this.getWalletSummary(userId, limit);
     return summary.transactions;
   }
+
+  /**
+   * Record the payment as a wallet DEBIT — creates (or lazy-creates) the learner's
+   * wallet, inserts a DEBIT ledger row linked to the payment, and decrements the
+   * running balance. Runs inside the caller's DB transaction so the ledger and
+   * balance are always consistent with the payment state machine.
+   */
+    private async recordWalletDebitTx(
+    tx: Prisma.TransactionClient,
+    payment: { id: string; userId: string; amountCents: number; productType: PaymentResponse['productType']; productRef: string | null },
+  ): Promise<void> {
+    const wallet = await this.ensureWalletTx(tx, payment.userId);
+
+    await tx.walletTransaction.create({
+      data: {
+        walletId: wallet.id,
+        type: 'DEBIT',
+        amountCents: payment.amountCents,
+        description: this.paymentDescription(payment.productType, payment.productRef ?? undefined),
+        paymentId: payment.id,
+      },
+    });
+
+    await tx.learnerWallet.update({
+      where: { id: wallet.id },
+      data: {
+        balanceCents: { decrement: payment.amountCents },
+      },
+    });
+  }
+
+  /**
+   * Record a wallet CREDIT for a refund — links to the original payment so the
+   * ledger audit trail is complete. The caller must have validated the refund
+   * state transition before reaching here.
+   */
+    private async recordWalletCreditTx(
+    tx: Prisma.TransactionClient,
+    payment: { id: string; userId: string; amountCents: number; productType: PaymentResponse['productType']; productRef: string | null },
+    refundCents: number,
+  ): Promise<void> {
+    const wallet = await this.ensureWalletTx(tx, payment.userId);
+
+    await tx.walletTransaction.create({
+      data: {
+        walletId: wallet.id,
+        type: 'CREDIT',
+        amountCents: refundCents,
+        description: `بازپرداخت برای ${this.paymentDescription(payment.productType, payment.productRef ?? undefined)}`,
+        paymentId: payment.id,
+      },
+    });
+
+    await tx.learnerWallet.update({
+      where: { id: wallet.id },
+      data: {
+        balanceCents: { increment: refundCents },
+      },
+    });
+  }
+
+  /** Lazy-create a learner wallet using the provided transaction client. */
+  private async ensureWalletTx(tx: Prisma.TransactionClient, userId: string) {
+    const existing = await tx.learnerWallet.findUnique({ where: { userId } });
+    if (existing) return existing;
+
+    const user = await tx.user.findUnique({
+      where: { id: userId },
+      select: { phone: true },
+    });
+    const digits = (user?.phone ?? userId).replace(/\D/g, '');
+    const cardLast4 = (digits.slice(-4) || '1234').padStart(4, '0').slice(-4);
+
+    return tx.learnerWallet.create({
+      data: { userId, balanceCents: 0, cardLast4, expiresLabel: '06/27' },
+    });
+  }
+
 
   private paymentDescription(
     productType: PaymentResponse['productType'],
@@ -779,10 +939,14 @@ export class PaymentsService {
         );
       }
 
-      const fresh =
+            const fresh =
         (await tx.payment.findUnique({ where: { id: paymentId } })) ?? payment;
 
       await this.grantEntitlements(tx, fresh);
+
+      // Record the payment as a wallet DEBIT inside the same transaction so the
+      // ledger and balance are always consistent with the payment state machine.
+      await this.recordWalletDebitTx(tx, fresh);
 
       if (payment.orderId) {
         const order = await tx.order.findUniqueOrThrow({

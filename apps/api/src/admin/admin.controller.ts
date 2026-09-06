@@ -44,6 +44,7 @@ import {
   AdminUpdateUserAccessDto,
   AdminUpdateUserRoleDto,
   AdminUpdateUserStatusDto,
+  RefundPaymentDto,
 } from './dto/admin.dto';
 
 @Controller('admin')
@@ -477,7 +478,18 @@ export class AdminController {
     @Param('userId') userId: string,
     @Body() dto: AdminAdjustWalletDto,
   ) {
-    return this.adminService.adjustWallet(userId, dto, actor, auditMeta);
+        return this.adminService.adjustWallet(userId, dto, actor, auditMeta);
+  }
+
+  @Post('payments/:id/refund')
+  @AdminAccess('payments', 'manage')
+  refundPayment(
+    @CurrentUser() actor: AuthUser,
+    @AuditMeta() auditMeta: AuditRequestMeta,
+    @Param('id') paymentId: string,
+    @Body() dto: RefundPaymentDto,
+  ) {
+    return this.adminService.refundPayment(paymentId, dto, actor, auditMeta);
   }
 
   /* --- Audit log (read-only; immutable) --------------------------------------------- */

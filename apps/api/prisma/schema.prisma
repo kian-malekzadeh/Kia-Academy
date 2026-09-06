@@ -273,9 +273,10 @@ model Payment {
   stripeId    String?
   gatewayRef  String?
   metadata    String?
-  createdAt   DateTime      @default(now())
+    createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
+  walletTransaction WalletTransaction?
   @@index([userId, status])
   @@index([stripeId])
   @@index([gatewayRef])
@@ -621,8 +622,10 @@ model WalletTransaction {
   /** Absolute amount in IRR (sign inferred from type). */
   amountCents Int
   description String
-  paymentId   String?
-  createdAt   DateTime     @default(now())
+  /** FK to the Payment that produced this ledger entry (one-to-one). */
+  paymentId   String?   @unique
+  payment     Payment?  @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  createdAt   DateTime   @default(now())
 
   @@index([walletId, createdAt])
 }

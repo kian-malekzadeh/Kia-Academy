@@ -38,8 +38,18 @@ describe('PaymentsService', () => {
     enrollment: {
       upsert: jest.fn(),
     },
-    user: {
+        user: {
       findUniqueOrThrow: jest.fn(),
+      findUnique: jest.fn(),
+    },
+    learnerWallet: {
+      findUnique: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+    },
+    walletTransaction: {
+      create: jest.fn(),
+      findMany: jest.fn(),
     },
     course: {
       findFirst: jest.fn(),
@@ -134,9 +144,14 @@ describe('PaymentsService', () => {
     prisma.$transaction.mockImplementation(
       async (cb: (tx: never) => Promise<unknown>) => cb(prisma as never),
     );
-    prisma.entitlement.findMany.mockResolvedValue([]);
+        prisma.entitlement.findMany.mockResolvedValue([]);
     prisma.invoice.count.mockResolvedValue(0);
     prisma.invoice.findUnique.mockResolvedValue(null);
+    // Wallet mocks: completePayment creates a DEBIT ledger entry + balance decrement.
+    prisma.learnerWallet.findUnique.mockResolvedValue(null);
+    prisma.learnerWallet.create.mockResolvedValue({ id: 'w-1', balanceCents: 0 });
+    prisma.learnerWallet.update.mockResolvedValue({ id: 'w-1', balanceCents: -1000 });
+    prisma.walletTransaction.create.mockResolvedValue({ id: 'wt-1' });
     createPaymentMock.mockResolvedValue({
       redirectUrl: null,
       gatewayRef: null,

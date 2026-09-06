@@ -50,10 +50,12 @@ import {
   AdminUpdateRoleDto,
   AdminUpdateTicketDto,
   AdminUpdateUserAccessDto,
-  AdminUpdateUserRoleDto,
+    AdminUpdateUserRoleDto,
   AdminUpdateUserStatusDto,
+  RefundPaymentDto,
 } from './dto/admin.dto';
 import { AdminAuditService } from './audit.service';
+import { PaymentsService } from '../payments/payments.service';
 import { Prisma } from '../generated/prisma/client';
 
 const BCRYPT_ROUNDS = 12;
@@ -85,11 +87,12 @@ function toJsonAccess(value: SiteAdminAccessSettings): Prisma.InputJsonValue {
 
 @Injectable()
 export class AdminService {
-  constructor(
+     constructor(
     private readonly prisma: PrismaService,
     private readonly mediaStorage: MediaStorageService,
     private readonly siteSettings: SiteSettingsService,
     private readonly audit: AdminAuditService,
+    private readonly paymentsService: PaymentsService,
   ) {}
 
   async getStats(): Promise<AdminStats> {
@@ -1913,7 +1916,7 @@ export class AdminService {
       }),
     ]);
 
-    await this.audit.record({
+        await this.audit.record({
       actor,
       action: 'wallet.adjust',
       section: 'payments',
@@ -1934,5 +1937,43 @@ export class AdminService {
     });
 
     return this.getWallet(userId);
+  }
+
+  /** Admin-initiated refund (full or partial) — delegates to PaymentsService
+   *  which enforces the payment state machine and records a wallet CREDIT. */
+  async refundPayment(
+    paymentId: string,
+    dto: RefundPaymentDto,
+    actor: AuthUser,
+    requestMeta: AdminRequestMeta = {},
+  ): Promise<AdminPayment> {
+    const before = await this.prisma.payment.findUnique({
+      where: { id: paymentId },
+      select: { status: true, amountCents: true, userId: true },
+    });
+    if (!before) {
+      throw new NotFoundException(`Payment ${paymentId} not found`);
+    }
+
+    const result = await this.paymentsService.refundPayment(
+      paymentId,
+      dto.amountCents,
+      dto.reason,
+    );
+
+    await this.audit.record({
+      actor,
+      action: 'payment.refund',
+      section: 'payments',
+      entityType: 'Payment',
+      entityId: paymentId,
+            target: before.userId,
+      before: { status: before.status, amountCents: before.amountCents },
+      after: { status: result.status, refundCents: dto.amountCents ?? before.amountCents },
+      reason: dto.reason,
+      ...requestMeta,
+    });
+
+    return result as unknown as AdminPayment;
   }
 }

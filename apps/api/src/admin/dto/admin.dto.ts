@@ -366,7 +366,23 @@ export class AdminAdjustWalletDto {
   @IsString()
   description?: string;
 
-  /** Required (server-side) — every manual money movement must state why. */
+    /** Required (server-side) — every manual money movement must state why. */
+  @IsString()
+  reason!: string;
+}
+
+/**
+ * Full or partial refund initiated by an admin. For a full refund omit
+ * `amountCents` (or pass the full payment amount); for a partial refund
+ * provide the amount to return and the payment transitions to PARTIALLY_REFUNDED.
+ */
+export class RefundPaymentDto {
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  amountCents?: number;
+
+  /** Required — admin must justify the refund for the audit trail. */
   @IsString()
   reason!: string;
 }
