@@ -23,6 +23,7 @@ function makeService(prisma: unknown) {
     } as never,
     { get: jest.fn() } as never,
     { record: jest.fn().mockResolvedValue(undefined) } as never,
+    { refundOrder: jest.fn() } as never,
   );
 }
 
@@ -55,6 +56,7 @@ describe('AdminService.getStats', () => {
     });
   });
 });
+
 
 describe('AdminService.updateUserRole session revocation', () => {
   it('deletes the target user refresh tokens when their role changes', async () => {
@@ -101,6 +103,7 @@ describe('AdminService.updateUserRole session revocation', () => {
       } as never,
       { get: jest.fn().mockResolvedValue({ adminAccess: { users: ['read'] } }) } as never,
       audit as never,
+      { refundOrder: jest.fn() } as never,
     );
 
     await service.updateUserRole('u1', { role: 'ADMIN' }, actor);
@@ -153,6 +156,7 @@ describe('AdminService.updateUserRole session revocation', () => {
       } as never,
       { get: jest.fn().mockResolvedValue({ adminAccess: { users: ['read'] } }) } as never,
       { record: jest.fn().mockResolvedValue(undefined) } as never,
+      { refundOrder: jest.fn() } as never,
     );
 
     await service.updateUserRole('u1', { role: 'ADMIN' }, actor);
@@ -398,4 +402,3 @@ describe('ownership and lesson completion', () => {
     });
   });
 });
-
