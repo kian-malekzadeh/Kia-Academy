@@ -15,7 +15,8 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-**[🌐 Live Demo](https://kian-malekzadeh.github.io/Kia-Academy/)** &nbsp;·&nbsp;
+**[🌐 Live Demo (DashPloy)](https://kia-academy.dashploy.app)** &nbsp;·&nbsp;
+**[📄 GitHub Pages mirror](https://kian-malekzadeh.github.io/Kia-Academy/)** &nbsp;·&nbsp;
 **[📦 Repository](https://github.com/kian-malekzadeh/Kia-Academy)** &nbsp;·&nbsp;
 **[🐞 Issues](https://github.com/kian-malekzadeh/Kia-Academy/issues)** &nbsp;·&nbsp;
 **[🔒 Security Policy](SECURITY.md)**
@@ -33,7 +34,8 @@ role-scoped admin panel.
 
 > 💡 The live demo runs in **in-browser demo mode** (`NEXT_PUBLIC_DEMO_MODE=true`): the
 > full UI works against mock data with zero backend required — perfect for exploring the
-> product before self-hosting.
+> product before self-hosting. Hosted at <https://kia-academy.dashploy.app> (DashPloy,
+> static tier).
 
 ## ✨ Highlights
 
@@ -191,7 +193,12 @@ Report vulnerabilities responsibly per [`SECURITY.md`](SECURITY.md) — please u
 
 ## ☁️ Deployment
 
-- **GitHub Pages (demo mode):** the `Deploy GitHub Pages` workflow builds the demo app on every push to `main` (`NEXT_PUBLIC_DEMO_MODE=true`, basePath `/Kia-Academy/`) and deploys it automatically — live at <https://kian-malekzadeh.github.io/Kia-Academy/>. Local preview: `pnpm build:pages` → serve `apps/web/out`.
+- **DashPloy (primary demo):** the live demo is published as a static site at
+  <https://kia-academy.dashploy.app> (free static tier, `NEXT_PUBLIC_DEMO_MODE=true`,
+  no backend). To redeploy, build with `GITHUB_PAGES=true NEXT_BASE_PATH= NEXT_PUBLIC_DEMO_MODE=true pnpm --filter @kia-academy/web build`,
+  then push `apps/web/out` via the DashPloy API (`POST /api/v1/deploy`, see
+  <https://dashploy.com/llms.txt>).
+- **GitHub Pages (mirror):** the `Deploy GitHub Pages` workflow builds the demo app on every push to `main` (`NEXT_PUBLIC_DEMO_MODE=true`, basePath `/Kia-Academy/`) and deploys it automatically — live at <https://kian-malekzadeh.github.io/Kia-Academy/>. Local preview: `pnpm build:pages` → serve `apps/web/out`.
 - **Self-host Docker:** hardened multi-stage images (`docker build --target api|web`) running as a non-root `node` user, OCI-labelled, with built-in healthchecks; Compose adds `init: true` and `no-new-privileges` on app containers. See run mode **C** above.
 - **CI:** every commit is validated against a live Postgres before merge
 
