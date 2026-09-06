@@ -2395,3 +2395,402 @@ a.admin-stat-card:focus-visible .admin-stat-hint {
   line-height: 1;
   box-shadow: 0 0 0 2px var(--admin-bg);
 }
+
+/* =============================================================================
+   Admin redesign — Operational Atelier
+   A token-only visual layer: every existing route, control and permission state
+   remains intact while the control room gains a calmer, denser visual hierarchy.
+   ========================================================================== */
+
+.admin-shell--redesigned {
+  --admin-bg: #090d18;
+  --admin-surface: rgba(23, 31, 51, 0.86);
+  --admin-surface-2: rgba(12, 18, 33, 0.9);
+  --admin-accent: #8ea4ff;
+  --admin-accent-soft: #c2ccff;
+  --admin-accent-dark: #6477de;
+  --admin-value: #f6cb72;
+  --admin-text: #f4f7ff;
+  --admin-muted: #aab6cf;
+  --admin-line: rgba(177, 192, 236, 0.14);
+  --admin-line-strong: rgba(177, 192, 236, 0.3);
+  --admin-success: #55d99c;
+  --admin-warning: #f6c85f;
+  --admin-danger: #ff818c;
+  --admin-radius: 1.25rem;
+  --admin-radius-sm: 0.85rem;
+  --admin-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+  --admin-shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.36);
+  --admin-focus-ring: 0 0 0 3px rgba(142, 164, 255, 0.48);
+  background:
+    radial-gradient(circle at 82% -12%, rgba(100, 119, 229, 0.28), transparent 29rem),
+    radial-gradient(circle at 4% 104%, rgba(47, 191, 139, 0.14), transparent 30rem),
+    var(--admin-bg);
+}
+
+.admin-skip-link {
+  position: fixed;
+  top: 0.8rem;
+  inset-inline-start: 0.8rem;
+  z-index: 100;
+  transform: translateY(-160%);
+  padding: 0.7rem 1rem;
+  border-radius: 0.7rem;
+  background: var(--admin-text);
+  color: #0b1020;
+  font-weight: 800;
+  text-decoration: none;
+  transition: transform 160ms ease-out;
+}
+
+.admin-skip-link:focus {
+  transform: translateY(0);
+}
+
+.admin-shell--redesigned .admin-sidebar {
+  width: 17.75rem;
+  padding: 1.25rem 0.75rem 0.85rem;
+  background: linear-gradient(180deg, rgba(18, 27, 47, 0.96), rgba(10, 15, 28, 0.93));
+  border-inline-end-color: rgba(188, 201, 242, 0.12);
+  box-shadow: inset -1px 0 rgba(255, 255, 255, 0.02);
+}
+
+.admin-shell--redesigned .admin-brand {
+  position: relative;
+  margin: 0 0 1.1rem;
+  padding: 0.55rem 0.7rem 1.2rem;
+  gap: 0.8rem;
+  border: 0;
+}
+
+.admin-shell--redesigned .admin-brand::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0.7rem;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--admin-line-strong), transparent);
+}
+
+.admin-shell--redesigned .admin-brand-mark {
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0.45rem;
+  border: 1px solid rgba(178, 192, 255, 0.25);
+  border-radius: 0.9rem;
+  background: linear-gradient(140deg, rgba(142, 164, 255, 0.25), rgba(60, 74, 142, 0.11));
+  box-shadow: 0 8px 20px rgba(30, 41, 91, 0.25);
+}
+
+.admin-shell--redesigned .admin-brand small {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--admin-muted);
+  font-size: 0.68rem;
+  font-weight: 500;
+}
+
+.admin-shell--redesigned .admin-nav {
+  gap: 0.2rem;
+  padding-inline: 0.25rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(162, 179, 235, 0.28) transparent;
+}
+
+.admin-shell--redesigned .admin-nav-group-label {
+  display: block;
+  padding: 1rem 0.65rem 0.38rem;
+  color: #7280a0;
+  font-size: 0.63rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-shell--redesigned .admin-menu-sep {
+  display: none;
+}
+
+.admin-shell--redesigned .admin-nav-link,
+.admin-shell--redesigned .admin-nav-group-toggle {
+  min-height: 2.8rem;
+  padding: 0.6rem 0.72rem;
+  border-radius: 0.72rem;
+  color: #aeb9d0;
+  font-size: 0.78rem;
+}
+
+.admin-shell--redesigned .admin-nav-link:hover,
+.admin-shell--redesigned .admin-nav-group-toggle:hover {
+  border-color: transparent;
+  background: rgba(154, 172, 244, 0.1);
+  color: var(--admin-text);
+}
+
+.admin-shell--redesigned .admin-nav-link.active {
+  border-color: rgba(154, 172, 244, 0.24);
+  background: linear-gradient(90deg, rgba(117, 137, 224, 0.26), rgba(117, 137, 224, 0.08));
+  color: #fff;
+  box-shadow: inset 3px 0 #9db1ff, 0 6px 16px rgba(2, 8, 23, 0.22);
+}
+
+.admin-shell--redesigned .admin-nav-submenu {
+  margin-inline: 0.5rem;
+  padding-inline-start: 0.55rem;
+  border-inline-start: 1px solid rgba(177, 192, 236, 0.16);
+}
+
+.admin-shell--redesigned .admin-sidebar-profile {
+  margin: 1rem 0.25rem 0;
+  padding: 0.85rem 0.55rem;
+  border: 1px solid rgba(177, 192, 236, 0.12);
+  border-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.admin-shell--redesigned .admin-sidebar-profile .admin-brand-mark {
+  width: 2rem;
+  height: 2rem;
+  padding: 0.3rem;
+  border-radius: 0.65rem;
+}
+
+.admin-shell--redesigned .admin-header {
+  min-height: 4.65rem;
+  padding: 0.85rem clamp(1rem, 3vw, 2.75rem);
+  border-bottom-color: rgba(177, 192, 236, 0.12);
+  background: rgba(9, 13, 24, 0.68);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+}
+
+.admin-shell--redesigned .admin-header-title h1 {
+  font-size: clamp(1.05rem, 1.7vw, 1.35rem);
+  letter-spacing: -0.02em;
+}
+
+.admin-shell--redesigned .admin-breadcrumb {
+  color: #8794b2;
+}
+
+.admin-shell--redesigned .admin-search-trigger,
+.admin-shell--redesigned .admin-icon-button,
+.admin-shell--redesigned .admin-profile-button {
+  min-height: 2.55rem;
+  border-color: rgba(177, 192, 236, 0.17);
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: none;
+}
+
+.admin-shell--redesigned .admin-search-trigger:hover,
+.admin-shell--redesigned .admin-icon-button:hover,
+.admin-shell--redesigned .admin-profile-button:hover {
+  border-color: rgba(177, 192, 236, 0.34);
+  background: rgba(154, 172, 244, 0.1);
+}
+
+.admin-shell--redesigned .admin-profile-avatar {
+  background: linear-gradient(145deg, #9aaeff, #6979d9);
+  box-shadow: 0 4px 14px rgba(100, 119, 229, 0.35);
+}
+
+.admin-shell--redesigned .admin-content {
+  max-width: 96rem;
+  padding: clamp(1.25rem, 3vw, 2.75rem);
+}
+
+.admin-shell--redesigned .admin-page-content {
+  min-width: 0;
+}
+
+.admin-shell--redesigned .admin-content > .admin-header-row,
+.admin-shell--redesigned .admin-content > h1:first-child {
+  margin-bottom: 1.8rem;
+}
+
+.admin-shell--redesigned .admin-card,
+.admin-shell--redesigned .admin-stat-card,
+.admin-shell--redesigned .admin-table-wrap {
+  border-color: rgba(177, 192, 236, 0.13);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.018)), var(--admin-surface);
+  box-shadow: var(--admin-shadow);
+}
+
+.admin-shell--redesigned .admin-card {
+  padding: clamp(1rem, 2vw, 1.45rem);
+}
+
+.admin-shell--redesigned .admin-card:hover {
+  border-color: rgba(177, 192, 236, 0.22);
+}
+
+.admin-shell--redesigned .admin-kpi-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13.5rem), 1fr));
+  gap: 0.9rem;
+}
+
+.admin-shell--redesigned .admin-stat-card {
+  min-height: 8.75rem;
+  padding: 1.1rem;
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+.admin-shell--redesigned .admin-stat-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent 34%);
+}
+
+.admin-shell--redesigned .admin-stat-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(154, 172, 244, 0.42);
+  box-shadow: var(--admin-shadow-lg);
+}
+
+.admin-shell--redesigned .admin-stat-card.highlight {
+  border-color: rgba(246, 203, 114, 0.36);
+  background: linear-gradient(135deg, rgba(246, 203, 114, 0.17), rgba(255, 255, 255, 0.02) 54%), var(--admin-surface);
+}
+
+.admin-shell--redesigned .admin-stat-label {
+  color: #afbad1;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+.admin-shell--redesigned .admin-stat-value {
+  margin-top: 0.5rem;
+  font-size: clamp(1.45rem, 2.4vw, 2rem);
+}
+
+.admin-shell--redesigned .admin-stat-icon {
+  width: 2.8rem;
+  height: 2.8rem;
+  border-color: rgba(154, 172, 244, 0.22);
+  background: rgba(154, 172, 244, 0.12);
+}
+
+.admin-shell--redesigned .admin-chart {
+  min-height: 12rem;
+  gap: 0.65rem;
+  padding: 1rem 0.25rem 1.8rem;
+}
+
+.admin-shell--redesigned .admin-chart-bar {
+  border-radius: 0.55rem 0.55rem 0.2rem 0.2rem;
+  background: linear-gradient(180deg, #a8b8ff, #5e70df);
+  box-shadow: 0 8px 18px rgba(76, 95, 204, 0.22);
+}
+
+.admin-shell--redesigned .admin-chart-bar:hover {
+  filter: brightness(1.15);
+}
+
+.admin-shell--redesigned .admin-table-wrap {
+  border-radius: 1rem;
+}
+
+.admin-shell--redesigned .admin-table th {
+  padding-block: 0.95rem;
+  background: rgba(7, 12, 23, 0.34);
+  color: #aeb9d0;
+  font-size: 0.65rem;
+}
+
+.admin-shell--redesigned .admin-table td {
+  padding-block: 1rem;
+}
+
+.admin-shell--redesigned .admin-table tbody tr:hover td {
+  background: rgba(154, 172, 244, 0.075);
+}
+
+.admin-shell--redesigned .admin-badge {
+  padding: 0.22rem 0.55rem;
+  font-size: 0.66rem;
+}
+
+.admin-shell--redesigned :is(.admin-input, .admin-select, .admin-textarea, .form-field input, .form-field select, .form-field textarea) {
+  border-color: rgba(177, 192, 236, 0.18);
+  background: rgba(6, 11, 22, 0.38);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.025);
+}
+
+.admin-shell--redesigned :is(.admin-input, .admin-select, .admin-textarea, .form-field input, .form-field select, .form-field textarea):focus {
+  border-color: #9aaeff;
+  box-shadow: 0 0 0 3px rgba(142, 164, 255, 0.2);
+}
+
+.admin-shell--redesigned :is(.cta-primary, .btn-next, .admin-btn) {
+  min-height: 2.75rem;
+  border-radius: 0.8rem;
+  background: linear-gradient(135deg, #94a7ff, #6878df);
+  box-shadow: 0 8px 18px rgba(79, 94, 204, 0.25);
+}
+
+.admin-shell--redesigned :is(.cta-primary, .btn-next, .admin-btn):hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.07);
+}
+
+.admin-shell--redesigned .admin-quick-tile {
+  min-height: 8rem;
+  justify-content: space-between;
+  border-color: rgba(177, 192, 236, 0.13);
+  background: rgba(10, 16, 29, 0.36);
+}
+
+.admin-shell--redesigned .admin-quick-tile:hover {
+  border-color: rgba(154, 172, 244, 0.38);
+  background: rgba(154, 172, 244, 0.09);
+  transform: translateY(-2px);
+}
+
+.admin-shell--redesigned .admin-activity-icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  background: rgba(154, 172, 244, 0.11);
+}
+
+@media (max-width: 900px) {
+  .admin-shell--redesigned .admin-sidebar {
+    width: min(19rem, 88vw);
+    padding-top: 1rem;
+  }
+
+  .admin-shell--redesigned .admin-header {
+    padding-inline: 0.8rem;
+  }
+
+  .admin-shell--redesigned .admin-content {
+    padding: 1.1rem 0.9rem 5rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .admin-shell--redesigned .admin-kpi-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-shell--redesigned .admin-stat-card {
+    min-height: 7.8rem;
+    padding: 0.9rem;
+  }
+
+  .admin-shell--redesigned .admin-stat-icon {
+    width: 2.3rem;
+    height: 2.3rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-shell--redesigned *,
+  .admin-shell--redesigned *::before,
+  .admin-shell--redesigned *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

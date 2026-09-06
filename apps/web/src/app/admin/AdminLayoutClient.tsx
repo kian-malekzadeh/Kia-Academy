@@ -553,6 +553,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     setSidebarOpen(false);
   }, [pathname]);
 
+  useEffect(() => {
+    document.getElementById('admin-main')?.focus({ preventScroll: true });
+  }, [pathname]);
+
   const pageMeta = useMemo(() => {
     for (const item of nav) {
       if ('children' in item && item.children) {
@@ -587,8 +591,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     <div
       className={`admin-shell${sidebarOpen ? ' sidebar-open' : ''}${
         collapsed ? ' sidebar-collapsed' : ''
-      }`}
+      } admin-shell--redesigned`}
     >
+      <a className="admin-skip-link" href="#admin-main">
+        پرش به محتوای اصلی
+      </a>
       {/* Mobile menu button (drawer toggle) */}
       <button
         type="button"
@@ -666,7 +673,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </button>
       </aside>
 
-      <div className="admin-main">
+      <main id="admin-main" className="admin-main" tabIndex={-1}>
         <header className="admin-header">
           <div className="admin-header-left">
             <div className="admin-header-title">
@@ -769,8 +776,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <main>{children}</main>
-      </div>
+        <div className="admin-page-content">{children}</div>
+      </main>
 
       <AdminCommandPalette
         open={paletteOpen}
