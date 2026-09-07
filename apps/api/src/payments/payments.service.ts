@@ -27,7 +27,7 @@ import {
 } from '@kia-academy/shared';
 import type Stripe from 'stripe';
 import { isProductionEnv } from '../common/utils/node-env';
-import type { Prisma } from '../generated/prisma/client';
+import { Prisma } from '../generated/prisma/client';
 import { CartService } from '../cart/cart.service';
 import { EmailService } from '../email/email.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -169,13 +169,12 @@ export class PaymentsService {
     let paymentId: string;
     if (order.payment) {
       const refreshed = await this.prisma.payment.update({
-        where: { id: order.payment.id },
-        data: {
-          status: 'PENDING',
+        where: { id: order.payment.id },      data: {
+        status: 'PENDING',
           provider: paymentCfg.provider,
           gatewayRef: null,
           stripeId: null,
-          metadata: null,
+          metadata: Prisma.JsonNull,
           amountCents: order.totalCents,
           currency: order.currency,
           productType,
@@ -254,23 +253,20 @@ export class PaymentsService {
       throw new NotFoundException('Payment not found for gateway callback');
     }
 
-    // Public (unauthenticated) failure callbacks must prove they belong to this
-    // payment's gateway session. Without this, anyone who knows a payment id
-    // could flip a PENDING payment/order to FAILED (forged status=NOK).
-    const failureStatus =
-      dto.status !== undefined && dto.status !== null && dto.status.toUpperCase() !== 'OK'
-        ? dto.status.toUpperCase()
-        : null;
-    if (
-      !userId &&
-      failureStatus &&
-      (!dto.authority || dto.authority !== payment.gatewayRef)
-    ) {
-      const failureUrl = this.resolveUrl(
+    // Public (unauthenticated) callbacks must prove they belong to this
+    // payment's gateway session by carrying the provider-issued authority
+    // (gatewayRef). Without this, anyone who learns a payment id could forge a
+    // failure — or, with a dev/sandbox provider, a SUCCESS — for that payment.
+    // Authenticated callbacks are ownership-checked above and verified
+    // server-side through the provider, so they need no extra proof.
+    const statusUpper =
+      dto.status !== undefined && dto.status !== null ? dto.status.toUpperCase() : null;
+    if (!userId && dto.authority !== payment.gatewayRef) {
+      const redirectUrl = this.resolveUrl(
         paymentCfg.failureUrl,
         `/checkout/cancel?payment_id=${payment.id}`,
       );
-      return { success: false, payment: this.toResponse(payment), redirectUrl: failureUrl };
+      return { success: false, payment: this.toResponse(payment), redirectUrl };
     }
 
     const successUrl = this.resolveUrl(
@@ -300,7 +296,7 @@ export class PaymentsService {
         gatewayRef: payment.gatewayRef,
         authority: dto.authority,
         status: dto.status,
-        metadata: payment.metadata,
+        metadata: jsonObjectOrNull(payment.metadata),
       },
       paymentCfg,
     );
@@ -314,10 +310,10 @@ export class PaymentsService {
         data: {
           status: 'FAILED',
           gatewayRef: verify.gatewayRef ?? payment.gatewayRef,
-          metadata: JSON.stringify({
-            ...(safeParse(payment.metadata) ?? {}),
+          metadata: {
+            ...(jsonObjectOrNull(payment.metadata) ?? {}),
             verifyFailure: verify.failureReason,
-          }),
+          },
         },
       });
       if (payment.orderId) {
@@ -874,7 +870,10 @@ export class PaymentsService {
           paymentCfg.provider === 'stripe' && result.gatewayRef?.startsWith('cs_')
             ? result.gatewayRef
             : payment.stripeId,
-        metadata: result.metadata ? JSON.stringify(result.metadata) : payment.metadata,
+        metadata:
+          result.metadata !== undefined
+            ? (result.metadata as Prisma.InputJsonValue)
+            : (payment.metadata as Prisma.InputJsonValue | undefined),
         provider: paymentCfg.provider,
       },
     });
@@ -1034,7 +1033,7 @@ export class PaymentsService {
       if (!roadmap || roadmap.userId !== userId) {
         throw new NotFoundException(`Roadmap ${dto.productRef} not found`);
       }
-      const pricing = JSON.parse(roadmap.pricing) as RoadmapResponse['pricing'];
+      const pricing = roadmap.pricing as unknown as RoadmapResponse['pricing'];
       return [
         {
           productType: 'ROADMAP_BUNDLE',
@@ -1332,7 +1331,7 @@ export class PaymentsService {
       subtotalCents: number;
       discountCents: number;
       totalCents: number;
-      lineItems: string;
+      lineItems: Prisma.JsonValue;
     },
     fallbackItems: Array<{
       id: string;
@@ -1348,11 +1347,9 @@ export class PaymentsService {
     }>,
   ): InvoiceResponse {
     let lineItems: OrderItemResponse[] = fallbackItems.map((i) => this.toOrderItemResponse(i));
-    try {
-      const parsed = JSON.parse(invoice.lineItems) as OrderItemResponse[];
-      if (Array.isArray(parsed) && parsed.length) lineItems = parsed;
-    } catch {
-      /* use fallback */
+    const parsed = invoice.lineItems;
+    if (Array.isArray(parsed) && parsed.length) {
+      lineItems = parsed as unknown as OrderItemResponse[];
     }
     return {
       id: invoice.id,
@@ -1409,7 +1406,7 @@ export class PaymentsService {
       subtotalCents: number;
       discountCents: number;
       totalCents: number;
-      lineItems: string;
+      lineItems: Prisma.JsonValue;
     } | null;
   }): OrderResponse {
     return {
@@ -1430,14 +1427,10 @@ export class PaymentsService {
   }
 }
 
-function safeParse(raw: string | null | undefined): Record<string, unknown> | null {
-  if (!raw) return null;
-  try {
-    const v = JSON.parse(raw) as unknown;
-    return v && typeof v === 'object' ? (v as Record<string, unknown>) : null;
-  } catch {
-    return null;
-  }
+/** Coerce a nullable jsonb column value into a plain object (or null). */
+function jsonObjectOrNull(value: Prisma.JsonValue | null): Record<string, unknown> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
 }
 
 function escapeHtml(value: string): string {

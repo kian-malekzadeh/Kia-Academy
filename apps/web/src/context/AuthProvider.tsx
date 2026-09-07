@@ -1,6 +1,12 @@
 'use client';
 
-import type { AuthUser, LearnerState, LoginDto, RegisterDto } from '@kia-academy/shared';
+import type {
+  AuthUser,
+  LearnerState,
+  LoginDto,
+  RegisterDto,
+  TwoFactorChallengeResponse,
+} from '@kia-academy/shared';
 import {
   createContext,
   useCallback,
@@ -20,7 +26,10 @@ interface AuthContextValue {
   learnerState: LearnerState | null;
   loading: boolean;
   isAuthenticated: boolean;
-  login: (dto: LoginDto) => Promise<AuthUser>;
+  /** Resolves with the signed-in user, or a 2FA challenge the caller must complete. */
+  login: (dto: LoginDto) => Promise<AuthUser | TwoFactorChallengeResponse>;
+  /** Complete the 2FA second step (AUTH-5) and hydrate the session. */
+  verifyTwoFactorLogin: (challenge: string, code: string) => Promise<AuthUser>;
   register: (dto: RegisterDto) => Promise<AuthUser>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
@@ -84,8 +93,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refreshSession, clearSession]);
 
   const login = useCallback(
-    async (dto: LoginDto) => {
+    async (dto: LoginDto): Promise<AuthUser | TwoFactorChallengeResponse> => {
       const res = await api.login(dto);
+      if ('twoFactorRequired' in res) {
+        // No session yet — the login form must collect the second factor.
+        return res;
+      }
+      setUser(res.user);
+      const state = await api.me();
+      applyLearnerState(state);
+      return state.user;
+    },
+    [applyLearnerState],
+  );
+
+  /** Complete the 2FA second step and hydrate the session. */
+  const verifyTwoFactorLogin = useCallback(
+    async (challenge: string, code: string): Promise<AuthUser> => {
+      const res = await api.verifyTwoFactor({ challenge, code });
       setUser(res.user);
       const state = await api.me();
       applyLearnerState(state);
@@ -120,11 +145,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       isAuthenticated: !!user,
       login,
+      verifyTwoFactorLogin,
       register,
       logout,
       refreshSession,
     }),
-    [user, learnerState, loading, login, register, logout, refreshSession],
+    [user, learnerState, loading, login, verifyTwoFactorLogin, register, logout, refreshSession],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

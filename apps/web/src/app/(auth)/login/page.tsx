@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { LogIn } from 'lucide-react';
+import { LogIn, ShieldCheck } from 'lucide-react';
 import { FormEvent, Suspense, useEffect, useState } from 'react';
 import { PageBackButton } from '@/components/layout/PageBackButton';
 import { BrandMark } from '@/components/brand/BrandMark';
@@ -10,16 +10,20 @@ import { PasswordInput } from '@/components/auth/PasswordInput';
 import { useAuth } from '@/context/AuthProvider';
 import { useLanguage } from '@/context/LanguageProvider';
 import { resolvePostLoginPath } from '@/lib/postLoginPath';
+import type { TwoFactorChallengeResponse } from '@kia-academy/shared';
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, logout, user, loading, isAuthenticated } = useAuth();
+  const { login, logout, user, loading, isAuthenticated, verifyTwoFactorLogin } = useAuth();
   const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [twoFactor, setTwoFactor] = useState<TwoFactorChallengeResponse | null>(null);
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [twoFactorSubmitting, setTwoFactorSubmitting] = useState(false);
 
   const next = searchParams.get('next') ?? '/dashboard';
   const nextNeedsAdmin = next.startsWith('/admin');
@@ -43,8 +47,13 @@ function LoginForm() {
     setError('');
     setSubmitting(true);
     try {
-      const loggedIn = await login({ email, password });
-      const dest = resolvePostLoginPath(loggedIn.role, next);
+      const result = await login({ email, password });
+      if ('twoFactorRequired' in result) {
+        // Staff account with TOTP enabled — show the second-factor step.
+        setTwoFactor(result);
+        return;
+      }
+      const dest = resolvePostLoginPath(result.role, next);
       router.push(dest);
     } catch {
       setError(t('auth.login.error'));
@@ -52,6 +61,70 @@ function LoginForm() {
       setSubmitting(false);
     }
   };
+
+  const handleTwoFactorSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (twoFactorSubmitting || !twoFactor) return;
+    setError('');
+    setTwoFactorSubmitting(true);
+    try {
+      const loggedIn = await verifyTwoFactorLogin(twoFactor.challenge, twoFactorCode.trim());
+      const dest = resolvePostLoginPath(loggedIn.role, next);
+      router.push(dest);
+    } catch {
+      setError(t('auth.login.twoFactorError'));
+    } finally {
+      setTwoFactorSubmitting(false);
+    }
+  };
+
+  if (twoFactor) {
+    return (
+      <div className="page-content">
+        <div className="container auth-shell">
+          <PageBackButton href="/" />
+          <div className="auth-card">
+            <Link href="/" className="education-brand" aria-label={t('common.brand')}>
+              <BrandMark className="education-brand-mark" size={28} title="" />
+              {t('common.brand')}
+            </Link>
+            <span className="eyebrow">
+              <ShieldCheck size={14} className="inline-leading-icon" />
+              {t('auth.login.twoFactorEyebrow')}
+            </span>
+            <h1>{t('auth.login.twoFactorTitle')}</h1>
+            <p className="auth-sub">{t('auth.login.twoFactorSub')}</p>
+            <form className="auth-form" onSubmit={handleTwoFactorSubmit}>
+              <label className="form-field">
+                <span>{t('auth.login.twoFactorCodeLabel')}</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  autoFocus
+                  required
+                  minLength={6}
+                  maxLength={16}
+                  value={twoFactorCode}
+                  onChange={(e) => setTwoFactorCode(e.target.value)}
+                  placeholder="123456"
+                  dir="ltr"
+                  className="ltr-isolate"
+                />
+              </label>
+              {error && <p className="form-error">{error}</p>}
+              <button type="submit" className="cta-primary auth-submit" disabled={twoFactorSubmitting}>
+                {twoFactorSubmitting
+                  ? t('auth.login.submitting')
+                  : t('auth.login.twoFactorSubmit')}
+              </button>
+            </form>
+            <p className="auth-footer">{t('auth.login.twoFactorRecoveryHint')}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page-content">
@@ -101,6 +174,8 @@ function LoginForm() {
           </form>
 
           <p className="auth-footer">
+            <Link href="/forgot-password">{t('auth.forgotPassword.eyebrow')}</Link>
+            {' · '}
             {t('auth.login.footer')} <Link href="/register">{t('auth.login.createAccount')}</Link>
           </p>
         </div>

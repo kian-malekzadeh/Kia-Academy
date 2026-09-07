@@ -31,6 +31,7 @@ import { AssessmentsService } from '../assessments/assessments.service';
 import { EmailService } from '../email/email.service';
 import { PersonalityService } from '../personality/personality.service';
 import { PrismaService } from '../prisma/prisma.service';
+import type { Prisma } from '../generated/prisma/client';
 import { SiteSettingsService } from '../site-settings/site-settings.service';
 import { TestBanksService } from '../test-banks/test-banks.service';
 import { CreateReadinessTestDto } from './dto/create-readiness-test.dto';
@@ -61,11 +62,11 @@ export class ReadinessService {
     const record = await this.prisma.readinessTest.create({
       data: {
         userId,
-        scores: JSON.stringify(dto.scores),
-        percentages: JSON.stringify(result.percentages),
+        scores: dto.scores as unknown as Prisma.InputJsonValue,
+        percentages: result.percentages as unknown as Prisma.InputJsonValue,
         average: result.average,
         passed: result.passed,
-        verdict: JSON.stringify(result.verdict),
+        verdict: result.verdict as unknown as Prisma.InputJsonValue,
       },
     });
 
@@ -119,8 +120,8 @@ export class ReadinessService {
           roadmapId: resolvedRoadmapId,
           blueprintVersion: EXAM_BLUEPRINT_VERSION,
           status: 'IN_PROGRESS',
-          questionIds: JSON.stringify(questions.map((q) => q.id)),
-          answers: '{}',
+          questionIds: questions.map((q) => q.id),
+          answers: {} as Prisma.InputJsonValue,
           startedAt,
           endsAt,
         },
@@ -156,7 +157,7 @@ export class ReadinessService {
 
     await this.prisma.examAttempt.update({
       where: { id: attemptId },
-      data: { answers: JSON.stringify(merged) },
+      data: { answers: merged },
     });
 
     return {
@@ -236,7 +237,7 @@ export class ReadinessService {
     const roadmap = roadmapRecord
       ? {
           id: roadmapRecord.id,
-          modules: JSON.parse(roadmapRecord.modules) as string[],
+          modules: roadmapRecord.modules as unknown as string[],
           level: roadmapRecord.level,
         }
       : null;
@@ -249,7 +250,7 @@ export class ReadinessService {
     });
 
     if (roadmapRecord && outcome.roadmapModules.length > 0) {
-      const profile = JSON.parse(roadmapRecord.profile) as {
+      const profile = roadmapRecord.profile as unknown as {
         goal: string;
         level: string;
         style: string;
@@ -258,12 +259,12 @@ export class ReadinessService {
       await this.prisma.roadmap.update({
         where: { id: roadmapRecord.id },
         data: {
-          modules: JSON.stringify(outcome.roadmapModules),
+          modules: outcome.roadmapModules,
           level: outcome.levelAfter || roadmapRecord.level,
-          profile: JSON.stringify({
+          profile: {
             ...profile,
             level: outcome.levelAfter || profile.level,
-          }),
+          },
         },
       });
     }
@@ -279,14 +280,14 @@ export class ReadinessService {
       where: { id: attemptId },
       data: {
         status: 'SUBMITTED',
-        answers: JSON.stringify(answers),
+        answers: answers as unknown as Prisma.InputJsonValue,
         submittedAt,
         average: graded.average,
         passed,
-        domainScores: JSON.stringify(graded.domainScores),
-        percentages: JSON.stringify(graded.percentages),
-        outcome: JSON.stringify(outcome),
-        verdict: JSON.stringify(verdict),
+        domainScores: graded.domainScores as unknown as Prisma.InputJsonValue,
+        percentages: graded.percentages as unknown as Prisma.InputJsonValue,
+        outcome: outcome as unknown as Prisma.InputJsonValue,
+        verdict: verdict as unknown as Prisma.InputJsonValue,
         roadmapId: outcome.roadmapId ?? attempt.roadmapId,
       },
     });
@@ -311,11 +312,11 @@ export class ReadinessService {
     await this.prisma.readinessTest.create({
       data: {
         userId,
-        scores: JSON.stringify(legacyScores),
-        percentages: JSON.stringify(legacyResult.percentages),
+        scores: legacyScores as unknown as Prisma.InputJsonValue,
+        percentages: legacyResult.percentages as unknown as Prisma.InputJsonValue,
         average: graded.average,
         passed,
-        verdict: JSON.stringify(legacyResult.verdict),
+        verdict: legacyResult.verdict as unknown as Prisma.InputJsonValue,
       },
     });
 
@@ -388,10 +389,10 @@ export class ReadinessService {
     return {
       id: record.id,
       createdAt: record.createdAt.toISOString(),
-      percentages: JSON.parse(record.percentages),
+      percentages: record.percentages as unknown as Record<string, number>,
       average: record.average,
       passed: record.passed,
-      verdict: JSON.parse(record.verdict),
+      verdict: record.verdict as unknown as ReadinessResult['verdict'],
     };
   }
 
@@ -509,10 +510,10 @@ export class ReadinessService {
     return {
       id: record.id,
       createdAt: record.createdAt.toISOString(),
-      percentages: JSON.parse(record.percentages) as Record<string, number>,
+      percentages: record.percentages as unknown as Record<string, number>,
       average: record.average,
       passed: record.passed,
-      verdict: JSON.parse(record.verdict) as LearnerTestReportReadiness['verdict'],
+      verdict: record.verdict as unknown as LearnerTestReportReadiness['verdict'],
     };
   }
 
@@ -549,7 +550,7 @@ export class ReadinessService {
       trackKey: record.trackKey,
       trackName: record.trackName,
       level: record.level,
-      profile: JSON.parse(record.profile) as LearnerTestReportRoadmap['profile'],
+      profile: record.profile as unknown as LearnerTestReportRoadmap['profile'],
     };
   }
 
@@ -660,8 +661,8 @@ export class ReadinessService {
     });
   }
 
-  private async questionsForAttempt(questionIdsJson: string): Promise<ExamQuestion[]> {
-    const ids = JSON.parse(questionIdsJson) as string[];
+  private async questionsForAttempt(questionIdsJson: Prisma.JsonValue): Promise<ExamQuestion[]> {
+    const ids = (Array.isArray(questionIdsJson) ? questionIdsJson : []) as string[];
     const bank = await this.testBanks.getExamQuestions();
     const byId = new Map(bank.map((q) => [q.id, q]));
     return ids.map((id) => {
@@ -679,8 +680,8 @@ export class ReadinessService {
     startedAt: Date;
     endsAt: Date;
     roadmapId: string | null;
-    questionIds: string;
-    answers: string;
+    questionIds: Prisma.JsonValue;
+    answers: Prisma.JsonValue;
     status: string;
   }): Promise<ExamAttemptSession> {
     const questions = await this.questionsForAttempt(attempt.questionIds);
@@ -703,10 +704,10 @@ export class ReadinessService {
     id: string;
     average: number | null;
     passed: boolean | null;
-    domainScores: string | null;
-    percentages: string | null;
-    outcome: string | null;
-    verdict: string | null;
+    domainScores: Prisma.JsonValue | null;
+    percentages: Prisma.JsonValue | null;
+    outcome: Prisma.JsonValue | null;
+    verdict: Prisma.JsonValue | null;
     submittedAt: Date | null;
     createdAt?: Date;
   }): ExamSubmitResult {
@@ -725,17 +726,21 @@ export class ReadinessService {
       attemptId: attempt.id,
       average: attempt.average,
       passed: attempt.passed,
-      domainScores: JSON.parse(attempt.domainScores),
-      percentages: JSON.parse(attempt.percentages),
-      outcome: JSON.parse(attempt.outcome),
-      verdict: JSON.parse(attempt.verdict) as ExamSubmitResult['verdict'],
+      domainScores: attempt.domainScores as unknown as ExamSubmitResult['domainScores'],
+      percentages: attempt.percentages as unknown as ExamSubmitResult['percentages'],
+      outcome: attempt.outcome as unknown as ExamSubmitResult['outcome'],
+      verdict: attempt.verdict as unknown as ExamSubmitResult['verdict'],
       submittedAt: (attempt.submittedAt ?? attempt.createdAt ?? new Date()).toISOString(),
     };
   }
 
-  private parseAnswers(raw: string): Record<string, ExamResponse> {
+  private parseAnswers(raw: Prisma.JsonValue): Record<string, ExamResponse> {
     try {
-      return this.sanitizeAnswers(JSON.parse(raw) as Record<string, unknown>);
+      return this.sanitizeAnswers(
+        (raw && typeof raw === 'object' && !Array.isArray(raw)
+          ? raw
+          : {}) as Record<string, unknown>,
+      );
     } catch {
       return {};
     }

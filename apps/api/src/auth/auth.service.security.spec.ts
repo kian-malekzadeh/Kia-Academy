@@ -51,6 +51,7 @@ function buildService(overrides?: {
     {} as never,
     { get: jest.fn().mockResolvedValue({}) } as never,
     { sendOtp: jest.fn().mockResolvedValue(undefined) } as never,
+    { loginGate: jest.fn().mockResolvedValue(null) } as never,
   );
   return { service, prisma, configGet };
 }

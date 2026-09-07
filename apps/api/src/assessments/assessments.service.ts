@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import type { AssessmentAnswers, AssessmentResponse } from '@kia-academy/shared';
+import type { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAssessmentDto } from './dto/create-assessment.dto';
 
@@ -11,7 +12,7 @@ export class AssessmentsService {
     const record = await this.prisma.assessment.create({
       data: {
         userId,
-        answers: JSON.stringify(dto.answers),
+        answers: dto.answers as unknown as Prisma.InputJsonValue,
       },
     });
 
@@ -43,10 +44,10 @@ export class AssessmentsService {
     return record ? this.toResponse(record) : null;
   }
 
-  private toResponse(record: { id: string; answers: string; createdAt: Date }): AssessmentResponse {
+  private toResponse(record: { id: string; answers: Prisma.JsonValue; createdAt: Date }): AssessmentResponse {
     return {
       id: record.id,
-      answers: JSON.parse(record.answers) as AssessmentAnswers,
+      answers: record.answers as unknown as AssessmentAnswers,
       createdAt: record.createdAt.toISOString(),
     };
   }

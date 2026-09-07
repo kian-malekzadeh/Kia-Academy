@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import type { AuthUser } from '@kia-academy/shared';
 import { AdminService } from './admin.service';
 import { AssessmentsService } from '../assessments/assessments.service';
@@ -400,5 +400,91 @@ describe('ownership and lesson completion', () => {
       durationMin: 10,
       completed: true,
     });
+  });
+});
+
+describe('AdminService.softDeleteUser (DB-4)', () => {
+  const baseUser = {
+    id: 'user-1',
+    name: 'Learner',
+    email: 'learner@kia.academy',
+    phone: '09120000001',
+    role: 'LEARNER',
+    status: 'ACTIVE',
+    deletedAt: null,
+    createdAt: new Date('2026-01-01'),
+    adminPanelAccess: null,
+    passwordHash: 'hash',
+    twoFactorEnabled: false,
+    suspendedAt: null,
+    bio: 'hi',
+    avatarUrl: null,
+    province: null,
+    city: null,
+    firstName: null,
+    lastName: null,
+    profileComplete: true,
+  };
+
+  function txMock(updateResult: unknown) {
+    return {
+      refreshToken: { deleteMany: jest.fn().mockResolvedValue({ count: 2 }) },
+      user: { update: jest.fn().mockResolvedValue(updateResult) },
+    };
+  }
+
+  it('clears PII, bans the account, and forces logout inside a transaction', async () => {
+    const updated = { ...baseUser, status: 'BANNED', name: 'abcdef0123456789', email: null };
+    const tx = txMock(updated);
+    const prisma = {
+      user: { findUnique: jest.fn().mockResolvedValue({ ...baseUser }) },
+      $transaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx)),
+    };
+    const service = makeService(prisma);
+
+    const result = await service.softDeleteUser('user-1', 'gdpr request', actor);
+
+    expect(tx.refreshToken.deleteMany).toHaveBeenCalledWith({ where: { userId: 'user-1' } });
+    const data = tx.user.update.mock.calls[0][0].data;
+    expect(data.status).toBe('BANNED');
+    expect(data.email).toBeNull();
+    expect(data.phone).toBeNull();
+    expect(data.passwordHash).toBeNull();
+    expect(data.deletedAt).toBeInstanceOf(Date);
+    expect(result.status).toBe('BANNED');
+  });
+
+  it('refuses to soft-delete yourself', async () => {
+    const prisma = {
+      user: { findUnique: jest.fn().mockResolvedValue({ ...baseUser, id: 'admin-1' }) },
+      $transaction: jest.fn(),
+    };
+    const service = makeService(prisma);
+    await expect(service.softDeleteUser('admin-1', 'x', actor)).rejects.toThrow(
+      BadRequestException,
+    );
+  });
+
+  it('refuses to soft-delete the last super admin', async () => {
+    const prisma = {
+      user: {
+        findUnique: jest.fn().mockResolvedValue({ ...baseUser, role: 'SUPER_ADMIN' }),
+        count: jest.fn().mockResolvedValue(1),
+      },
+      $transaction: jest.fn(),
+    };
+    const service = makeService(prisma);
+    await expect(service.softDeleteUser('user-1', 'x', actor)).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
+
+  it('refuses to soft-delete an already-deleted account', async () => {
+    const prisma = {
+      user: { findUnique: jest.fn().mockResolvedValue({ ...baseUser, deletedAt: new Date() }) },
+      $transaction: jest.fn(),
+    };
+    const service = makeService(prisma);
+    await expect(service.softDeleteUser('user-1', 'x', actor)).rejects.toThrow(ConflictException);
   });
 });

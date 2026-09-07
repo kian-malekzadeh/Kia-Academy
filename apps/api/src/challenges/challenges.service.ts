@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { ChallengeScoreResult } from '@kia-academy/shared';
 import { PrismaService } from '../prisma/prisma.service';
+import type { Prisma } from '../generated/prisma/client';
 import { SiteSettingsService } from '../site-settings/site-settings.service';
 import { buildChallengeResult } from '@kia-academy/shared';
 import { CreateChallengeSubmissionDto } from './dto/create-challenge-submission.dto';
@@ -70,7 +71,7 @@ export class ChallengesService {
         code: dto.code,
         score: result.score,
         topScore: result.topScore,
-        result: JSON.stringify(result),
+        result: result as unknown as Prisma.InputJsonValue,
         status,
         executionTimeMs: dto.executionTimeMs ?? null,
         memoryUsageKb: dto.memoryUsageKb ?? null,
@@ -138,7 +139,7 @@ export class ChallengesService {
       throw new NotFoundException(`Challenge submission ${id} not found`);
     }
 
-    const result = JSON.parse(record.result) as ChallengeScoreResult;
+    const result = record.result as unknown as ChallengeScoreResult;
     return {
       id: record.id,
       challengeId: record.challengeId,

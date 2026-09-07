@@ -6,7 +6,8 @@ import { useEffect, useState } from 'react';
 import { useLanguage } from '@/context/LanguageProvider';
 import { api, ApiError } from '@/lib/api';
 
-const RESOURCE_TYPES = ['course', 'readiness_test', 'roadmap_bundle'] as const;
+/** Legacy labels map server-side to the canonical `readiness`/`roadmap` enum. */
+const RESOURCE_TYPES = ['course', 'readiness', 'roadmap'] as const;
 const SOURCES = ['FREE', 'CHALLENGE', 'BUNDLE'] as const;
 
 export default function AdminEntitlementsPage() {

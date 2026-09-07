@@ -15,8 +15,8 @@ Severity: **P0** critical (security / data loss / financial integrity) ·
 | AUTH-1 | P0 | `JwtStrategy.validateUser` and `validateRefreshToken` never check `user.status`; a suspended/banned user keeps API access until the access token (≤15 min) expires | **fixed (Phase 1)** |
 | AUTH-2 | P0 | `login` and `verifyOtp` do not reject suspended/banned accounts — a banned user can mint fresh sessions | **fixed (Phase 1)** |
 | AUTH-3 | P0 | Admin role change does not revoke the target user's refresh tokens — old sessions keep a changed role's refresh path alive | **fixed (Phase 1)** |
-| AUTH-4 | P1 | No password reset / forgot-password flow; no change-password endpoint (email+password accounts cannot recover) | backlog |
-| AUTH-5 | P1 | No 2FA/MFA for admin accounts | backlog (Phase 2) |
+| AUTH-4 | P1 | No password reset / forgot-password flow; no change-password endpoint (email+password accounts cannot recover) | **fixed** — `POST /api/auth/forgot-password` (uniform response, email-bomb cap), `POST /api/auth/reset-password` (hashed single-use 30-min tokens, atomic claim, full session revocation), `POST /api/auth/change-password` (current-password check, other-device revocation); Persian-first reset email template; unit + runtime smoke coverage |
+| AUTH-5 | P1 | No 2FA/MFA for admin accounts | **fixed** — RFC 6238 TOTP (SHA-1/6-digit/30s, ±1 step drift, replay-protected via verified-at watermark) implemented in-repo with RFC 4648 base32 + AES-256-GCM secret encryption (key derived from JWT_REFRESH_SECRET); staff-only enrollment (setup/confirm/status/recovery-codes/disable), 8 single-use bcrypt-hashed recovery codes with atomic claims, login returns a 2-minute single-purpose challenge JWT instead of a session, `POST /auth/2fa/verify` mints the real session; SUPER_ADMIN emergency-disable with audit log; unit tests incl. RFC test vectors + runtime smoke of the full lifecycle |
 | AUTH-6 | P2 | `register` returns `ConflictException('Email already registered')` → account enumeration | backlog |
 
 Positives already present: refresh tokens stored as SHA-256 digests, rotation via
@@ -51,15 +51,15 @@ flood caps, bcrypt cost 12, throttled auth endpoints.
 | ID | Severity | Finding | Status |
 | --- | --- | --- | --- |
 | DB-1 | P0 | `WalletTransaction.paymentId` has no FK; wallet balance is a bare mutable `Int` with no ledger invariant | fixed (FK) / ledger backlog |
-| DB-2 | P1 | Stringly-typed states (`ExamAttempt.status`, `Order.source`, `User.status`, `Entitlement.resourceType`) — validated only in app code | backlog (Phase 4) |
-| DB-3 | P1 | JSON payloads persisted as `String` (answers, questions, modules, pricing, invoice line items) | backlog (Phase 4) |
-| DB-4 | P2 | No soft-delete strategy for financial/audit records | backlog (Phase 4) |
+| DB-2 | P1 | Stringly-typed states (`ExamAttempt.status`, `Order.source`, `User.status`, `Entitlement.resourceType`) — validated only in app code | **fixed** — new `UserStatus` / `OrderSource` / `EntitlementResourceType` Postgres enums with data remap in migration 20260906140000 (`ExamAttempt.status` and `Order.status` were already enums); admin grant API now normalizes legacy `readiness_test`/`roadmap_bundle` labels to the canonical learner vocabulary, fixing a latent grant→check mismatch | 
+| DB-3 | P1 | JSON payloads persisted as `String` (answers, questions, modules, pricing, invoice line items) | **fixed** — all 14 flagged columns (Assessment.answers, Roadmap.modules/profile/pricing, ReadinessTest.scores/percentages/verdict, PersonalityResult.answers/scores, ChallengeSubmission.result, Payment.metadata, PaymentWebhookEvent.payload, Invoice.lineItems, ExamAttempt.questionIds/answers/domainScores/percentages/outcome/verdict, CourseExam.questions, CourseExamAttempt.answers, TestBank.payload, SiteSetting.value) converted to `jsonb` via Prisma `Json`; ~40 service-layer parse/stringify round-trips removed and services now read/write native JSON | 
+| DB-4 | P2 | No soft-delete strategy for financial/audit records | **fixed** — `User.deletedAt` soft-delete column; `Order→User`, `Payment→User`, `Invoice→Order` FKs changed Cascade→Restrict so financial records can never vanish via a user deletion; SUPER_ADMIN-only `DELETE /admin/users/:id` (PII-minimizing anonymization + force logout + audit) and `POST /admin/users/:id/restore`, with regression tests; soft-deleted users hidden from admin lists and locked out of auth |
 
 ### Admin & authorization
 | ID | Severity | Finding | Status |
 | --- | --- | --- | --- |
 | ADM-1 | P1 | Permission matrix duplicated frontend/backend; frontend must only consume server-issued access | backlog (Phase 2/9) |
-| ADM-2 | P1 | Object-level authorization (IDOR) not systematically audited across controllers | backlog (Phase 2/8) |
+| ADM-2 | P1 | Object-level authorization (IDOR) not systematically audited across controllers | **swept** — every object-level route audited (orders, payments, invoices, cart items, todos, tickets, messages, readiness/course-exam attempts, roadmaps, assessments, challenges, competitions, media); all learner routes scope by `userId` or enforce enrollment/entitlement; admin routes SUPER_ADMIN-gated for role/access changes with last-super protection. **One gap found & fixed:** unauthenticated gateway success callbacks required no `authority` proof (dev provider verifies everything as success) — the fail-closed gate now covers success AND failure callbacks; GET callback gained IDPay `id`/`order_id` mapping |
 | ADM-3 | P2 | Admin audit log exists (AdminAuditLog) — coverage of all sensitive actions needs completion | backlog |
 
 ### Infrastructure / CI

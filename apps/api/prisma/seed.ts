@@ -252,10 +252,10 @@ Review the STAR method on [Wikipedia](https://en.wikipedia.org/wiki/Situation,_T
   const defaults = createDefaultSiteSettings();
   await prisma.siteSetting.upsert({
     where: { key: 'site' },
-    create: { key: 'site', value: JSON.stringify(defaults) },
+    create: { key: 'site', value: defaults },
     update: {
       // Keep evolving defaults in sync for local/dev seeds (pricing + payment + sms + enamad).
-      value: JSON.stringify(defaults),
+      value: defaults,
     },
   });
   console.log('Seeded site settings');
@@ -282,8 +282,8 @@ Review the STAR method on [Wikipedia](https://en.wikipedia.org/wiki/Situation,_T
   for (const bank of testBanks) {
     await prisma.testBank.upsert({
       where: { id: bank.id },
-      create: { id: bank.id, payload: JSON.stringify(bank.payload) },
-      update: { payload: JSON.stringify(bank.payload) },
+      create: { id: bank.id, payload: bank.payload },
+      update: { payload: bank.payload },
     });
   }
   // ---- Default midterm & final exam for every course ----
@@ -332,7 +332,7 @@ Review the STAR method on [Wikipedia](https://en.wikipedia.org/wiki/Situation,_T
           sortOrder: exam.sortOrder,
           kind: exam.kind,
           afterLessonId: exam.afterLessonId,
-          questions: JSON.stringify(exam.questions),
+          questions: exam.questions,
         },
       });
     }

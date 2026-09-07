@@ -502,6 +502,64 @@ describe('PaymentsService', () => {
     expect(prisma.order.updateMany).not.toHaveBeenCalled();
   });
 
+  it('ignores public SUCCESS callbacks that carry no gateway authority (dev provider cannot be forced)', async () => {
+    // The dev provider verifies everything as success outside production —
+    // which is exactly why the authority proof must gate BEFORE provider verify.
+    verifyPaymentMock.mockResolvedValue({ success: true, gatewayRef: 'dev' });
+    prisma.payment.findUnique.mockResolvedValue({
+      id: 'pay-1',
+      userId: 'user-1',
+      productType: 'COURSE',
+      productRef: 'js-basics',
+      amountCents: 490_000,
+      currency: 'irr',
+      status: 'PENDING',
+      orderId: 'ord-1',
+      provider: 'dev',
+      gatewayRef: 'auth-1',
+      metadata: null,
+    });
+
+    // Attacker knows only the payment id and forges status=OK.
+    const result = await service.handlePublicCallback({
+      paymentId: 'pay-1',
+      status: 'OK',
+    });
+
+    expect(result.success).toBe(false);
+    // Provider verify must never have been reached, and nothing completed.
+    expect(verifyPaymentMock).not.toHaveBeenCalled();
+    expect(prisma.payment.updateMany).not.toHaveBeenCalled();
+    expect(prisma.order.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('ignores public callbacks whose authority does not match the payment gatewayRef', async () => {
+    verifyPaymentMock.mockResolvedValue({ success: true, gatewayRef: 'dev' });
+    prisma.payment.findUnique.mockResolvedValue({
+      id: 'pay-1',
+      userId: 'user-1',
+      productType: 'COURSE',
+      productRef: 'js-basics',
+      amountCents: 490_000,
+      currency: 'irr',
+      status: 'PENDING',
+      orderId: 'ord-1',
+      provider: 'dev',
+      gatewayRef: 'auth-1',
+      metadata: null,
+    });
+
+    const result = await service.handlePublicCallback({
+      paymentId: 'pay-1',
+      authority: 'someone-elses-authority',
+      status: 'OK',
+    });
+
+    expect(result.success).toBe(false);
+    expect(verifyPaymentMock).not.toHaveBeenCalled();
+    expect(prisma.payment.updateMany).not.toHaveBeenCalled();
+  });
+
   it('rejects checkout when payments are disabled', async () => {
     siteSettings.get.mockResolvedValue({
       general: { siteName: 'Kia' },

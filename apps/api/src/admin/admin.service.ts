@@ -29,6 +29,7 @@ import {
   normalizeIranianPhone,
 } from '@kia-academy/shared';
 import * as bcrypt from 'bcrypt';
+import { createHash } from 'crypto';
 import { MediaStorageService } from '../media/media-storage.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SiteSettingsService } from '../site-settings/site-settings.service';
@@ -56,7 +57,7 @@ import {
 } from './dto/admin.dto';
 import { AdminAuditService } from './audit.service';
 import { PaymentsService } from '../payments/payments.service';
-import { Prisma } from '../generated/prisma/client';
+import { Prisma, EntitlementResourceType } from '../generated/prisma/client';
 
 const BCRYPT_ROUNDS = 12;
 
@@ -70,6 +71,23 @@ export interface AdminRequestMeta {
 /** Valid account statuses for admin-managed users. */
 const USER_STATUSES = ['ACTIVE', 'SUSPENDED', 'BANNED'] as const;
 type UserStatus = (typeof USER_STATUSES)[number];
+
+/**
+ * Legacy admin-form resource-type labels mapped onto the canonical DB enum
+ * (DB-2). The enum now enforces the exact vocabulary the learner-side
+ * entitlement checks (`course:…`, `roadmap:…`, `readiness:…`) rely on, so
+ * grants written as `readiness_test`/`roadmap_bundle` are normalized at the
+ * boundary — previously they were stored verbatim and never matched a
+ * learner check.
+ */
+function toResourceType(value: string): EntitlementResourceType {
+  if (value === 'readiness_test') return 'readiness';
+  if (value === 'roadmap_bundle') return 'roadmap';
+  if (value === 'course' || value === 'roadmap' || value === 'readiness') {
+    return value;
+  }
+  throw new BadRequestException(`Invalid resourceType "${value}"`);
+}
 
 const SYSTEM_ROLE_DEFS = [
   { key: 'LEARNER', isSystem: true },
@@ -207,7 +225,7 @@ export class AdminService {
           sortOrder: exam.sortOrder,
           kind: exam.kind,
           afterLessonId: exam.afterLessonId,
-          questions: JSON.stringify(exam.questions),
+          questions: exam.questions as unknown as Prisma.InputJsonValue,
         },
       });
     }
@@ -610,6 +628,8 @@ export class AdminService {
     const limit = Math.min(100, Math.max(1, Math.floor(params.limit ?? 20)));
 
     const where: Prisma.UserWhereInput = {};
+    // DB-4: soft-deleted accounts are hidden from the admin list.
+    where.deletedAt = null;
     const search = params.search?.trim();
     if (search) {
       where.OR = [
@@ -737,6 +757,169 @@ export class AdminService {
       after: { status: updated.status, suspendedReason: updated.suspendedReason },
       reason: reason || null,
       ...requestMeta,
+    });
+
+    return this.toAdminUser(updated);
+  }
+
+  /**
+   * DB-4 soft delete: anonymize + deactivate the account while keeping the
+   * row (and its financial history, protected by the Restrict FKs on
+   * Order/Payment) intact for audit and reversal.
+   *
+   * Rules enforced server-side:
+   * - SUPER_ADMIN only.
+   * - Cannot soft-delete yourself or the last super admin.
+   * - Staff accounts require super-admin (implicit — route is SUPER_ADMIN only).
+   * - All refresh tokens revoked (force logout everywhere).
+   * - PII fields cleared; identity hash retained for audit correlation.
+   */
+  async softDeleteUser(
+    id: string,
+    reason: string,
+    actor: AuthUser,
+    requestMeta: AdminRequestMeta = {},
+  ): Promise<AdminUser> {
+    if (actor.role !== 'SUPER_ADMIN') {
+      throw new ForbiddenException('Only super admins can soft-delete accounts');
+    }
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      throw new NotFoundException(`User ${id} not found`);
+    }
+    if (user.id === actor.id) {
+      throw new BadRequestException('You cannot soft-delete your own account');
+    }
+    if (user.deletedAt) {
+      throw new ConflictException('User is already soft-deleted');
+    }
+    if (user.role === 'SUPER_ADMIN') {
+      const superCount = await this.prisma.user.count({
+        where: { role: 'SUPER_ADMIN', deletedAt: null },
+      });
+      if (superCount <= 1) {
+        throw new ForbiddenException('Cannot soft-delete the last super admin');
+      }
+    }
+
+    const deletedAt = new Date();
+    // Deterministic identity hash (not reversible) so audit trails and financial
+    // rows keep a stable correlation key after PII is cleared.
+    const identityHash = createHash('sha256')
+      .update(`kia-academy:user:${user.id}`)
+      .digest('hex')
+      .slice(0, 16);
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      // Force logout everywhere first.
+      await tx.refreshToken.deleteMany({ where: { userId: user.id } });
+      return tx.user.update({
+        where: { id: user.id },
+        data: {
+          deletedAt,
+          status: 'BANNED',
+          suspendedAt: deletedAt,
+          suspendedReason: `soft-delete: ${reason}`.slice(0, 500),
+          // PII minimization — the account is no longer reachable or identifiable.
+          name: identityHash,
+          firstName: null,
+          lastName: null,
+          email: null,
+          phone: null,
+          bio: null,
+          avatarUrl: null,
+          province: null,
+          city: null,
+          passwordHash: null,
+          twoFactorEnabled: false,
+          twoFactorSecret: null,
+          profileComplete: false,
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          role: true,
+          status: true,
+          createdAt: true,
+          adminPanelAccess: true,
+        },
+      });
+    });
+
+    await this.audit.record({
+      actor,
+      action: 'user.soft_delete',
+      section: 'users',
+      entityType: 'User',
+      entityId: user.id,
+      target: user.email ?? user.name,
+      ...requestMeta,
+      reason: reason.slice(0, 500),
+      before: {
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        status: user.status,
+      },
+      after: {
+        deletedAt: deletedAt.toISOString(),
+        identityHash,
+        status: 'BANNED',
+      },
+    });
+
+    return this.toAdminUser(updated);
+  }
+
+  /** DB-4: restore a soft-deleted account (audit-reversible). */
+  async restoreUser(
+    id: string,
+    actor: AuthUser,
+    requestMeta: AdminRequestMeta = {},
+  ): Promise<AdminUser> {
+    if (actor.role !== 'SUPER_ADMIN') {
+      throw new ForbiddenException('Only super admins can restore accounts');
+    }
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      throw new NotFoundException(`User ${id} not found`);
+    }
+    if (!user.deletedAt) {
+      throw new BadRequestException('User is not soft-deleted');
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: {
+        deletedAt: null,
+        status: 'ACTIVE',
+        suspendedAt: null,
+        suspendedReason: null,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        status: true,
+        createdAt: true,
+        adminPanelAccess: true,
+      },
+    });
+
+    await this.audit.record({
+      actor,
+      action: 'user.restore',
+      section: 'users',
+      entityType: 'User',
+      entityId: user.id,
+      target: user.name,
+      ...requestMeta,
+      before: { deletedAt: user.deletedAt.toISOString() },
+      after: { status: 'ACTIVE' },
     });
 
     return this.toAdminUser(updated);
@@ -1731,7 +1914,7 @@ export class AdminService {
       userId: entitlement.user.id,
       userName: entitlement.user.name,
       userEmail: entitlement.user.email,
-      resourceType: entitlement.resourceType,
+      resourceType: entitlement.resourceType as string,
       resourceId: entitlement.resourceId,
       source: entitlement.source,
       createdAt: entitlement.createdAt.toISOString(),
@@ -1747,11 +1930,12 @@ export class AdminService {
     if (!user) {
       throw new NotFoundException(`User ${dto.userId} not found`);
     }
+    const resourceType = toResourceType(dto.resourceType);
     const existing = await this.prisma.entitlement.findUnique({
       where: {
         userId_resourceType_resourceId: {
           userId: dto.userId,
-          resourceType: dto.resourceType,
+          resourceType,
           resourceId: dto.resourceId,
         },
       },
@@ -1762,7 +1946,7 @@ export class AdminService {
     const entitlement = await this.prisma.entitlement.create({
       data: {
         userId: dto.userId,
-        resourceType: dto.resourceType,
+        resourceType,
         resourceId: dto.resourceId,
         source: dto.source ?? 'FREE',
       },

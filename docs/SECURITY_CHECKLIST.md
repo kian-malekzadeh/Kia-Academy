@@ -12,6 +12,7 @@ See also: [`SECURITY.md`](../SECURITY.md) (reporting), [`PRE_LAUNCH_CHECKLIST.md
 - [ ] Payment provider = real gateway (`zarinpal` / `idpay` / `stripe`) — simulator verify paths rejected by API in production (`ZarinPalPaymentProvider.verifyPayment`)
 - [ ] `CORS_ORIGIN` lists only public HTTPS origins (comma-separated supported); no localhost warning at boot
 - [ ] `TRUST_PROXY=true` behind nginx/Cloudflare/Railway (correct rate-limit + secure-cookie behavior)
+- [ ] `REDIS_URL` set (e.g. `redis://redis:6379`) so rate limits are shared across API replicas — CI-2; without it throttling is per-process (single instance only, warning logged at boot)
 - [ ] Optional overrides validated: `COOKIE_SAMESITE` ∈ {none,lax,strict}
 - [ ] No live keys (Kavenegar/merchant/Enamad/SMTP) ever committed — gitleaks workflow guards history
 
@@ -49,6 +50,7 @@ See also: [`SECURITY.md`](../SECURITY.md) (reporting), [`PRE_LAUNCH_CHECKLIST.md
 ## CI / supply chain
 
 - [x] `.github/workflows/security.yml`: pnpm audit (prod, high+), gitleaks secret scan, CodeQL SAST (security-extended) — weekly cron sweep included
+- [x] CI-1: all third-party GitHub Actions pinned to immutable commit SHAs (no mutable tags); top-level `permissions: {}` default-deny with per-job minimal elevation; CI installs use `--ignore-scripts`
 - [x] Dockerfiles: multi-stage, non-root `node`, pre-owned mount points, healthchecks
 - [x] docker-compose: `no-new-privileges`, resource limits, loopback-only Postgres binding, explicit `OTP_DEV_EXPOSE:false`
 - [ ] On new Critical/high audit finding: patch or add to an explicit triage list within 48h

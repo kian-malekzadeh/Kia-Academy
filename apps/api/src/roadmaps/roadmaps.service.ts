@@ -3,6 +3,7 @@ import type { RoadmapResponse } from '@kia-academy/shared';
 import { buildRoadmapFromAnswers } from '@kia-academy/shared';
 import { AssessmentsService } from '../assessments/assessments.service';
 import { PrismaService } from '../prisma/prisma.service';
+import type { Prisma } from '../generated/prisma/client';
 import { SiteSettingsService } from '../site-settings/site-settings.service';
 import { CreateRoadmapDto } from './dto/create-roadmap.dto';
 
@@ -42,10 +43,10 @@ export class RoadmapsService {
         assessmentId,
         trackKey: built.trackKey,
         trackName: built.trackName,
-        modules: JSON.stringify(built.modules),
+        modules: built.modules,
         level: built.level,
-        profile: JSON.stringify(built.profile),
-        pricing: JSON.stringify(built.pricing),
+        profile: built.profile,
+        pricing: built.pricing,
         enrolled: false,
       },
     });
@@ -95,20 +96,20 @@ export class RoadmapsService {
     id: string;
     trackKey: string;
     trackName: string;
-    modules: string;
+    modules: Prisma.JsonValue;
     level: string;
-    profile: string;
-    pricing: string;
+    profile: Prisma.JsonValue;
+    pricing: Prisma.JsonValue;
     enrolled: boolean;
   }): RoadmapResponse {
     return {
       id: record.id,
       trackKey: record.trackKey as RoadmapResponse['trackKey'],
       trackName: record.trackName,
-      modules: JSON.parse(record.modules) as string[],
+      modules: record.modules as unknown as string[],
       level: record.level,
-      profile: JSON.parse(record.profile) as RoadmapResponse['profile'],
-      pricing: JSON.parse(record.pricing) as RoadmapResponse['pricing'],
+      profile: record.profile as RoadmapResponse['profile'],
+      pricing: record.pricing as RoadmapResponse['pricing'],
       enrolled: record.enrolled,
     };
   }

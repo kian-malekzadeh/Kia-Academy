@@ -17,6 +17,7 @@ import type {
   CourseExamKind,
 } from '@kia-academy/shared';
 import { PrismaService } from '../prisma/prisma.service';
+import type { Prisma } from '../generated/prisma/client';
 import {
   AdminCreateCourseExamDto,
   AdminUpdateCourseExamDto,
@@ -33,19 +34,15 @@ interface CourseExamRow {
   sortOrder: number;
   kind: string;
   afterLessonId: string | null;
-  questions: string;
+  questions: Prisma.JsonValue;
   createdAt: Date;
   updatedAt: Date;
   course: { slug: string; title: string };
   afterLesson: { slug: string } | null;
 }
 
-function parseQuestions(raw: string): CourseExamQuestion[] {
-  try {
-    return JSON.parse(raw) as CourseExamQuestion[];
-  } catch {
-    return [];
-  }
+function parseQuestions(raw: Prisma.JsonValue): CourseExamQuestion[] {
+  return (Array.isArray(raw) ? raw : []) as unknown as CourseExamQuestion[];
 }
 
 function toPublicQuestion(q: CourseExamQuestion): PublicCourseExamQuestion {
@@ -232,7 +229,7 @@ export class CourseExamsService {
         sortOrder: dto.sortOrder ?? (maxOrder._max.sortOrder ?? 0) + 1,
         kind: this.toDbKind(dto.kind),
         afterLessonId: dto.afterLessonId ?? null,
-        questions: JSON.stringify(dto.questions ?? []),
+        questions: (dto.questions ?? []) as unknown as Prisma.InputJsonValue,
       },
       include: {
         course: { select: { slug: true, title: true } },
@@ -260,7 +257,9 @@ export class CourseExamsService {
         kind: dto.kind !== undefined ? this.toDbKind(dto.kind) : undefined,
         afterLessonId: dto.afterLessonId,
         questions:
-          dto.questions !== undefined ? JSON.stringify(dto.questions) : undefined,
+          dto.questions !== undefined
+            ? (dto.questions as unknown as Prisma.InputJsonValue)
+            : undefined,
       },
       include: {
         course: { select: { slug: true, title: true } },
@@ -330,7 +329,7 @@ export class CourseExamsService {
     }
     await this.prisma.courseExamAttempt.update({
       where: { id: attempt.id },
-      data: { answers: JSON.stringify(this.sanitizeAnswers(dto.answers)) },
+      data: { answers: this.sanitizeAnswers(dto.answers) },
     });
     return { ok: true };
   }
@@ -412,7 +411,7 @@ export class CourseExamsService {
       data: {
         status: 'SUBMITTED',
         submittedAt: new Date(),
-        answers: JSON.stringify(mergedAnswers),
+        answers: mergedAnswers,
         score,
         passed,
       },
@@ -465,7 +464,7 @@ export class CourseExamsService {
       id: string;
       title: string;
       passScore: number;
-      questions: string;
+      questions: Prisma.JsonValue;
       course: { slug: string };
     },
     attempt: {
@@ -473,7 +472,7 @@ export class CourseExamsService {
       score: number | null;
       passed: boolean | null;
       submittedAt: Date | null;
-      answers: string | null;
+      answers: Prisma.JsonValue | null;
     },
     questions: CourseExamQuestion[],
   ): CourseExamSubmitResult {
@@ -503,13 +502,9 @@ export class CourseExamsService {
     return kind === 'MIDTERM' ? 'MIDTERM' : 'FINAL';
   }
 
-  private parseAnswers(raw: string | null): Record<string, CourseExamResponse> {
-    if (!raw) return {};
-    try {
-      return JSON.parse(raw) as Record<string, CourseExamResponse>;
-    } catch {
-      return {};
-    }
+  private parseAnswers(raw: Prisma.JsonValue | null): Record<string, CourseExamResponse> {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+    return raw as Record<string, CourseExamResponse>;
   }
 
   private sanitizeAnswers(input: Record<string, unknown>): Record<string, CourseExamResponse> {

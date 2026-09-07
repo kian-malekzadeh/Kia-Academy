@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { envValidationSchema } from './config/env.validation';
+import { RateLimitModule } from './common/rate-limit/rate-limit.module';
 import { AppController } from './app.controller';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
@@ -39,12 +40,17 @@ ConfigModule.forRoot({
     '.env',
   ],
   validationSchema: envValidationSchema,
-}),    ThrottlerModule.forRoot([
+}),    // CI-2: throttling storage is selected by RateLimitModule (imported below,
+    // global) — the Redis-backed provider when REDIS_URL is configured, the
+    // stock in-memory service otherwise. It re-registers ThrottlerStorage at a
+    // later position in the DI graph, which wins over ThrottlerModule's default.
+    ThrottlerModule.forRoot([
       {
         ttl: 60_000,
         limit: 100,
       },
     ]),
+    RateLimitModule,
     PrismaModule,
     AuthModule,
     HealthModule,

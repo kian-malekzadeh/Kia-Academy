@@ -7,6 +7,7 @@ import {
   type PersonalityResult,
 } from '@kia-academy/shared';
 import { PrismaService } from '../prisma/prisma.service';
+import type { Prisma } from '../generated/prisma/client';
 import { TestBanksService } from '../test-banks/test-banks.service';
 
 @Injectable()
@@ -36,8 +37,8 @@ export class PersonalityService {
       data: {
         userId,
         instrument: 'mini-ipip',
-        answers: JSON.stringify(answers),
-        scores: JSON.stringify(scored.scores),
+        answers: answers as unknown as Prisma.InputJsonValue,
+        scores: scored.scores as unknown as Prisma.InputJsonValue,
       },
     });
 
@@ -74,15 +75,15 @@ export class PersonalityService {
   }
 
   private toResult(
-    record: { id: string; answers: string; scores: string; createdAt: Date },
+    record: { id: string; answers: Prisma.JsonValue; scores: Prisma.JsonValue; createdAt: Date },
     citation: string,
   ): PersonalityResult {
     return {
       id: record.id,
       instrument: 'mini-ipip',
       citation,
-      answers: JSON.parse(record.answers) as MiniIpipAnswers,
-      scores: JSON.parse(record.scores) as PersonalityResult['scores'],
+      answers: record.answers as unknown as MiniIpipAnswers,
+      scores: record.scores as unknown as PersonalityResult['scores'],
       createdAt: record.createdAt.toISOString(),
     };
   }

@@ -112,10 +112,13 @@ export class PaymentsController {
     @Query('Status') status?: string,
     @Query('authority') authorityAlt?: string,
     @Query('status') statusAlt?: string,
+    // IDPay redirects carry the transaction id as `id` and our id as `order_id`.
+    @Query('id') idAlt?: string,
+    @Query('order_id') orderIdAlt?: string,
   ): Promise<void> {
     const result = await this.paymentsService.handlePublicCallback({
-      paymentId,
-      authority: authority || authorityAlt,
+      paymentId: paymentId || orderIdAlt,
+      authority: authority || authorityAlt || idAlt,
       status: status || statusAlt,
     });
     const accept = String(req.headers.accept ?? '');

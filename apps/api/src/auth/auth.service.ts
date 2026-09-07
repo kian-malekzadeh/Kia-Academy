@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -17,6 +18,11 @@ import type {
   RequestOtpResponse,
 } from '@kia-academy/shared';
 import {
+  ChangePasswordDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
+} from './dto/password.dto';
+import {
   containsUnsafeText,
   isValidEmail,
   isValidIranCity,
@@ -27,16 +33,18 @@ import {
   sanitizeProfileText,
 } from '@kia-academy/shared';
 import * as bcrypt from 'bcrypt';
-import { createHash, randomInt, randomUUID } from 'crypto';
+import { createHash, randomBytes, randomInt, randomUUID } from 'crypto';
 import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { EmailService } from '../email/email.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SiteSettingsService } from '../site-settings/site-settings.service';
 import { SmsService } from '../sms/sms.service';
+import { TwoFactorService } from './two-factor/two-factor.service';
 import { sniffImageMime } from '../common/utils/image-sniff';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import type { TwoFactorChallengeResponse } from './two-factor/two-factor.types';
 import { addDurationToDate, parseExpiresInSeconds } from './auth.utils';
 
 const BCRYPT_ROUNDS = 12;
@@ -45,6 +53,15 @@ const OTP_MAX_ATTEMPTS = 5;
 /** Per-phone SMS-bomb protection: max codes generated per window regardless of IP. */
 const OTP_PHONE_WINDOW_MS = 10 * 60 * 1000;
 const OTP_MAX_PER_PHONE = 3;
+
+/** Password reset tokens (AUTH-4): short-lived, single-use, hashed at rest. */
+const RESET_TOKEN_TTL_MINUTES = 30;
+const RESET_TOKEN_TTL_MS = RESET_TOKEN_TTL_MINUTES * 60 * 1000;
+/** 32 random bytes, hex-encoded. shape-checked before any DB lookup. */
+const RESET_TOKEN_PATTERN = /^[0-9a-f]{64}$/;
+/** Email-bomb protection: at most this many reset emails per account per window. */
+const RESET_EMAIL_WINDOW_MS = 10 * 60 * 1000;
+const RESET_EMAIL_MAX = 3;
 
 /**
  * Accounts that must never authenticate: suspended (temporary) or banned
@@ -58,6 +75,8 @@ function isAccountInactive(status: string): boolean {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
@@ -65,6 +84,7 @@ export class AuthService {
     private readonly emailService: EmailService,
     private readonly siteSettings: SiteSettingsService,
     private readonly smsService: SmsService,
+    private readonly twoFactorService: TwoFactorService,
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthResponse & { refreshToken: string }> {
@@ -111,7 +131,9 @@ export class AuthService {
     return this.issueAuthResponse(await this.buildAuthUser(user));
   }
 
-  async login(dto: LoginDto): Promise<AuthResponse & { refreshToken: string }> {
+  async login(
+    dto: LoginDto,
+  ): Promise<(AuthResponse & { refreshToken: string }) | TwoFactorChallengeResponse> {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email.toLowerCase() },
     });
@@ -130,6 +152,30 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
+    // AUTH-5: 2FA-enabled staff accounts receive NO session here — only a
+    // short-lived single-purpose challenge. The response shape is
+    // discriminated by `twoFactorRequired: true` so clients can branch safely.
+    const challenge = await this.twoFactorService.loginGate({ id: user.id, role: user.role });
+    if (challenge) {
+      return { twoFactorRequired: true, ...challenge };
+    }
+
+    return this.issueAuthResponse(await this.buildAuthUser(user));
+  }
+
+  /**
+   * Second login step (AUTH-5): verify the TOTP/recovery code for the
+   * challenge and mint the real session for the account.
+   */
+  async completeTwoFactorLogin(challenge: string, code: string): Promise<AuthResponse & { refreshToken: string }> {
+    const { userId } = await this.twoFactorService.verifyTwoFactorLogin(challenge, code);
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+    if (isAccountInactive(user.status)) {
+      throw new UnauthorizedException('Account suspended');
+    }
     return this.issueAuthResponse(await this.buildAuthUser(user));
   }
 
@@ -414,6 +460,138 @@ export class AuthService {
     return this.issueAuthResponse(user);
   }
 
+  // ---------------------------------------------------------------------------
+  // Password reset & change (AUTH-4)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Always resolves without error and with a uniform response: callers and
+   * attackers cannot distinguish unknown / malformed / rate-capped addresses
+   * from successful dispatch (account enumeration protection).
+   */
+  async forgotPassword(dto: ForgotPasswordDto): Promise<void> {
+    const email = dto.email.trim().toLowerCase();
+    if (!isValidEmail(email)) {
+      return;
+    }
+
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user?.email) {
+      return;
+    }
+
+    // Email-bomb protection: silently ignore once the cap is hit — no
+    // attacker-visible signal, and the newest legitimate link stays valid.
+    const recent = await this.prisma.passwordResetToken.count({
+      where: {
+        userId: user.id,
+        createdAt: { gte: new Date(Date.now() - RESET_EMAIL_WINDOW_MS) },
+      },
+    });
+    if (recent >= RESET_EMAIL_MAX) {
+      return;
+    }
+
+    // Any older token for the account becomes unusable — only the newest link works.
+    await this.prisma.passwordResetToken.deleteMany({ where: { userId: user.id } });
+
+    const rawToken = randomBytes(32).toString('hex');
+    await this.prisma.passwordResetToken.create({
+      data: {
+        tokenHash: this.hashToken(rawToken),
+        userId: user.id,
+        expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS),
+      },
+    });
+
+    const appUrl = this.configService.get<string>('APP_URL', 'http://localhost:3000');
+    const resetUrl = `${appUrl.replace(/\/$/, '')}/reset-password?token=${rawToken}`;
+    const status = await this.emailService.sendPasswordReset(
+      { id: user.id, name: user.name, email: user.email },
+      resetUrl,
+      RESET_TOKEN_TTL_MINUTES,
+    );
+
+    if (status !== 'sent' && this.configService.get<string>('NODE_ENV') !== 'production') {
+      // DEV ONLY: without SMTP there is no way to receive the link locally.
+      // The raw token is never logged in production.
+      this.logger.warn(
+        `[dev-only] SMTP unavailable — password reset link for ${email}: ${resetUrl}`,
+      );
+    }
+  }
+
+  async resetPassword(dto: ResetPasswordDto): Promise<void> {
+    if (dto.password !== dto.passwordConfirm) {
+      throw new BadRequestException('Passwords do not match');
+    }
+    if (!RESET_TOKEN_PATTERN.test(dto.token)) {
+      throw new BadRequestException('Invalid or expired reset link');
+    }
+
+    const record = await this.prisma.passwordResetToken.findUnique({
+      where: { tokenHash: this.hashToken(dto.token) },
+      include: { user: true },
+    });
+    if (!record || record.usedAt || record.expiresAt < new Date()) {
+      throw new BadRequestException('Invalid or expired reset link');
+    }
+    if (isAccountInactive(record.user.status)) {
+      throw new UnauthorizedException('Account suspended');
+    }
+
+    const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
+    await this.prisma.$transaction(async (tx) => {
+      // Atomic single-use claim: a replayed link loses the race and changes nothing.
+      const claimed = await tx.passwordResetToken.updateMany({
+        where: { id: record.id, usedAt: null },
+        data: { usedAt: new Date() },
+      });
+      if (claimed.count === 0) {
+        throw new BadRequestException('Invalid or expired reset link');
+      }
+      await tx.user.update({ where: { id: record.userId }, data: { passwordHash } });
+      // The credential may have been compromised — revoke every session.
+      await tx.refreshToken.deleteMany({ where: { userId: record.userId } });
+    });
+  }
+
+  async changePassword(
+    userId: string,
+    dto: ChangePasswordDto,
+    currentRefreshToken?: string,
+  ): Promise<void> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+    if (!user.passwordHash) {
+      throw new BadRequestException(
+        'This account signs in by phone. Use "forgot password" to set one first.',
+      );
+    }
+
+    const valid = await bcrypt.compare(dto.currentPassword, user.passwordHash);
+    if (!valid) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+    if (dto.currentPassword === dto.newPassword) {
+      throw new BadRequestException('New password must be different from the current password');
+    }
+
+    const passwordHash = await bcrypt.hash(dto.newPassword, BCRYPT_ROUNDS);
+    await this.prisma.$transaction([
+      this.prisma.user.update({ where: { id: userId }, data: { passwordHash } }),
+      // Revoke OTHER sessions (stolen-credential mitigation) but keep the
+      // current device signed in; if no cookie is present, revoke everything.
+      this.prisma.refreshToken.deleteMany({
+        where: currentRefreshToken
+          ? { userId, token: { not: this.hashRefreshToken(currentRefreshToken) } }
+          : { userId },
+      }),
+    ]);
+  }
+
   async logout(userId: string, refreshToken?: string): Promise<void> {
     if (refreshToken) {
       await this.prisma.refreshToken.deleteMany({
@@ -505,6 +683,11 @@ export class AuthService {
 
   /** Refresh tokens are high-value credentials — persist only their digest. */
   private hashRefreshToken(token: string): string {
+    return createHash('sha256').update(token).digest('hex');
+  }
+
+  /** Reset tokens are bearer credentials — persist only their digest. */
+  private hashToken(token: string): string {
     return createHash('sha256').update(token).digest('hex');
   }
 

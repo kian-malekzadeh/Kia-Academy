@@ -7,6 +7,7 @@ import {
   type UpdateSiteSettingsDto,
 } from '@kia-academy/shared';
 import { PrismaService } from '../prisma/prisma.service';
+import type { Prisma } from '../generated/prisma/client';
 
 const SETTINGS_KEY = 'site';
 
@@ -19,11 +20,11 @@ export class SiteSettingsService {
     if (!row) {
       const defaults = createDefaultSiteSettings();
       await this.prisma.siteSetting.create({
-        data: { key: SETTINGS_KEY, value: JSON.stringify(defaults) },
+        data: { key: SETTINGS_KEY, value: defaults as unknown as Prisma.InputJsonValue },
       });
       return defaults;
     }
-    return mergeSiteSettings(createDefaultSiteSettings(), JSON.parse(row.value) as SiteSettings);
+    return mergeSiteSettings(createDefaultSiteSettings(), row.value as unknown as SiteSettings);
   }
 
   async update(dto: UpdateSiteSettingsDto): Promise<SiteSettings> {
@@ -32,8 +33,8 @@ export class SiteSettingsService {
     this.validate(next);
     await this.prisma.siteSetting.upsert({
       where: { key: SETTINGS_KEY },
-      create: { key: SETTINGS_KEY, value: JSON.stringify(next) },
-      update: { value: JSON.stringify(next) },
+      create: { key: SETTINGS_KEY, value: next as unknown as Prisma.InputJsonValue },
+      update: { value: next as unknown as Prisma.InputJsonValue },
     });
     return next;
   }
@@ -42,8 +43,8 @@ export class SiteSettingsService {
     this.validate(settings);
     await this.prisma.siteSetting.upsert({
       where: { key: SETTINGS_KEY },
-      create: { key: SETTINGS_KEY, value: JSON.stringify(settings) },
-      update: { value: JSON.stringify(settings) },
+      create: { key: SETTINGS_KEY, value: settings as unknown as Prisma.InputJsonValue },
+      update: { value: settings as unknown as Prisma.InputJsonValue },
     });
     return settings;
   }

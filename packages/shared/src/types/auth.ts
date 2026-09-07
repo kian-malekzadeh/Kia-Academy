@@ -77,8 +77,71 @@ export interface CompleteProfileDto {
 /** Alias used by the learner profile edit page. */
 export type UpdateProfileDto = CompleteProfileDto;
 
+export interface ForgotPasswordDto {
+  email: string;
+}
+
+export interface ResetPasswordDto {
+  token: string;
+  password: string;
+  passwordConfirm: string;
+}
+
+export interface ChangePasswordDto {
+  currentPassword: string;
+  newPassword: string;
+}
+
 export interface AuthResponse extends AuthTokens {
   user: AuthUser;
+}
+
+/**
+ * LOGIN-2FA shape returned by POST /auth/login when the account has TOTP
+ * enabled (staff only). Discriminated from AuthResponse by twoFactorRequired;
+ * carries NO tokens — the client must complete POST /auth/2fa/verify.
+ */
+export interface TwoFactorChallengeResponse {
+  twoFactorRequired: true;
+  challenge: string;
+  /** Seconds until the single-purpose challenge expires. */
+  expiresIn: number;
+}
+
+export interface VerifyTwoFactorDto {
+  challenge: string;
+  code: string;
+}
+
+export interface TwoFactorStatusResponse {
+  enabled: boolean;
+  backupCodesRemaining: number;
+}
+
+export interface TwoFactorSetupResponse {
+  /** Plain base32 secret — shown exactly once during enrollment. */
+  secret: string;
+  otpauthUrl: string;
+  /** Data URL of the enrollment QR code. */
+  qrDataUrl: string;
+}
+
+export interface TwoFactorConfirmResponse {
+  enabled: true;
+  /** One-time display of the 8 single-use recovery codes. */
+  recoveryCodes: string[];
+}
+
+export interface TwoFactorRecoveryResponse {
+  recoveryCodes: string[];
+}
+
+export interface TwoFactorStaffRow {
+  id: string;
+  name: string;
+  email: string | null;
+  role: string;
+  twoFactorEnabled: boolean;
 }
 
 export interface LearnerState {

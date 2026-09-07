@@ -1,9 +1,10 @@
 'use client';
 
 import type { ProfileDetails } from '@kia-academy/shared';
-import { Loader2, UserRound } from 'lucide-react';
+import { Loader2, LockKeyhole, UserRound } from 'lucide-react';
 import { FormEvent, useEffect, useState } from 'react';
 import { ProvinceCityFields } from '@/components/auth/ProvinceCityFields';
+import { PasswordInput } from '@/components/auth/PasswordInput';
 import { DashboardGate, PanelPage } from '@/components/dashboard/DashboardShell';
 import { useAuth } from '@/context/AuthProvider';
 import { useLanguage } from '@/context/LanguageProvider';
@@ -23,6 +24,12 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -72,6 +79,29 @@ export default function ProfilePage() {
       setError(err instanceof ApiError ? err.message : t('panel.profile.saveError'));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handlePasswordSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (changingPassword) return;
+    setPasswordError('');
+    setPasswordSuccess('');
+    if (newPassword !== newPasswordConfirm) {
+      setPasswordError(t('auth.changePassword.mismatch'));
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      await api.changePassword({ currentPassword, newPassword });
+      setCurrentPassword('');
+      setNewPassword('');
+      setNewPasswordConfirm('');
+      setPasswordSuccess(t('auth.changePassword.saved'));
+    } catch (err) {
+      setPasswordError(err instanceof ApiError ? err.message : t('auth.changePassword.error'));
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -154,6 +184,50 @@ export default function ProfilePage() {
             {success ? <p className="form-success">{success}</p> : null}
             <button type="submit" className="btn btn--primary" disabled={saving}>
               {saving ? t('common.saving') : t('common.save')}
+            </button>
+          </form>
+        ) : null}
+
+        {!loading ? (
+          <form className="auth-form dashboard-password-form" onSubmit={handlePasswordSubmit}>
+            <h2 className="section-title">
+              <LockKeyhole size={16} className="inline-leading-icon" />
+              {t('auth.changePassword.title')}
+            </h2>
+            <p className="auth-sub">{t('auth.changePassword.sub')}</p>
+            <PasswordInput
+              label={t('auth.changePassword.current')}
+              autoComplete="current-password"
+              required
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              showLabel={t('auth.password.show')}
+              hideLabel={t('auth.password.hide')}
+            />
+            <PasswordInput
+              label={t('auth.changePassword.new')}
+              autoComplete="new-password"
+              required
+              minLength={8}
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              showLabel={t('auth.password.show')}
+              hideLabel={t('auth.password.hide')}
+            />
+            <PasswordInput
+              label={t('auth.changePassword.confirm')}
+              autoComplete="new-password"
+              required
+              minLength={8}
+              value={newPasswordConfirm}
+              onChange={(e) => setNewPasswordConfirm(e.target.value)}
+              showLabel={t('auth.password.show')}
+              hideLabel={t('auth.password.hide')}
+            />
+            {passwordError ? <p className="form-error">{passwordError}</p> : null}
+            {passwordSuccess ? <p className="form-success">{passwordSuccess}</p> : null}
+            <button type="submit" className="btn btn--primary" disabled={changingPassword}>
+              {changingPassword ? t('auth.changePassword.submitting') : t('auth.changePassword.submit')}
             </button>
           </form>
         ) : null}

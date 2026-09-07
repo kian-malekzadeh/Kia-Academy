@@ -35,6 +35,7 @@
     "docker:up": "docker compose --profile full up -d",
     "docker:down": "docker compose --profile full down",
     "docker:logs": "docker compose --profile full logs -f",
+    "docker:redis": "docker compose --profile full-redis up -d redis",
     "docker:setup": "node -e \"const fs=require('fs'); if(!fs.existsSync('.env.docker')){fs.copyFileSync('.env.docker.example','.env.docker'); console.log('Created .env.docker');} else {console.log('.env.docker already exists');}\"",
     "postinstall": "pnpm db:generate && pnpm --filter @kia-academy/shared build"
   },

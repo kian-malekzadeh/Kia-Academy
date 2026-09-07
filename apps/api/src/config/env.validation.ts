@@ -36,6 +36,11 @@ export const envValidationSchema = Joi.object({
   JWT_ACCESS_SECRET: Joi.string().min(32).optional(),
   NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
   /**
+   * CI-2: optional Redis connection for distributed rate limiting. When unset,
+   * throttling falls back to per-process in-memory storage (single instance).
+   */
+  REDIS_URL: Joi.string().uri({ scheme: ['redis', 'rediss'] }).optional(),
+  /**
    * When true (and NODE_ENV is not production), OTP codes are returned as `devCode`
    * and logged. Forbidden in production. Defaults to true in non-production for local DX.
    */

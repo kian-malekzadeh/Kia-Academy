@@ -239,6 +239,12 @@ export class AdminUpdateUserStatusDto {
   reason?: string;
 }
 
+/** DB-4 soft delete — reason is mandatory for the audit trail. */
+export class AdminSoftDeleteUserDto {
+  @IsString()
+  reason!: string;
+}
+
 export class AdminUpdateLessonDto {
   @IsOptional()
   @IsString()
@@ -343,7 +349,12 @@ export class AdminGrantEntitlementDto {
   @IsString()
   userId!: string;
 
-  @IsIn(['course', 'readiness_test', 'roadmap_bundle'])
+  /**
+   * Canonical values map to the EntitlementResourceType enum; the legacy
+   * admin-form labels (`readiness_test`/`roadmap_bundle`) are accepted and
+   * normalized server-side so existing clients keep working.
+   */
+  @IsIn(['course', 'readiness', 'roadmap', 'readiness_test', 'roadmap_bundle'])
   resourceType!: string;
 
   @IsString()

@@ -452,6 +452,12 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             key: 'settings',
           },
           {
+            id: 'settings-security',
+            href: '/admin/security',
+            label: t('auth.twoFactor.title'),
+            key: 'settings',
+          },
+          {
             id: 'settings-contact',
             href: '/admin/contact',
             label: t('admin.nav.contact'),

@@ -4,12 +4,13 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { MediaModule } from '../media/media.module';
 import { PaymentsModule } from '../payments/payments.module';
 import { SiteSettingsModule } from '../site-settings/site-settings.module';
+import { AuthModule } from '../auth/auth.module';
 import { AdminAuditService } from './audit.service';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
 
 @Module({
-  imports: [MediaModule, SiteSettingsModule, PaymentsModule],
+  imports: [MediaModule, SiteSettingsModule, PaymentsModule, AuthModule],
   controllers: [AdminController],
   providers: [AdminService, AdminAuditService, RolesGuard, AdminAccessGuard],
 })

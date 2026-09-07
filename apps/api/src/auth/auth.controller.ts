@@ -20,6 +20,7 @@ import type {
   LearnerState,
   ProfileDetails,
   RequestOtpResponse,
+  TwoFactorChallengeResponse,
 } from '@kia-academy/shared';
 import type { Request, Response } from 'express';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -29,6 +30,7 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { CompleteProfileDto, RequestOtpDto, VerifyOtpDto } from './dto/otp.dto';
+import { ChangePasswordDto, ForgotPasswordDto, ResetPasswordDto } from './dto/password.dto';
 import { ConfigService } from '@nestjs/config';
 import { parseExpiresInSeconds } from './auth.utils';
 
@@ -55,8 +57,12 @@ export class AuthController {
   async login(
     @Body() dto: LoginDto,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<AuthResponse> {
+  ): Promise<AuthResponse | TwoFactorChallengeResponse> {
     const result = await this.authService.login(dto);
+    if ('twoFactorRequired' in result) {
+      // No session exists yet — the client must complete POST /auth/2fa/verify.
+      return result;
+    }
     this.setRefreshCookie(res, result.refreshToken);
     return this.stripRefreshToken(result);
   }
@@ -76,6 +82,41 @@ export class AuthController {
     const result = await this.authService.verifyOtp(dto.phone, dto.code);
     this.setRefreshCookie(res, result.refreshToken);
     return this.stripRefreshToken(result);
+  }
+
+  /**
+   * Always returns success (uniform response): unknown emails and rate-capped
+   * requests are indistinguishable from successful dispatch.
+   */
+  @Post('forgot-password')
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  async forgotPassword(@Body() dto: ForgotPasswordDto): Promise<{ success: true }> {
+    await this.authService.forgotPassword(dto);
+    return { success: true };
+  }
+
+  @Post('reset-password')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  async resetPassword(@Body() dto: ResetPasswordDto): Promise<{ success: true }> {
+    await this.authService.resetPassword(dto);
+    return { success: true };
+  }
+
+  @Post('change-password')
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  async changePassword(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: ChangePasswordDto,
+    @Req() req: Request,
+  ): Promise<{ success: true }> {
+    // The current session survives the rotation; other devices are signed out.
+    await this.authService.changePassword(
+      user.id,
+      dto,
+      req.cookies?.refreshToken as string | undefined,
+    );
+    return { success: true };
   }
 
   @Post('profile')

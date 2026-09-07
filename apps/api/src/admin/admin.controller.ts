@@ -22,6 +22,7 @@ import { AdminAccessGuard } from '../common/guards/admin-access.guard';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { MAX_LESSON_VIDEO_BYTES } from '../media/media-storage.service';
+import { TwoFactorService } from '../auth/two-factor/two-factor.service';
 import { AdminService } from './admin.service';
 import { AdminAuditService } from './audit.service';
 import {
@@ -44,6 +45,7 @@ import {
   AdminUpdateUserAccessDto,
   AdminUpdateUserRoleDto,
   AdminUpdateUserStatusDto,
+  AdminSoftDeleteUserDto,
   RefundPaymentDto,
 } from './dto/admin.dto';
 
@@ -54,6 +56,7 @@ export class AdminController {
   constructor(
     private readonly adminService: AdminService,
     private readonly audit: AdminAuditService,
+    private readonly twoFactorService: TwoFactorService,
   ) {}
 
   @Get('stats')
@@ -226,6 +229,29 @@ export class AdminController {
     @Body() dto: AdminUpdateUserStatusDto,
   ) {
     return this.adminService.updateUserStatus(id, dto, actor, auditMeta);
+  }
+
+  /** DB-4: soft delete keeps the row + financial history, clears PII, forces logout. */
+  @Delete('users/:id')
+  @AdminAccess('users', 'manage')
+  softDeleteUser(
+    @CurrentUser() actor: AuthUser,
+    @AuditMeta() auditMeta: AuditRequestMeta,
+    @Param('id') id: string,
+    @Body() dto: AdminSoftDeleteUserDto,
+  ) {
+    return this.adminService.softDeleteUser(id, dto.reason, actor, auditMeta);
+  }
+
+  /** DB-4: reverse a soft delete (audit-reversible). */
+  @Post('users/:id/restore')
+  @AdminAccess('users', 'manage')
+  restoreUser(
+    @CurrentUser() actor: AuthUser,
+    @AuditMeta() auditMeta: AuditRequestMeta,
+    @Param('id') id: string,
+  ) {
+    return this.adminService.restoreUser(id, actor, auditMeta);
   }
 
   @Post('users')
@@ -493,6 +519,37 @@ export class AdminController {
   }
 
   /* --- Audit log (read-only; immutable) --------------------------------------------- */
+
+  /**
+   * AUTH-5: staff 2FA enrollment overview (SUPER_ADMIN manages overrides).
+   * Reading the list requires the users section; disabling another staff
+   * member's 2FA is the emergency-break-glass action below.
+   */
+  @Get('staff-2fa')
+  @AdminAccess('users', 'view')
+  listStaffTwoFactor() {
+    return this.twoFactorService.listStaffTwoFactor();
+  }
+
+  @Delete('staff-2fa/:userId')
+  @AdminAccess('users', 'edit')
+  async disableStaffTwoFactor(
+    @CurrentUser() actor: AuthUser,
+    @AuditMeta() auditMeta: AuditRequestMeta,
+    @Param('userId') targetUserId: string,
+  ) {
+    const result = await this.twoFactorService.disableForUser(actor, targetUserId);
+    await this.audit.record({
+      actor,
+      action: 'user.2fa.disable',
+      section: 'users',
+      entityType: 'User',
+      entityId: targetUserId,
+      target: targetUserId,
+      ...auditMeta,
+    });
+    return result;
+  }
 
   @Get('audit-logs')
   @AdminAccess('audit', 'view')

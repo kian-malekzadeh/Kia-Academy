@@ -139,6 +139,35 @@ export class EmailService {
     }
   }
 
+  /**
+   * Password reset email (AUTH-4). The raw reset token is embedded exactly
+   * once, in the link, and never logged. Subject/body are Persian-first with
+   * an English fallback so both audiences can act on the same template.
+   */
+  async sendPasswordReset(
+    user: EmailUser,
+    resetUrl: string,
+    expiresMinutes: number,
+  ): Promise<'sent' | 'skipped' | 'failed'> {
+    const subject = 'بازیابی رمز عبور کیا آکادمی | Kia Academy password reset';
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; color: #1a1a1a;" dir="rtl">
+        <h1 style="color: #2563eb;">بازیابی رمز عبور</h1>
+        <p>سلام ${escapeHtml(user.name) || 'کاربر گرامی'}،</p>
+        <p>برای تنظیم رمز عبور جدید روی دکمه زیر بزنید. این پیوند تا ${expiresMinutes} دقیقه معتبر است و فقط یک بار قابل استفاده است.</p>
+        <p style="margin: 24px 0;">
+          <a href="${resetUrl}" style="background: #2563eb; color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; display: inline-block;">تنظیم رمز عبور جدید</a>
+        </p>
+        <p style="font-size: 13px; color: #6b7280;">اگر شما درخواست نداده‌اید، این ایمیل را نادیده بگیرید — رمز عبور شما تغییری نمی‌کند.</p>
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+        <p dir="ltr" style="font-size: 14px;">If you did not request a reset, ignore this email — your password will not change.</p>
+        <p dir="ltr" style="font-size: 12px; color: #6b7280; word-break: break-all;">Link / پیوند: ${escapeHtml(resetUrl)}</p>
+      </div>
+    `;
+
+    return this.send(user, subject, 'password-reset', html);
+  }
+
   async sendReadinessResults(user: EmailUser, result: ReadinessResult): Promise<void> {
     const subject = 'Your Kia Academy readiness results';
     const verdictTitle = escapeHtml(result.verdict.title);
@@ -164,7 +193,7 @@ export class EmailService {
     subject: string,
     template: string,
     html: string,
-  ): Promise<void> {
+  ): Promise<'sent' | 'skipped' | 'failed'> {
     if (!this.transporter) {
       await this.prisma.emailLog.create({
         data: {
@@ -176,7 +205,7 @@ export class EmailService {
         },
       });
       this.logger.log(`Email skipped (no SMTP): ${template} -> ${user.email}`);
-      return;
+      return 'skipped';
     }
 
     try {
@@ -196,6 +225,7 @@ export class EmailService {
           status: 'sent',
         },
       });
+      return 'sent';
     } catch (error) {
       await this.prisma.emailLog.create({
         data: {
@@ -207,6 +237,7 @@ export class EmailService {
         },
       });
       this.logger.error(`Failed to send ${template} email to ${user.email}`, error);
+      return 'failed';
     }
   }
 

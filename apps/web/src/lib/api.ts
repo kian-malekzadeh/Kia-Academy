@@ -13,6 +13,16 @@ import type {
   ContactFormDto,
   ContactFormResponse,
   CompleteProfileDto,
+  ChangePasswordDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
+  TwoFactorChallengeResponse,
+  TwoFactorStatusResponse,
+  TwoFactorSetupResponse,
+  TwoFactorConfirmResponse,
+  TwoFactorRecoveryResponse,
+  TwoFactorStaffRow,
+  VerifyTwoFactorDto,
   CourseSummary,
   CreateChallengeDto,
   CreateCourseDto,
@@ -204,8 +214,21 @@ const liveApi = {
     });
   },
 
-  login(dto: LoginDto): Promise<AuthResponse> {
-    return request<AuthResponse>('/auth/login', {
+  login(dto: LoginDto): Promise<AuthResponse | TwoFactorChallengeResponse> {
+    return request<AuthResponse | TwoFactorChallengeResponse>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(dto),
+      skipAuth: true,
+    }).then((res) => {
+      if (!('twoFactorRequired' in res)) {
+        setAccessToken(res.accessToken);
+      }
+      return res;
+    });
+  },
+
+  verifyTwoFactor(dto: VerifyTwoFactorDto): Promise<AuthResponse> {
+    return request<AuthResponse>('/auth/2fa/verify', {
       method: 'POST',
       body: JSON.stringify(dto),
       skipAuth: true,
@@ -213,6 +236,43 @@ const liveApi = {
       setAccessToken(res.accessToken);
       return res;
     });
+  },
+
+  twoFactorStatus(): Promise<TwoFactorStatusResponse> {
+    return request<TwoFactorStatusResponse>('/auth/2fa/status');
+  },
+
+  twoFactorSetup(): Promise<TwoFactorSetupResponse> {
+    return request<TwoFactorSetupResponse>('/auth/2fa/setup', { method: 'POST' });
+  },
+
+  twoFactorConfirm(code: string): Promise<TwoFactorConfirmResponse> {
+    return request<TwoFactorConfirmResponse>('/auth/2fa/confirm', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    });
+  },
+
+  twoFactorRegenerateRecoveryCodes(code: string): Promise<TwoFactorRecoveryResponse> {
+    return request<TwoFactorRecoveryResponse>('/auth/2fa/recovery-codes', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    });
+  },
+
+  twoFactorDisable(code: string): Promise<{ enabled: false }> {
+    return request<{ enabled: false }>('/auth/2fa', {
+      method: 'DELETE',
+      body: JSON.stringify({ code }),
+    });
+  },
+
+  adminListStaffTwoFactor(): Promise<TwoFactorStaffRow[]> {
+    return request<TwoFactorStaffRow[]>('/admin/staff-2fa');
+  },
+
+  adminDisableStaffTwoFactor(userId: string): Promise<{ enabled: false }> {
+    return request<{ enabled: false }>(`/admin/staff-2fa/${userId}`, { method: 'DELETE' });
   },
 
   requestOtp(dto: RequestOtpDto): Promise<RequestOtpResponse> {
@@ -231,6 +291,29 @@ const liveApi = {
     }).then((res) => {
       setAccessToken(res.accessToken);
       return res;
+    });
+  },
+
+  forgotPassword(dto: ForgotPasswordDto): Promise<{ success: true }> {
+    return request<{ success: true }>('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify(dto),
+      skipAuth: true,
+    });
+  },
+
+  resetPassword(dto: ResetPasswordDto): Promise<{ success: true }> {
+    return request<{ success: true }>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify(dto),
+      skipAuth: true,
+    });
+  },
+
+  changePassword(dto: ChangePasswordDto): Promise<{ success: true }> {
+    return request<{ success: true }>('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify(dto),
     });
   },
 

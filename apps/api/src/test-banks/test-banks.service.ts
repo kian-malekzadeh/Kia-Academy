@@ -14,6 +14,7 @@ import {
   type TestBankPayload,
 } from '@kia-academy/shared';
 import { PrismaService } from '../prisma/prisma.service';
+import type { Prisma } from '../generated/prisma/client';
 
 @Injectable()
 export class TestBanksService implements OnModuleInit {
@@ -28,7 +29,7 @@ export class TestBanksService implements OnModuleInit {
       const existing = await this.prisma.testBank.findUnique({ where: { id } });
       if (!existing) {
         await this.prisma.testBank.create({
-          data: { id, payload: JSON.stringify(this.defaultPayload(id)) },
+          data: { id, payload: this.defaultPayload(id) as Prisma.InputJsonValue },
         });
       }
     }
@@ -121,11 +122,11 @@ export class TestBanksService implements OnModuleInit {
       where: { id },
       create: {
         id,
-        payload: JSON.stringify(normalized),
+        payload: normalized as Prisma.InputJsonValue,
         updatedBy: updatedBy ?? null,
       },
       update: {
-        payload: JSON.stringify(normalized),
+        payload: normalized as Prisma.InputJsonValue,
         updatedBy: updatedBy ?? null,
       },
     });
@@ -146,9 +147,9 @@ export class TestBanksService implements OnModuleInit {
     return (payload as ReadinessBank).questions?.length ?? 0;
   }
 
-  private parsePayload(id: TestBankId, raw: string): unknown {
+  private parsePayload(id: TestBankId, raw: Prisma.JsonValue): unknown {
     try {
-      return this.validateAndNormalize(id, JSON.parse(raw));
+      return this.validateAndNormalize(id, raw);
     } catch {
       return this.defaultPayload(id);
     }

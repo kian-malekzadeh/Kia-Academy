@@ -124,7 +124,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{
+            // Neutralize any literal `</script>` so dynamically sourced JSON-LD
+            // (e.g. admin-entered course titles) can never break out of the tag.
+            __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c'),
+          }}
         />
         <ClientProviders initialLocale={locale}>
           <SiteChrome>{children}</SiteChrome>

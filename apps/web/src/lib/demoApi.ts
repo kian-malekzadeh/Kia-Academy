@@ -1053,6 +1053,85 @@ export const demoApi = {
     );
   },
 
+  async forgotPassword(_dto: { email: string }): Promise<{ success: true }> {
+    // Demo mode: no backend, no email. Respond identically to the live API.
+    return delay({ success: true });
+  },
+
+  async verifyTwoFactor(_dto: { challenge: string; code: string }): Promise<AuthResponse> {
+    // Demo accepts 000000 or any recovery code for the admin demo persona.
+    if (_dto.code !== '000000') throw new ApiError('Invalid or expired verification code', 401);
+    return delay(authResponse(DEMO_ADMIN));
+  },
+
+  async twoFactorStatus(): Promise<{ enabled: boolean; backupCodesRemaining: number }> {
+    requireUser();
+    return delay({ enabled: false, backupCodesRemaining: 0 });
+  },
+
+  async twoFactorSetup(): Promise<{ secret: string; otpauthUrl: string; qrDataUrl: string }> {
+    requireUser();
+    // Static placeholder QR — the demo never stores a real secret.
+    return delay({
+      secret: 'DEMO234567DEMO234567DEMO234567DE',
+      otpauthUrl: 'otpauth://totp/Kia%20Academy:demo%40kia.academy?secret=DEMO&issuer=Kia%20Academy',
+      qrDataUrl:
+        'data:image/svg+xml;utf8,' +
+        encodeURIComponent(
+          '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="white"/><text x="60" y="64" font-size="12" text-anchor="middle">Demo QR</text></svg>',
+        ),
+    });
+  },
+
+  async twoFactorConfirm(_code: string): Promise<{ enabled: true; recoveryCodes: string[] }> {
+    requireUser();
+    return delay({ enabled: true, recoveryCodes: ['DEMO1-DEMO1', 'DEMO2-DEMO2'] });
+  },
+
+  async twoFactorRegenerateRecoveryCodes(_code: string): Promise<{ recoveryCodes: string[] }> {
+    requireUser();
+    return delay({ recoveryCodes: ['DEMO3-DEMO3', 'DEMO4-DEMO4'] });
+  },
+
+  async twoFactorDisable(_code: string): Promise<{ enabled: false }> {
+    requireUser();
+    return delay({ enabled: false });
+  },
+
+  async adminListStaffTwoFactor(): Promise<import('@kia-academy/shared').TwoFactorStaffRow[]> {
+    return delay([
+      {
+        id: DEMO_ADMIN.id,
+        name: DEMO_ADMIN.name,
+        email: DEMO_ADMIN.email,
+        role: DEMO_ADMIN.role,
+        twoFactorEnabled: false,
+      },
+    ]);
+  },
+
+  async adminDisableStaffTwoFactor(_userId: string): Promise<{ enabled: false }> {
+    return delay({ enabled: false });
+  },
+
+  async resetPassword(dto: { token: string; password: string; passwordConfirm: string }): Promise<{ success: true }> {
+    if (dto.password !== dto.passwordConfirm) {
+      throw new ApiError('Passwords do not match', 400);
+    }
+    if (dto.token.length < 32) {
+      throw new ApiError('Invalid or expired reset link', 400);
+    }
+    return delay({ success: true });
+  },
+
+  async changePassword(dto: { currentPassword: string; newPassword: string }): Promise<{ success: true }> {
+    requireUser();
+    if (dto.currentPassword === dto.newPassword) {
+      throw new ApiError('New password must be different from the current password', 400);
+    }
+    return delay({ success: true });
+  },
+
   async completeProfile(dto: {
     firstName: string;
     lastName: string;

@@ -21,6 +21,9 @@ x-api-env: &api-env
   # Explicitly opt-in only; never defaults to exposing OTP codes.
   OTP_DEV_EXPOSE: ${OTP_DEV_EXPOSE:-false}
   TRUST_PROXY: ${TRUST_PROXY:-true}
+  # CI-2: when set, API replicas share one rate-limit counter store (Redis).
+  # Empty → in-memory storage (fine for the single-container full stack).
+  REDIS_URL: ${REDIS_URL:-}
   DB_HOST: postgres
   DB_PORT: "5432"
   DB_USER: ${POSTGRES_USER:-kia_academy}
@@ -59,6 +62,27 @@ services:
     # Note: official postgres image entrypoint needs its default capabilities
     # (gosu setuid/chown of the data dir), so we deliberately do NOT cap_drop.
     shm_size: 128mb
+
+  # ------------------------------------------------------------- redis ------
+  # Optional (profile "full-redis"): shared rate-limit store for multi-replica
+  # API deployments. Locally bound; AOF persistence keeps counters across restarts.
+  redis:
+    image: redis:7-alpine
+    profiles: ["full-redis"]
+    container_name: kia-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    ports:
+      - "${REDIS_PORT:-127.0.0.1:6379}:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    security_opt:
+      - no-new-privileges:true
 
   # --------------------------------------------------------------- api ------
   api:
@@ -132,3 +156,4 @@ services:
 volumes:
   pgdata:
   api-uploads:
+  redisdata:

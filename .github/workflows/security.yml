@@ -12,20 +12,29 @@ on:
     # Every Monday 03:00 UTC
     - cron: "0 3 * * 1"
 
-permissions:
-  contents: read
+# CI-1 (supply chain): every third-party action is pinned to an immutable
+# commit SHA (not a mutable tag) so a compromised action repo cannot push new
+# code into this pipeline. Job permissions are minimal and explicit.
+permissions: {}
 
 jobs:
   # ------------------------------------------------------- dependency audit --
   audit:
     name: Dependency audit (pnpm)
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      # actions/checkout v4.3.1
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      # pnpm/action-setup v4.1.0
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa
         with:
           version: 11.19.0
-      - uses: actions/setup-node@v4
+      # actions/setup-node v4.2.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version-file: .nvmrc
           cache: pnpm
@@ -41,12 +50,18 @@ jobs:
   secrets-scan:
     name: Secret scan (gitleaks)
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
     steps:
-      - uses: actions/checkout@v4
+      # actions/checkout v4.3.1
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           fetch-depth: 0 # full history so gitleaks can scan commits
       - name: Scan for committed secrets
-        uses: gitleaks/gitleaks-action@v3
+        # gitleaks-action v3.0.0
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -58,22 +73,26 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      # actions/checkout v4.3.1
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      # pnpm/action-setup v4.1.0
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa
         with:
           version: 11.19.0
-      - uses: actions/setup-node@v4
+      # actions/setup-node v4.2.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version-file: .nvmrc
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
+        # codeql-action v4.31.2
+        uses: github/codeql-action/init@fddeee1a7ece751b577e409a89057319e3172939
         with:
           languages: javascript-typescript
           queries: security-extended
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4
+        uses: github/codeql-action/analyze@fddeee1a7ece751b577e409a89057319e3172939
         with:
           category: "/language:javascript-typescript"

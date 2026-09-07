@@ -32,7 +32,8 @@ export interface PaymentVerifyInput {
   gatewayRef: string | null;
   authority?: string | null;
   status?: string | null;
-  metadata?: string | null;
+  /** Payment.metadata jsonb column (previously a serialized string). */
+  metadata?: Record<string, unknown> | null;
 }
 
 export interface PaymentVerifyResult {
