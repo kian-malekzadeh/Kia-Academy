@@ -59,6 +59,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
+      # `--ignore-scripts` skips the root postinstall that normally generates
+      # the Prisma client (git-ignored, custom output at apps/api/src/generated).
+      # Generate it explicitly before lint/typecheck/build steps.
+      - name: Generate Prisma client
+        run: pnpm db:generate
+
       - name: Build shared package
         run: pnpm --filter @kia-academy/shared build
 
