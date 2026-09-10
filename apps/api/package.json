@@ -45,7 +45,7 @@
     "stripe": "^22.6.0"
   },
   "devDependencies": {
-    "@nestjs/cli": "^11.0.6",
+    "@nestjs/cli": "^12.0.0",
     "@nestjs/schematics": "^11.0.5",
     "@nestjs/testing": "^12.0.1",
     "@types/bcrypt": "^6.0.0",
