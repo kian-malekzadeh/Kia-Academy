@@ -2,9 +2,14 @@
 
 import type { AdminEntitlement, AdminUser } from '@kia-academy/shared';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLanguage } from '@/context/LanguageProvider';
 import { api, ApiError } from '@/lib/api';
+import {
+  AdminSortHeader,
+  sortRows,
+  type SortState,
+} from '@/components/admin/AdminPro';
 
 /** Legacy labels map server-side to the canonical `readiness`/`roadmap` enum. */
 const RESOURCE_TYPES = ['course', 'readiness', 'roadmap'] as const;
@@ -22,6 +27,8 @@ export default function AdminEntitlementsPage() {
   const [resourceType, setResourceType] = useState<string>('course');
   const [resourceId, setResourceId] = useState('');
   const [source, setSource] = useState<string>('FREE');
+  const [sort, setSort] = useState<SortState>(null);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([api.adminListEntitlements(), api.adminListUsers()])
@@ -36,8 +43,28 @@ export default function AdminEntitlementsPage() {
       .finally(() => setLoading(false));
   }, [t]);
 
+  const selectedUser = useMemo(
+    () => users.find((user) => user.id === userId),
+    [users, userId],
+  );
+
+  const grantFormValid = Boolean(userId && resourceId.trim());
+
+  const grantPreview = useMemo(
+    () =>
+      t('admin.pro.grantPreviewValue', {
+        user: selectedUser?.name ?? '—',
+        type: t(
+          `admin.entitlements.type.${resourceType.replace('_', '')}` as 'admin.entitlements.type.course',
+        ),
+        resource: resourceId.trim() || '…',
+        source,
+      }),
+    [t, selectedUser, resourceType, resourceId, source],
+  );
+
   const grant = async () => {
-    if (!userId || !resourceId.trim()) return;
+    if (!grantFormValid) return;
     setBusy(true);
     setSaved('');
     try {
@@ -58,12 +85,30 @@ export default function AdminEntitlementsPage() {
   };
 
   const revoke = async (id: string) => {
+    setConfirmingId(null);
     try {
       await api.adminRevokeEntitlement(id);
       setEntitlements((prev) => prev.filter((item) => item.id !== id));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('admin.entitlements.error'));
     }
+  };
+
+  const sorted = useMemo(
+    () =>
+      sortRows(entitlements, sort, {
+        user: (row) => row.userName,
+        resource: (row) => `${row.resourceType}/${row.resourceId}`,
+        source: (row) => row.source,
+        date: (row) => row.createdAt,
+      }),
+    [entitlements, sort],
+  );
+
+  const onSort = (key: string) => {
+    setSort((prev) =>
+      prev?.key === key ? (prev.dir === 'asc' ? { key, dir: 'desc' } : null) : { key, dir: 'asc' },
+    );
   };
 
   if (loading) {
@@ -76,45 +121,70 @@ export default function AdminEntitlementsPage() {
 
   return (
     <div className="admin-content">
-      {error ? <p className="form-error">{error}</p> : null}
-      {saved ? <p className="form-success">{saved}</p> : null}
-      <article className="admin-card" style={{ marginBottom: '1.5rem' }}>
+      {/* Success / error feedback with roles for screen readers */}
+      {saved ? (
+        <p className="form-success" role="status">
+          {saved}
+        </p>
+      ) : null}
+      {error ? (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+
+      <article className="admin-card" style={{ marginBottom: '1.25rem' }}>
         <div className="admin-section-head">
           <div>
             <h2>{t('admin.entitlements.grant')}</h2>
             <p>{t('admin.entitlements.grantSub')}</p>
           </div>
         </div>
-        <div style={{ display: 'grid', gap: '0.75rem', maxWidth: 640 }}>
-          <select
-            className="admin-input"
-            value={userId}
-            onChange={(e) => setUserId(e.target.value)}
-          >
-            {users.map((user) => (
-              <option key={user.id} value={user.id}>
-                {user.name} {user.email ? `(${user.email})` : ''}
-              </option>
-            ))}
-          </select>
-          <select
-            className="admin-input"
-            value={resourceType}
-            onChange={(e) => setResourceType(e.target.value)}
-          >
-            {RESOURCE_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {t(`admin.entitlements.type.${type.replace('_', '')}` as 'admin.entitlements.type.course')}
-              </option>
-            ))}
-          </select>
-          <input
-            className="admin-input ltr-isolate"
-            placeholder={t('admin.entitlements.resourceId')}
-            value={resourceId}
-            onChange={(e) => setResourceId(e.target.value)}
-          />
-          <label style={{ display: 'grid', gap: '0.25rem', maxWidth: 240 }}>
+
+        <div className="apro-form-grid" style={{ maxWidth: 760 }}>
+          <label className="apro-field">
+            <span className="admin-sub">{t('admin.entitlements.col.user')}</span>
+            <select
+              className="admin-input"
+              value={userId}
+              onChange={(e) => setUserId(e.target.value)}
+            >
+              {users.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.name} {user.email ? `(${user.email})` : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="apro-field">
+            <span className="admin-sub">{t('admin.entitlements.grant')}</span>
+            <select
+              className="admin-input"
+              value={resourceType}
+              onChange={(e) => setResourceType(e.target.value)}
+            >
+              {RESOURCE_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {t(
+                    `admin.entitlements.type.${type.replace('_', '')}` as 'admin.entitlements.type.course',
+                  )}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="apro-field">
+            <span className="admin-sub">{t('admin.entitlements.resourceId')}</span>
+            <input
+              className="admin-input ltr-isolate"
+              placeholder={t('admin.entitlements.resourceId')}
+              value={resourceId}
+              onChange={(e) => setResourceId(e.target.value)}
+            />
+          </label>
+
+          <label className="apro-field">
             <span className="admin-sub">{t('admin.entitlements.source')}</span>
             <select
               className="admin-input"
@@ -128,16 +198,23 @@ export default function AdminEntitlementsPage() {
               ))}
             </select>
           </label>
-          <button
-            type="button"
-            className="cta-primary"
-            onClick={() => void grant()}
-            disabled={busy || !userId || !resourceId.trim()}
-          >
-            {busy ? <Loader2 size={16} className="spin" /> : <Plus size={16} />}{' '}
-            {t('admin.entitlements.grantBtn')}
-          </button>
         </div>
+
+        {/* Live grant preview — states the exact effect before submit */}
+        <p className="admin-meta" style={{ marginTop: '0.85rem' }}>
+          {t('admin.pro.grantPreview')}: <strong>{grantPreview}</strong>
+        </p>
+
+        <button
+          type="button"
+          className="cta-primary"
+          style={{ marginTop: '1rem' }}
+          onClick={() => void grant()}
+          disabled={busy || !grantFormValid}
+        >
+          {busy ? <Loader2 size={16} className="spin" /> : <Plus size={16} />}{' '}
+          {t('admin.entitlements.grantBtn')}
+        </button>
       </article>
 
       <article className="admin-card">
@@ -146,50 +223,91 @@ export default function AdminEntitlementsPage() {
             <h2>{t('admin.entitlements.title')}</h2>
             <p>{t('admin.entitlements.sub')}</p>
           </div>
+          <span className="admin-badge info">{format.number(entitlements.length)}</span>
         </div>
+
         <div className="admin-table-wrap" style={{ marginBottom: 0 }}>
           <table className="admin-table">
             <thead>
               <tr>
-                <th>{t('admin.entitlements.col.user')}</th>
-                <th>{t('admin.entitlements.col.resource')}</th>
-                <th>{t('admin.entitlements.col.source')}</th>
-                <th>{t('admin.entitlements.col.date')}</th>
-                <th></th>
+                <AdminSortHeader
+                  label={t('admin.entitlements.col.user')}
+                  sortKey="user"
+                  sort={sort}
+                  onSort={onSort}
+                />
+                <AdminSortHeader
+                  label={t('admin.entitlements.col.resource')}
+                  sortKey="resource"
+                  sort={sort}
+                  onSort={onSort}
+                />
+                <AdminSortHeader
+                  label={t('admin.entitlements.col.source')}
+                  sortKey="source"
+                  sort={sort}
+                  onSort={onSort}
+                />
+                <AdminSortHeader
+                  label={t('admin.entitlements.col.date')}
+                  sortKey="date"
+                  sort={sort}
+                  onSort={onSort}
+                />
+                <th>
+                  <span className="sr-only">{t('common.delete')}</span>
+                </th>
               </tr>
             </thead>
             <tbody>
-              {entitlements.length === 0 ? (
+              {sorted.length === 0 ? (
                 <tr>
                   <td colSpan={5}>{t('admin.entitlements.empty')}</td>
                 </tr>
               ) : (
-                entitlements.map((entitlement) => (
+                sorted.map((entitlement) => (
                   <tr key={entitlement.id}>
                     <td>
                       <div>{entitlement.userName}</div>
-                      <div
-                        className="ltr-isolate"
-                        style={{ fontSize: '12px', color: 'var(--text-faint)' }}
-                      >
-                        {entitlement.userEmail}
-                      </div>
+                      <div className="ltr-isolate admin-cell-meta">{entitlement.userEmail}</div>
                     </td>
                     <td>
                       <code>{entitlement.resourceType}</code> /{' '}
                       <code>{entitlement.resourceId}</code>
                     </td>
-                    <td>{entitlement.source}</td>
+                    <td>
+                      <span className="admin-badge info">{entitlement.source}</span>
+                    </td>
                     <td>{format.date(entitlement.createdAt)}</td>
                     <td>
-                      <button
-                        type="button"
-                        className="pill-btn"
-                        onClick={() => void revoke(entitlement.id)}
-                        aria-label={t('admin.entitlements.revoke')}
-                      >
-                        <Trash2 size={14} /> {t('admin.entitlements.revoke')}
-                      </button>
+                      {confirmingId === entitlement.id ? (
+                        <span className="apro-confirm">
+                          <span>{t('admin.pro.revokeConfirm')}</span>
+                          <button
+                            type="button"
+                            className="pill-btn"
+                            onClick={() => void revoke(entitlement.id)}
+                          >
+                            {t('common.yes')}
+                          </button>
+                          <button
+                            type="button"
+                            className="pill-btn pro-accent"
+                            onClick={() => setConfirmingId(null)}
+                          >
+                            {t('common.cancel')}
+                          </button>
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          className="pill-btn"
+                          onClick={() => setConfirmingId(entitlement.id)}
+                          aria-label={t('admin.entitlements.revoke')}
+                        >
+                          <Trash2 size={14} /> {t('admin.entitlements.revoke')}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))

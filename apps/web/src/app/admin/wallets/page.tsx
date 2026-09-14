@@ -1,10 +1,16 @@
 'use client';
 
 import type { AdminWalletDetail, AdminWalletSummary } from '@kia-academy/shared';
-import { Loader2 } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useLanguage } from '@/context/LanguageProvider';
 import { api, ApiError } from '@/lib/api';
+import {
+  AdminSortHeader,
+  AdminTableToolbar,
+  sortRows,
+  type SortState,
+} from '@/components/admin/AdminPro';
 
 export default function AdminWalletsPage() {
   const { t, format } = useLanguage();
@@ -17,6 +23,8 @@ export default function AdminWalletsPage() {
   const [type, setType] = useState<'CREDIT' | 'DEBIT'>('CREDIT');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
+  const [search, setSearch] = useState('');
+  const [sort, setSort] = useState<SortState>(null);
 
   useEffect(() => {
     api
@@ -26,8 +34,26 @@ export default function AdminWalletsPage() {
       .finally(() => setLoading(false));
   }, [t]);
 
+  const filtered = (() => {
+    const q = search.trim().toLowerCase();
+    const rows = q
+      ? wallets.filter(
+          (wallet) =>
+            wallet.userName.toLowerCase().includes(q) ||
+            (wallet.userEmail ?? '').toLowerCase().includes(q),
+        )
+      : wallets;
+    return sortRows(rows, sort, {
+      user: (row) => row.userName,
+      balance: (row) => row.balanceCents,
+      txns: (row) => row.transactionCount,
+      lastTxn: (row) => row.lastTransactionAt ?? '',
+    });
+  })();
+
   const openDetail = async (userId: string) => {
     setError('');
+    setSaved('');
     try {
       const next = await api.adminGetWallet(userId);
       setDetail(next);
@@ -72,6 +98,13 @@ export default function AdminWalletsPage() {
     }
   };
 
+  const totalBalance = wallets.reduce((acc, wallet) => acc + wallet.balanceCents, 0);
+  const onSort = (key: string) => {
+    setSort((prev) =>
+      prev?.key === key ? (prev.dir === 'asc' ? { key, dir: 'desc' } : null) : { key, dir: 'asc' },
+    );
+  };
+
   if (loading) {
     return (
       <div className="admin-content auth-loading">
@@ -82,50 +115,108 @@ export default function AdminWalletsPage() {
 
   return (
     <div className="admin-content">
-      {error ? <p className="form-error">{error}</p> : null}
-      {saved ? <p className="form-success">{saved}</p> : null}
-      <article className="admin-card" style={{ marginBottom: '1.5rem' }}>
+      {error ? (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+      {saved ? (
+        <p className="form-success" role="status">
+          {saved}
+        </p>
+      ) : null}
+
+      {/* Summary strip */}
+      <div className="admin-stat-grid">
+        <div className="admin-stat-card highlight">
+          <div className="admin-stat-row">
+            <div>
+              <span className="admin-stat-label">{t('admin.pro.balance')}</span>
+              <div className="admin-stat-value">{format.currency(totalBalance)}</div>
+            </div>
+          </div>
+        </div>
+        <div className="admin-stat-card">
+          <div className="admin-stat-row">
+            <div>
+              <span className="admin-stat-label">{t('admin.wallets.title')}</span>
+              <div className="admin-stat-value">{format.number(wallets.length)}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <article className="admin-card">
         <div className="admin-section-head">
           <div>
             <h2>{t('admin.wallets.title')}</h2>
             <p>{t('admin.wallets.sub')}</p>
           </div>
         </div>
+
+        <AdminTableToolbar
+          search={search}
+          onSearchChange={setSearch}
+          searchLabel={t('admin.pro.search')}
+          searchPlaceholder={t('admin.pro.searchPlaceholder')}
+        />
+
         <div className="admin-table-wrap" style={{ marginBottom: 0 }}>
           <table className="admin-table">
             <thead>
               <tr>
-                <th>{t('admin.wallets.col.user')}</th>
-                <th>{t('admin.wallets.col.balance')}</th>
-                <th>{t('admin.wallets.col.txns')}</th>
-                <th>{t('admin.wallets.col.lastTxn')}</th>
-                <th></th>
+                <AdminSortHeader
+                  label={t('admin.wallets.col.user')}
+                  sortKey="user"
+                  sort={sort}
+                  onSort={onSort}
+                />
+                <AdminSortHeader
+                  label={t('admin.wallets.col.balance')}
+                  sortKey="balance"
+                  sort={sort}
+                  onSort={onSort}
+                />
+                <AdminSortHeader
+                  label={t('admin.wallets.col.txns')}
+                  sortKey="txns"
+                  sort={sort}
+                  onSort={onSort}
+                />
+                <AdminSortHeader
+                  label={t('admin.wallets.col.lastTxn')}
+                  sortKey="lastTxn"
+                  sort={sort}
+                  onSort={onSort}
+                />
+                <th>
+                  <span className="sr-only">{t('admin.wallets.manage')}</span>
+                </th>
               </tr>
             </thead>
             <tbody>
-              {wallets.length === 0 ? (
+              {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5}>{t('admin.wallets.empty')}</td>
+                  <td colSpan={5}>
+                    {wallets.length === 0 ? t('admin.wallets.empty') : t('admin.pro.emptyFiltered')}
+                  </td>
                 </tr>
               ) : (
-                wallets.map((wallet) => (
+                filtered.map((wallet) => (
                   <tr key={wallet.userId}>
                     <td>
                       <div>{wallet.userName}</div>
-                      <div
-                        className="ltr-isolate"
-                        style={{ fontSize: '12px', color: 'var(--text-faint)' }}
-                      >
-                        {wallet.userEmail}
-                      </div>
+                      <div className="ltr-isolate admin-cell-meta">{wallet.userEmail}</div>
                     </td>
-                    <td>{format.currency(wallet.balanceCents)}</td>
+                    <td className="apro-num">{format.currency(wallet.balanceCents)}</td>
                     <td>{format.number(wallet.transactionCount)}</td>
-                    <td>{wallet.lastTransactionAt ? format.date(wallet.lastTransactionAt) : '—'}</td>
+                    <td>
+                      {wallet.lastTransactionAt ? format.date(wallet.lastTransactionAt) : '—'}
+                    </td>
                     <td>
                       <button
                         type="button"
-                        className="pill-btn"
+                        className="pill-btn pro-accent"
                         onClick={() => void openDetail(wallet.userId)}
                       >
                         {t('admin.wallets.manage')}
@@ -140,19 +231,31 @@ export default function AdminWalletsPage() {
       </article>
 
       {detail ? (
-        <article className="admin-card">
+        <article className="admin-card" style={{ marginTop: '1.25rem' }}>
           <div className="admin-section-head">
             <div>
               <h2>
                 {t('admin.wallets.detailTitle')} — {detail.userName}
               </h2>
               <p>
-                {t('admin.wallets.balance')}: {format.currency(detail.balanceCents)}
+                {t('admin.wallets.balance')}: <strong>{format.currency(detail.balanceCents)}</strong>
               </p>
             </div>
+            <button
+              type="button"
+              className="admin-icon-button"
+              aria-label={t('common.cancel')}
+              onClick={() => {
+                setDetail(null);
+                setSaved('');
+              }}
+            >
+              <X size={14} aria-hidden />
+            </button>
           </div>
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'end' }}>
-            <label style={{ display: 'grid', gap: '0.25rem' }}>
+
+          <div className="apro-form-grid" style={{ maxWidth: 860 }}>
+            <label className="apro-field">
               <span className="admin-sub">{t('admin.wallets.type')}</span>
               <select
                 className="admin-input"
@@ -163,7 +266,7 @@ export default function AdminWalletsPage() {
                 <option value="DEBIT">{t('admin.wallets.debit')}</option>
               </select>
             </label>
-            <label style={{ display: 'grid', gap: '0.25rem' }}>
+            <label className="apro-field">
               <span className="admin-sub">{t('admin.wallets.amount')}</span>
               <input
                 className="admin-input ltr-isolate"
@@ -172,7 +275,7 @@ export default function AdminWalletsPage() {
                 onChange={(e) => setAmount(e.target.value)}
               />
             </label>
-            <label style={{ display: 'grid', gap: '0.25rem', flex: '1 1 220px' }}>
+            <label className="apro-field apro-field-wide">
               <span className="admin-sub">{t('admin.wallets.description')}</span>
               <input
                 className="admin-input"
@@ -180,15 +283,18 @@ export default function AdminWalletsPage() {
                 onChange={(e) => setDescription(e.target.value)}
               />
             </label>
-            <button
-              type="button"
-              className="cta-primary"
-              onClick={() => void adjust()}
-              disabled={busy || !amount.trim() || !description.trim()}
-            >
-              {busy ? <Loader2 size={16} className="spin" /> : null} {t('admin.wallets.apply')}
-            </button>
+            <div className="apro-field" style={{ justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="cta-primary"
+                onClick={() => void adjust()}
+                disabled={busy || !amount.trim() || !description.trim()}
+              >
+                {busy ? <Loader2 size={16} className="spin" /> : null} {t('admin.wallets.apply')}
+              </button>
+            </div>
           </div>
+
           <div className="admin-table-wrap" style={{ marginTop: '1rem' }}>
             <table className="admin-table">
               <thead>
@@ -208,13 +314,19 @@ export default function AdminWalletsPage() {
                   detail.transactions.map((transaction) => (
                     <tr key={transaction.id}>
                       <td>
-                        <span className={`admin-badge${transaction.type === 'CREDIT' ? ' ok' : ''}`}>
-                          {transaction.type === 'CREDIT'
-                            ? t('admin.wallets.credit')
-                            : t('admin.wallets.debit')}
-                        </span>
+                        {transaction.type === 'CREDIT' ? (
+                          <span className="admin-badge ok">
+                            <span className="apro-dot" aria-hidden="true" />
+                            {t('admin.wallets.credit')}
+                          </span>
+                        ) : (
+                          <span className="admin-badge danger">
+                            <span className="apro-dot" aria-hidden="true" />
+                            {t('admin.wallets.debit')}
+                          </span>
+                        )}
                       </td>
-                      <td>{format.currency(transaction.amountCents)}</td>
+                      <td className="apro-num">{format.currency(transaction.amountCents)}</td>
                       <td>{transaction.description}</td>
                       <td>{format.date(transaction.createdAt)}</td>
                     </tr>

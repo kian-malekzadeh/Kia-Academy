@@ -2,9 +2,31 @@
 
 import type { AdminOrder } from '@kia-academy/shared';
 import { Loader2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLanguage } from '@/context/LanguageProvider';
 import { api, ApiError } from '@/lib/api';
+import {
+  AdminSortHeader,
+  AdminStatusBadge,
+  AdminTableToolbar,
+  sortRows,
+  type SortState,
+} from '@/components/admin/AdminPro';
+
+function orderTone(status: string): 'ok' | 'warning' | 'danger' | 'info' {
+  switch (status) {
+    case 'PAID':
+      return 'ok';
+    case 'PENDING':
+      return 'warning';
+    case 'FAILED':
+    case 'CANCELED':
+    case 'CANCELLED':
+      return 'danger';
+    default:
+      return 'info';
+  }
+}
 
 export default function AdminOrdersPage() {
   const { t, format } = useLanguage();
@@ -12,6 +34,7 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
+  const [sort, setSort] = useState<SortState>(null);
 
   useEffect(() => {
     api
@@ -21,16 +44,41 @@ export default function AdminOrdersPage() {
       .finally(() => setLoading(false));
   }, [t]);
 
-  const filtered = orders.filter((order) => {
+  const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return true;
-    return (
-      order.userName.toLowerCase().includes(q) ||
-      (order.userEmail ?? '').toLowerCase().includes(q) ||
-      order.status.toLowerCase().includes(q) ||
-      order.id.toLowerCase().includes(q)
+    const rows = orders.filter((order) => {
+      if (!q) return true;
+      return (
+        order.userName.toLowerCase().includes(q) ||
+        (order.userEmail ?? '').toLowerCase().includes(q) ||
+        order.status.toLowerCase().includes(q) ||
+        order.id.toLowerCase().includes(q)
+      );
+    });
+    return sortRows(rows, sort, {
+      date: (row) => row.createdAt,
+      user: (row) => row.userName,
+      items: (row) => row.itemCount,
+      total: (row) => row.totalCents,
+      status: (row) => row.status,
+    });
+  }, [orders, search, sort]);
+
+  const filteredTotal = useMemo(
+    () => filtered.reduce((acc, order) => acc + order.totalCents, 0),
+    [filtered],
+  );
+
+  const paidCount = useMemo(
+    () => orders.filter((order) => order.status === 'PAID').length,
+    [orders],
+  );
+
+  const onSort = (key: string) => {
+    setSort((prev) =>
+      prev?.key === key ? (prev.dir === 'asc' ? { key, dir: 'desc' } : null) : { key, dir: 'asc' },
     );
-  });
+  };
 
   if (loading) {
     return (
@@ -42,16 +90,38 @@ export default function AdminOrdersPage() {
 
   return (
     <div className="admin-content">
-      {error ? <p className="form-error">{error}</p> : null}
+      {error ? (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      ) : null}
 
-      <div style={{ marginBottom: '1rem', maxWidth: 360 }}>
-        <input
-          type="search"
-          className="admin-input"
-          placeholder={t('admin.orders.search')}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+      {/* Summary strip */}
+      <div className="admin-stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 11rem), 1fr))' }}>
+        <div className="admin-stat-card">
+          <div className="admin-stat-row">
+            <div>
+              <span className="admin-stat-label">{t('admin.orders.title')}</span>
+              <div className="admin-stat-value">{format.number(orders.length)}</div>
+            </div>
+          </div>
+        </div>
+        <div className="admin-stat-card">
+          <div className="admin-stat-row">
+            <div>
+              <span className="admin-stat-label">{t('admin.pro.positive')}</span>
+              <div className="admin-stat-value">{format.number(paidCount)}</div>
+            </div>
+          </div>
+        </div>
+        <div className="admin-stat-card highlight">
+          <div className="admin-stat-row">
+            <div>
+              <span className="admin-stat-label">{t('admin.pro.total')}</span>
+              <div className="admin-stat-value">{format.currency(filteredTotal)}</div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <article className="admin-card">
@@ -60,22 +130,60 @@ export default function AdminOrdersPage() {
             <h2>{t('admin.orders.title')}</h2>
             <p>{t('admin.orders.sub')}</p>
           </div>
+          <span className="admin-badge info">
+            {format.number(filtered.length)} / {format.number(orders.length)}
+          </span>
         </div>
-        <div className="admin-table-wrap" style={{ marginBottom: 0 }}>
+
+        <AdminTableToolbar
+          search={search}
+          onSearchChange={setSearch}
+          searchLabel={t('admin.orders.search')}
+          searchPlaceholder={t('admin.orders.search')}
+        />
+
+        <div className="admin-table-wrap">
           <table className="admin-table">
             <thead>
               <tr>
-                <th>{t('admin.orders.col.date')}</th>
-                <th>{t('admin.orders.col.user')}</th>
-                <th>{t('admin.orders.col.items')}</th>
-                <th>{t('admin.orders.col.total')}</th>
-                <th>{t('admin.orders.col.status')}</th>
+                <AdminSortHeader
+                  label={t('admin.orders.col.date')}
+                  sortKey="date"
+                  sort={sort}
+                  onSort={onSort}
+                />
+                <AdminSortHeader
+                  label={t('admin.orders.col.user')}
+                  sortKey="user"
+                  sort={sort}
+                  onSort={onSort}
+                />
+                <AdminSortHeader
+                  label={t('admin.orders.col.items')}
+                  sortKey="items"
+                  sort={sort}
+                  onSort={onSort}
+                />
+                <AdminSortHeader
+                  label={t('admin.orders.col.total')}
+                  sortKey="total"
+                  sort={sort}
+                  onSort={onSort}
+                />
+                <AdminSortHeader
+                  label={t('admin.orders.col.status')}
+                  sortKey="status"
+                  sort={sort}
+                  onSort={onSort}
+                />
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5}>{t('admin.orders.empty')}</td>
+                  <td colSpan={5}>
+                    {orders.length === 0 ? t('admin.orders.empty') : t('admin.pro.emptyFiltered')}
+                  </td>
                 </tr>
               ) : (
                 filtered.map((order) => (
@@ -83,19 +191,12 @@ export default function AdminOrdersPage() {
                     <td>{format.date(order.createdAt)}</td>
                     <td>
                       <div>{order.userName}</div>
-                      <div
-                        className="ltr-isolate"
-                        style={{ fontSize: '12px', color: 'var(--text-faint)' }}
-                      >
-                        {order.userEmail}
-                      </div>
+                      <div className="ltr-isolate admin-cell-meta">{order.userEmail}</div>
                     </td>
                     <td>{format.number(order.itemCount)}</td>
-                    <td>{format.currency(order.totalCents)}</td>
+                    <td className="apro-num">{format.currency(order.totalCents)}</td>
                     <td>
-                      <span className={`admin-badge${order.status === 'PAID' ? ' ok' : ''}`}>
-                        {order.status}
-                      </span>
+                      <AdminStatusBadge tone={orderTone(order.status)}>{order.status}</AdminStatusBadge>
                     </td>
                   </tr>
                 ))
