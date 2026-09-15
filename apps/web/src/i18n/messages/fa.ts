@@ -365,7 +365,8 @@ export const fa = {
       disabledBadge: 'غیرفعال',
       backupCodesRemaining: '{count} کد بازیابی استفاده‌نشده',
       setupTitle: 'احرازگر خود را تنظیم کنید',
-      setupStep1: 'کد QR را با Google Authenticator یا 1Password یا هر اپ TOTP دیگری اسکن کنید — یا رمز را دستی وارد کنید.',
+      setupStep1:
+        'کد QR را با Google Authenticator یا 1Password یا هر اپ TOTP دیگری اسکن کنید — یا رمز را دستی وارد کنید.',
       setupStep2: 'کد ۶ رقمی اپلیکیشن را برای تأیید وارد کنید.',
       secretLabel: 'رمز دستی',
       confirmLabel: 'کد تأیید',
@@ -1548,6 +1549,17 @@ export const fa = {
       activeChallenges: 'چالش‌های فعال',
       pendingItems: 'اقلام در انتظار',
       view: 'مشاهده',
+    },
+    dashboard: {
+      eyebrow: 'مرکز عملیات آکادمی',
+      title: 'نمای کلی مدیریت',
+      sub: 'وضعیت محتوا، درآمد و فعالیت‌های پلتفرم را در یک نگاه بررسی کنید.',
+      refresh: 'به‌روزرسانی',
+      healthTitle: 'سلامت پرداخت‌ها',
+      healthSub: 'وضعیت تراکنش‌های اخیر پلتفرم',
+      successRate: 'نرخ موفقیت',
+      live: 'زنده',
+      systemReady: 'سرویس‌های اصلی پایدار و آماده هستند',
     },
     activity: {
       title: 'فعالیت‌های اخیر',

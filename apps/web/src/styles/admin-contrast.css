@@ -1,0 +1,359 @@
+/* WCAG contrast layer -------------------------------------------------------
+   Loaded last so every admin route gets one predictable, accessible text
+   palette. The visual identity stays dark/gold; only low-contrast foregrounds
+   and state treatments are strengthened. Target: WCAG 2.2 AA for normal text
+   (4.5:1), with stronger focus and disabled-state affordances. */
+.admin-shell--redesigned {
+  color-scheme: dark;
+  --admin-text: #f8fafc;
+  --admin-muted: #d1d5db;
+  --admin-text-secondary: #e2e8f0;
+  --admin-text-subtle: #c4ccd8;
+  --admin-text-faint: #b6c0cf;
+  --admin-line: rgba(255, 215, 0, 0.32);
+  --admin-line-strong: rgba(255, 215, 0, 0.62);
+  --admin-accent: #ffe047;
+  --admin-accent-soft: #fff1a3;
+  --admin-success: #7cf2aa;
+  --admin-warning: #ffe28a;
+  --admin-danger: #ff9fa8;
+  --admin-info: #8bd7ff;
+  --admin-focus-ring: 0 0 0 3px #0f0f23, 0 0 0 6px #ffe047;
+  --apro-text: #f8fafc;
+  --apro-text-secondary: #e2e8f0;
+  --apro-text-muted: #d1d5db;
+  --apro-text-faint: #b6c0cf;
+  --apro-accent: #ffe047;
+  --apro-accent-hover: #fff1a3;
+  --apro-accent-soft: #fff1a3;
+  --apro-success: #7cf2aa;
+  --apro-warning: #ffe28a;
+  --apro-danger: #ff9fa8;
+  --apro-info: #8bd7ff;
+  --apro-money: #ffe08a;
+  --apro-line: rgba(255, 215, 0, 0.32);
+  --apro-line-strong: rgba(255, 215, 0, 0.62);
+  --apro-line-faint: rgba(224, 232, 240, 0.2);
+  --apro-accent-line: rgba(255, 224, 71, 0.66);
+}
+
+/* Base text and headings: never inherit a faint token accidentally. */
+.admin-shell--redesigned :is(h1, h2, h3, h4, h5, h6, strong, b, th, td, dt, legend) {
+  color: var(--admin-text);
+}
+
+.admin-shell--redesigned
+  :is(
+    p,
+    small,
+    label,
+    .form-field > span,
+    .admin-field label,
+    .admin-field > span:first-child,
+    .admin-meta,
+    .admin-cell-meta,
+    .admin-sub,
+    .admin-section-head p
+  ) {
+  color: var(--admin-muted);
+}
+
+.admin-shell--redesigned
+  :is(
+    .admin-breadcrumb,
+    .admin-breadcrumb a,
+    .admin-dashboard-date,
+    .admin-nav-group-label,
+    .admin-dropdown-empty,
+    .admin-empty-state,
+    .admin-palette-empty,
+    .admin-inline-status
+  ) {
+  color: var(--admin-text-subtle);
+}
+
+.admin-shell--redesigned
+  :is(.admin-nav-link, .admin-nav-group-toggle, .admin-nav-submenu .admin-nav-link) {
+  color: var(--admin-text-secondary);
+}
+
+.admin-shell--redesigned
+  :is(
+    .admin-nav-link:hover,
+    .admin-nav-group-toggle:hover,
+    .admin-nav-link.active,
+    .admin-nav-submenu .admin-nav-link.active
+  ) {
+  color: var(--admin-accent-soft);
+}
+
+.admin-shell--redesigned
+  :is(.admin-link, .admin-link-btn, .admin-back, .admin-dropdown-footer a, .admin-quick-links a) {
+  color: var(--admin-accent-soft);
+  text-decoration-thickness: 0.1em;
+  text-underline-offset: 0.18em;
+}
+
+.admin-shell--redesigned
+  :is(.admin-link:hover, .admin-link-btn:hover, .admin-back:hover, .admin-dropdown-footer a:hover) {
+  color: #fff8d1;
+}
+
+.admin-shell--redesigned .admin-link.danger,
+.admin-shell--redesigned .admin-link-btn.danger {
+  color: var(--admin-danger);
+}
+
+/* Sidebar labels/icons and header controls. */
+.admin-shell--redesigned .admin-brand small,
+.admin-shell--redesigned .admin-sidebar-profile .profile small,
+.admin-shell--redesigned .admin-sidebar-profile .profile strong {
+  color: var(--admin-muted);
+}
+
+.admin-shell--redesigned .admin-brand strong,
+.admin-shell--redesigned .admin-header-title h1,
+.admin-shell--redesigned .admin-dashboard-eyebrow,
+.admin-shell--redesigned .admin-stat-value,
+.admin-shell--redesigned .admin-stat-icon,
+.admin-shell--redesigned .admin-dashboard-refresh {
+  color: var(--admin-accent);
+}
+
+.admin-shell--redesigned
+  :is(.admin-search-trigger, .admin-icon-button, .admin-profile-button, .admin-dashboard-refresh) {
+  color: var(--admin-accent-soft);
+  border-color: var(--admin-line);
+}
+
+.admin-shell--redesigned
+  :is(
+    .admin-search-trigger:hover,
+    .admin-icon-button:hover,
+    .admin-profile-button:hover,
+    .admin-dashboard-refresh:hover
+  ) {
+  color: #17130a;
+  background: var(--admin-accent);
+}
+
+/* Tables and metadata. */
+.admin-shell--redesigned .admin-table th {
+  color: var(--admin-text-secondary);
+  background: #171a2e;
+}
+
+.admin-shell--redesigned .admin-table td {
+  color: var(--admin-text);
+}
+
+.admin-shell--redesigned .admin-table :is(small, code, .admin-meta, .admin-cell-meta) {
+  color: var(--admin-text-subtle);
+}
+
+.admin-shell--redesigned .admin-table code {
+  border-color: rgba(255, 224, 71, 0.5);
+  background: rgba(255, 224, 71, 0.1);
+  color: #fff1a3;
+}
+
+/* Inputs: readable text, labels, placeholder, select options, and textareas. */
+.admin-shell--redesigned
+  :is(input, select, textarea, .admin-input, .admin-select, .admin-textarea) {
+  color: var(--admin-text);
+  caret-color: var(--admin-accent);
+  border-color: rgba(210, 219, 232, 0.42);
+  background: #14192c;
+}
+
+.admin-shell--redesigned
+  :is(input, select, textarea, .admin-input, .admin-select, .admin-textarea)::placeholder {
+  color: #c4ccd8;
+  opacity: 1;
+}
+
+.admin-shell--redesigned
+  :is(input, select, textarea, .admin-input, .admin-select, .admin-textarea):hover {
+  border-color: rgba(255, 224, 71, 0.7);
+}
+
+.admin-shell--redesigned
+  :is(input, select, textarea, .admin-input, .admin-select, .admin-textarea):focus {
+  border-color: var(--admin-accent);
+  outline: 2px solid var(--admin-accent);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 5px #14192c;
+}
+
+.admin-shell--redesigned select option,
+.admin-shell--redesigned select optgroup {
+  color: #f8fafc;
+  background: #14192c;
+}
+
+.admin-shell--redesigned :is(input, select, textarea):disabled,
+.admin-shell--redesigned :is(button, a)[aria-disabled='true'],
+.admin-shell--redesigned :is(button, input, select, textarea):disabled {
+  color: #b6c0cf;
+  border-color: rgba(182, 192, 207, 0.32);
+  background: #252b40;
+  opacity: 1;
+}
+
+.admin-shell--redesigned :is(button, input, select, textarea):disabled::placeholder {
+  color: #b6c0cf;
+}
+
+/* Status badges use solid-enough surfaces so color is not lost in translucency. */
+.admin-shell--redesigned .admin-badge {
+  border-width: 1px;
+  border-style: solid;
+  color: var(--admin-text-secondary);
+  background: #2a3044;
+}
+
+.admin-shell--redesigned .admin-badge.ok,
+.admin-shell--redesigned .admin-badge.success {
+  color: #9affc0;
+  border-color: rgba(124, 242, 170, 0.72);
+  background: #123b2b;
+}
+
+.admin-shell--redesigned .admin-badge.warning,
+.admin-shell--redesigned .admin-badge.soon {
+  color: #ffe89b;
+  border-color: rgba(255, 226, 138, 0.72);
+  background: #493b12;
+}
+
+.admin-shell--redesigned .admin-badge.info {
+  color: #a8e2ff;
+  border-color: rgba(139, 215, 255, 0.72);
+  background: #12344a;
+}
+
+.admin-shell--redesigned .admin-badge.danger {
+  color: #ffb5bb;
+  border-color: rgba(255, 159, 168, 0.72);
+  background: #4a2028;
+}
+
+/* Feedback and empty/loading states. */
+.admin-shell--redesigned :is(.form-error, .apro-alert, .admin-error-state) {
+  color: #ffb5bb;
+  border-color: rgba(255, 159, 168, 0.72);
+  background: #4a2028;
+}
+
+.admin-shell--redesigned :is(.form-success, .admin-notice[role='status']) {
+  color: #a5ffc5;
+  border-color: rgba(124, 242, 170, 0.72);
+  background: #123b2b;
+}
+
+.admin-shell--redesigned .admin-empty-state :is(strong, p),
+.admin-shell--redesigned .admin-error-state :is(strong, p),
+.admin-shell--redesigned .admin-error-state svg {
+  color: inherit;
+}
+
+.admin-shell--redesigned .admin-skeleton {
+  background: linear-gradient(90deg, #252b40 25%, #39445e 50%, #252b40 75%);
+}
+
+/* Dropdowns, palette, activities, quick tiles, and icon affordances. */
+.admin-shell--redesigned :is(.admin-header-dropdown, .admin-palette) {
+  background: #171d32;
+  border-color: rgba(255, 215, 0, 0.45);
+}
+
+.admin-shell--redesigned
+  :is(.admin-dropdown-item, .admin-palette-option, .admin-activity-body, .admin-quick-tile) {
+  color: var(--admin-text-secondary);
+}
+
+.admin-shell--redesigned
+  :is(
+    .admin-dropdown-item strong,
+    .admin-dropdown-item time,
+    .admin-activity-body strong,
+    .admin-activity-body time
+  ) {
+  color: var(--admin-text);
+}
+
+.admin-shell--redesigned :is(.admin-dropdown-item small, .admin-activity-body small) {
+  color: var(--admin-text-subtle);
+}
+
+.admin-shell--redesigned
+  :is(
+    .admin-dropdown-item:hover,
+    .admin-dropdown-item:focus-visible,
+    .admin-palette-option[data-active='true'],
+    .admin-quick-tile:hover
+  ) {
+  color: #fff8d1;
+  background: rgba(255, 215, 0, 0.16);
+}
+
+.admin-shell--redesigned :is(.admin-dropdown-item-icon, .admin-activity-icon, .admin-stat-icon) {
+  color: var(--admin-accent-soft);
+  border-color: rgba(255, 215, 0, 0.46);
+  background: rgba(255, 215, 0, 0.14);
+}
+
+/* High-visibility focus for every keyboard-operable admin control. */
+.admin-shell--redesigned
+  :is(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 3px solid var(--admin-accent);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px #0f0f23;
+}
+
+.admin-shell--redesigned
+  :is(a, button, input, select, textarea, summary, [tabindex]):focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Contrast-safe chart labels and dashboard status text. */
+.admin-shell--redesigned .admin-chart-bar::after,
+.admin-shell--redesigned .admin-dashboard-date,
+.admin-shell--redesigned .admin-health-list,
+.admin-shell--redesigned .admin-health-footer,
+.admin-shell--redesigned .admin-health-ring small {
+  color: var(--admin-text-subtle);
+}
+
+.admin-shell--redesigned .admin-health-ring strong,
+.admin-shell--redesigned .admin-dashboard-live,
+.admin-shell--redesigned .admin-health-list > div:nth-child(1) svg {
+  color: #9affc0;
+}
+
+.admin-shell--redesigned .admin-health-list > div:nth-child(2) svg {
+  color: #ffe89b;
+}
+
+.admin-shell--redesigned .admin-health-list > div:nth-child(3) svg {
+  color: #ffb5bb;
+}
+
+@media (prefers-contrast: more) {
+  .admin-shell--redesigned {
+    --admin-line: rgba(255, 255, 255, 0.65);
+    --admin-line-strong: #ffffff;
+  }
+
+  .admin-shell--redesigned
+    :is(
+      .admin-card,
+      .admin-stat-card,
+      .admin-table-wrap,
+      .admin-input,
+      .admin-select,
+      .admin-textarea
+    ) {
+    border-width: 2px;
+  }
+}

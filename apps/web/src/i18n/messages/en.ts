@@ -365,7 +365,8 @@ export const en = {
       disabledBadge: 'Not enabled',
       backupCodesRemaining: '{count} unused recovery codes',
       setupTitle: 'Set up your authenticator',
-      setupStep1: 'Scan this QR code with Google Authenticator, 1Password, or any TOTP app — or enter the secret manually.',
+      setupStep1:
+        'Scan this QR code with Google Authenticator, 1Password, or any TOTP app — or enter the secret manually.',
       setupStep2: 'Enter the 6-digit code from the app to confirm.',
       secretLabel: 'Manual secret',
       confirmLabel: 'Verification code',
@@ -1550,6 +1551,17 @@ export const en = {
       activeChallenges: 'Active challenges',
       pendingItems: 'Pending items',
       view: 'View',
+    },
+    dashboard: {
+      eyebrow: 'Academy operations center',
+      title: 'Management overview',
+      sub: 'Review content, revenue, and platform activity from one command center.',
+      refresh: 'Refresh',
+      healthTitle: 'Payment health',
+      healthSub: 'Current state of recent platform transactions',
+      successRate: 'Success rate',
+      live: 'Live',
+      systemReady: 'Core services are stable and ready',
     },
     activity: {
       title: 'Recent activity',

@@ -6,6 +6,12 @@ import {
   ClipboardList,
   CreditCard,
   GraduationCap,
+  Activity,
+  CheckCircle2,
+  Clock3,
+  RefreshCw,
+  Server,
+  TriangleAlert,
   LineChart,
   Mail,
   ScrollText,
@@ -16,11 +22,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type {
-  AdminAuditLog,
-  AdminPayment,
-  AdminStats,
-} from '@kia-academy/shared';
+import type { AdminAuditLog, AdminPayment, AdminStats } from '@kia-academy/shared';
 import { useLanguage } from '@/context/LanguageProvider';
 import { api, ApiError } from '@/lib/api';
 import { AdminErrorState, AdminSkeleton } from '@/components/admin/AdminStates';
@@ -81,9 +83,11 @@ export default function AdminStatsPage() {
       can('tickets', 'view')
         ? api
             .adminListTickets()
-            .then((tickets) =>
-              tickets.filter((ticket) => ticket.status === 'OPEN' || ticket.status === 'IN_PROGRESS')
-                .length,
+            .then(
+              (tickets) =>
+                tickets.filter(
+                  (ticket) => ticket.status === 'OPEN' || ticket.status === 'IN_PROGRESS',
+                ).length,
             )
             .catch(() => 0)
         : Promise.resolve(0),
@@ -112,7 +116,9 @@ export default function AdminStatsPage() {
     const totals = days.map((day) => {
       const key = day.toISOString().slice(0, 10);
       const sum = (data?.payments ?? [])
-        .filter((payment) => payment.status === 'COMPLETED' && payment.createdAt.slice(0, 10) === key)
+        .filter(
+          (payment) => payment.status === 'COMPLETED' && payment.createdAt.slice(0, 10) === key,
+        )
         .reduce((acc, payment) => acc + payment.amountCents, 0);
       return { label: weekdayLabel(day, locale), value: sum };
     });
@@ -125,10 +131,16 @@ export default function AdminStatsPage() {
 
   const statusCounts = useMemo(() => {
     const payments = data?.payments ?? [];
+    const completed = payments.filter((payment) => payment.status === 'COMPLETED').length;
+    const pending = payments.filter((payment) => payment.status === 'PENDING').length;
+    const failed = payments.filter((payment) => payment.status === 'FAILED').length;
+    const total = completed + pending + failed;
     return {
-      completed: payments.filter((payment) => payment.status === 'COMPLETED').length,
-      pending: payments.filter((payment) => payment.status === 'PENDING').length,
-      failed: payments.filter((payment) => payment.status === 'FAILED').length,
+      completed,
+      pending,
+      failed,
+      total,
+      successRate: total ? Math.round((completed / total) * 100) : 0,
     };
   }, [data]);
 
@@ -227,9 +239,30 @@ export default function AdminStatsPage() {
   ].filter((kpi) => kpi.enabled);
 
   return (
-    <div className="admin-content">
+    <div className="admin-content admin-dashboard">
+      <section className="admin-dashboard-intro" aria-labelledby="admin-dashboard-heading">
+        <div>
+          <span className="admin-dashboard-eyebrow">
+            <Activity size={14} /> {t('admin.dashboard.eyebrow')}
+          </span>
+          <h2 id="admin-dashboard-heading">{t('admin.dashboard.title')}</h2>
+          <p>{t('admin.dashboard.sub')}</p>
+        </div>
+        <div className="admin-dashboard-intro-actions">
+          <span className="admin-dashboard-date">{format.date(new Date().toISOString())}</span>
+          <button
+            type="button"
+            className="admin-dashboard-refresh"
+            onClick={load}
+            aria-label={t('admin.dashboard.refresh')}
+          >
+            <RefreshCw size={16} /> <span>{t('admin.dashboard.refresh')}</span>
+          </button>
+        </div>
+      </section>
+
       {/* Executive KPI grid */}
-      <div className="admin-kpi-grid">
+      <div className="admin-kpi-grid admin-dashboard-kpis">
         {kpis.map((kpi) => {
           const Icon = kpi.icon;
           return (
@@ -255,9 +288,52 @@ export default function AdminStatsPage() {
         })}
       </div>
 
-      <div className="admin-grid admin-grid-2">
+      <div className="admin-dashboard-overview">
+        <article className="admin-card admin-dashboard-health">
+          <div className="admin-section-head">
+            <div>
+              <h2>{t('admin.dashboard.healthTitle')}</h2>
+              <p className="admin-sub" style={{ marginBottom: 0 }}>
+                {t('admin.dashboard.healthSub')}
+              </p>
+            </div>
+            <span className="admin-dashboard-live">
+              <span /> {t('admin.dashboard.live')}
+            </span>
+          </div>
+          <div className="admin-health-score">
+            <div
+              className="admin-health-ring"
+              style={{ '--health-value': `${statusCounts.successRate}%` } as React.CSSProperties}
+            >
+              <strong>{format.number(statusCounts.successRate)}٪</strong>
+              <small>{t('admin.dashboard.successRate')}</small>
+            </div>
+            <div className="admin-health-list">
+              <div>
+                <CheckCircle2 size={16} />
+                <span>{t('admin.analytics.completed')}</span>
+                <b>{format.number(statusCounts.completed)}</b>
+              </div>
+              <div>
+                <Clock3 size={16} />
+                <span>{t('admin.analytics.pending')}</span>
+                <b>{format.number(statusCounts.pending)}</b>
+              </div>
+              <div>
+                <TriangleAlert size={16} />
+                <span>{t('admin.analytics.failed')}</span>
+                <b>{format.number(statusCounts.failed)}</b>
+              </div>
+            </div>
+          </div>
+          <div className="admin-health-footer">
+            <Server size={14} /> {t('admin.dashboard.systemReady')}
+          </div>
+        </article>
+
         {/* Revenue trend (real completed payments) */}
-        <article className="admin-card">
+        <article className="admin-card admin-dashboard-revenue">
           <div className="admin-section-head">
             <div>
               <h2>{t('admin.analytics.revenueTrend')}</h2>
@@ -298,7 +374,7 @@ export default function AdminStatsPage() {
         </article>
 
         {/* Recent activity — real audit log */}
-        <article className="admin-card">
+        <article className="admin-card admin-dashboard-activity">
           <div className="admin-section-head">
             <div>
               <h2>{t('admin.activity.title')}</h2>
@@ -345,7 +421,7 @@ export default function AdminStatsPage() {
       </div>
 
       {/* Quick actions — permission-aware */}
-      <article className="admin-card">
+      <article className="admin-card admin-dashboard-quick">
         <div className="admin-section-head">
           <div>
             <h2>{t('admin.quick.title')}</h2>
