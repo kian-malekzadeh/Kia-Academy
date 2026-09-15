@@ -17,6 +17,8 @@ export interface AdminLesson {
   slug: string;
   title: string;
   content: string;
+  /** English lesson body used when the learner switches to English. */
+  contentEn?: string | null;
   videoUrl: string | null;
   durationMin: number;
   sortOrder: number;
@@ -28,6 +30,8 @@ export interface AdminCourse {
   slug: string;
   title: string;
   description: string;
+  /** English course description used when the learner switches to English. */
+  descriptionEn?: string | null;
   icon: string;
   trackKey: string | null;
   sortOrder: number;
@@ -174,6 +178,7 @@ export interface CreateCourseDto {
   slug: string;
   title: string;
   description: string;
+  descriptionEn?: string;
   icon?: string;
   trackKey?: string;
   sortOrder?: number;
@@ -189,6 +194,7 @@ export interface CreateLessonDto {
   slug: string;
   title: string;
   content: string;
+  contentEn?: string;
   durationMin?: number;
   sortOrder?: number;
   /** "Coming soon" — visible in listings but locked with no content access. */

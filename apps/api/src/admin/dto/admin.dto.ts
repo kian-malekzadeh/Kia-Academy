@@ -44,6 +44,10 @@ export class AdminCreateLessonDto {
   content!: string;
 
   @IsOptional()
+  @IsString()
+  contentEn?: string;
+
+  @IsOptional()
   @IsInt()
   @Min(1)
   durationMin?: number;
@@ -66,6 +70,10 @@ export class AdminCreateCourseDto {
 
   @IsString()
   description!: string;
+
+  @IsOptional()
+  @IsString()
+  descriptionEn?: string;
 
   @IsOptional()
   @IsString()
@@ -107,6 +115,10 @@ export class AdminUpdateCourseDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @IsOptional()
+  @IsString()
+  descriptionEn?: string;
 
   @IsOptional()
   @IsString()
@@ -257,6 +269,10 @@ export class AdminUpdateLessonDto {
   @IsOptional()
   @IsString()
   content?: string;
+
+  @IsOptional()
+  @IsString()
+  contentEn?: string;
 
   @IsOptional()
   @IsInt()

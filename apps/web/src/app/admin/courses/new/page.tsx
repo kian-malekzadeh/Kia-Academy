@@ -12,6 +12,7 @@ export default function AdminNewCoursePage() {
   const [slug, setSlug] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [descriptionEn, setDescriptionEn] = useState('');
   const [icon, setIcon] = useState('📘');
   const [trackKey, setTrackKey] = useState('');
   const [published, setPublished] = useState(true);
@@ -27,6 +28,7 @@ export default function AdminNewCoursePage() {
         slug,
         title,
         description,
+        descriptionEn: descriptionEn.trim() || undefined,
         icon,
         trackKey: trackKey || undefined,
         published,
@@ -61,16 +63,16 @@ export default function AdminNewCoursePage() {
           <span>{t('admin.courses.field.title')}</span>
           <input required value={title} onChange={(e) => setTitle(e.target.value)} />
         </label>
-        <label className="form-field">
-          <span>{t('admin.courses.field.description')}</span>
-          <textarea
-            className="admin-textarea"
-            required
-            rows={4}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-        </label>
+        <div className="admin-form-row admin-language-pair">
+          <label className="form-field">
+            <span>{t('admin.courses.field.description')}</span>
+            <textarea className="admin-textarea" required rows={5} value={description} onChange={(e) => setDescription(e.target.value)} />
+          </label>
+          <label className="form-field admin-language-field" dir="ltr">
+            <span>{t('admin.courses.field.descriptionEn')}</span>
+            <textarea className="admin-textarea" rows={5} value={descriptionEn} onChange={(e) => setDescriptionEn(e.target.value)} placeholder="Write the English course description…" />
+          </label>
+        </div>
         <div className="admin-form-row">
           <label className="form-field">
             <span>{t('admin.courses.field.icon')}</span>

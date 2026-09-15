@@ -169,6 +169,7 @@ export class AdminService {
         slug: dto.slug,
         title: dto.title,
         description: dto.description,
+        descriptionEn: dto.descriptionEn?.trim() || null,
         icon: dto.icon ?? 'book',
         trackKey: dto.trackKey ?? null,
         sortOrder: dto.sortOrder ?? 0,
@@ -180,6 +181,7 @@ export class AdminService {
                 slug: lesson.slug,
                 title: lesson.title,
                 content: lesson.content,
+                contentEn: lesson.contentEn?.trim() || null,
                 durationMin: lesson.durationMin ?? 10,
                 sortOrder: lesson.sortOrder ?? index + 1,
                 comingSoon: lesson.comingSoon ?? false,
@@ -267,6 +269,7 @@ export class AdminService {
         slug: dto.slug,
         title: dto.title,
         description: dto.description,
+        descriptionEn: dto.descriptionEn?.trim() || null,
         icon: dto.icon,
         trackKey: dto.trackKey,
         sortOrder: dto.sortOrder,
@@ -395,6 +398,7 @@ export class AdminService {
         slug: dto.slug,
         title: dto.title,
         content: dto.content,
+        contentEn: dto.contentEn?.trim() || null,
         durationMin: dto.durationMin,
         sortOrder: dto.sortOrder,
         comingSoon: dto.comingSoon,
@@ -1425,6 +1429,7 @@ export class AdminService {
     slug: string;
     title: string;
     content: string;
+    contentEn?: string | null;
     videoUrl?: string | null;
     durationMin: number;
     sortOrder: number;
@@ -1435,6 +1440,7 @@ export class AdminService {
       slug: lesson.slug,
       title: lesson.title,
       content: lesson.content,
+      contentEn: lesson.contentEn ?? null,
       videoUrl: lesson.videoUrl ?? null,
       durationMin: lesson.durationMin,
       sortOrder: lesson.sortOrder,
@@ -1447,6 +1453,7 @@ export class AdminService {
     slug: string;
     title: string;
     description: string;
+    descriptionEn?: string | null;
     icon: string;
     trackKey: string | null;
     sortOrder: number;
@@ -1457,6 +1464,7 @@ export class AdminService {
       slug: string;
       title: string;
       content: string;
+      contentEn?: string | null;
       videoUrl?: string | null;
       durationMin: number;
       sortOrder: number;
@@ -1467,6 +1475,7 @@ export class AdminService {
       slug: course.slug,
       title: course.title,
       description: course.description,
+      descriptionEn: course.descriptionEn ?? null,
       icon: course.icon,
       trackKey: course.trackKey,
       sortOrder: course.sortOrder,

@@ -7,11 +7,13 @@ import { type ChangeEvent, type FormEvent, useCallback, useEffect, useState } fr
 import type { AdminCourse, AdminLesson } from '@kia-academy/shared';
 import { AdminErrorState, AdminSkeleton } from '@/components/admin/AdminStates';
 import { api, ApiError } from '@/lib/api';
+import { useLanguage } from '@/context/LanguageProvider';
 
 type LessonDraft = {
   slug: string;
   title: string;
   content: string;
+  contentEn: string;
   durationMin: number;
   comingSoon: boolean;
 };
@@ -20,6 +22,7 @@ const blankLesson = (): LessonDraft => ({
   slug: '',
   title: '',
   content: '',
+  contentEn: '',
   durationMin: 10,
   comingSoon: false,
 });
@@ -31,10 +34,18 @@ function toMessage(error: unknown, fallback: string) {
 export default function AdminEditCoursePage() {
   const params = useParams<{ slug: string }>();
   const router = useRouter();
+  const { t } = useLanguage();
   const courseSlug = decodeURIComponent(params.slug);
   const [course, setCourse] = useState<AdminCourse | null>(null);
   const [draft, setDraft] = useState({
-    slug: '', title: '', description: '', icon: '', trackKey: '', published: true, comingSoon: false,
+    slug: '',
+    title: '',
+    description: '',
+    descriptionEn: '',
+    icon: '',
+    trackKey: '',
+    published: true,
+    comingSoon: false,
   });
   const [newLesson, setNewLesson] = useState<LessonDraft>(blankLesson);
   const [editingLesson, setEditingLesson] = useState<AdminLesson | null>(null);
@@ -51,6 +62,7 @@ export default function AdminEditCoursePage() {
       slug: value.slug,
       title: value.title,
       description: value.description,
+      descriptionEn: value.descriptionEn ?? '',
       icon: value.icon,
       trackKey: value.trackKey ?? '',
       published: value.published,
@@ -83,6 +95,7 @@ export default function AdminEditCoursePage() {
     try {
       const updated = await api.adminUpdateCourse(course.slug, {
         ...draft,
+        descriptionEn: draft.descriptionEn.trim() || undefined,
         trackKey: draft.trackKey.trim() || undefined,
       });
       hydrate(updated);
@@ -188,7 +201,10 @@ export default function AdminEditCoursePage() {
           <label className="form-field"><span>عنوان دوره</span><input required value={draft.title} onChange={(e) => setDraft((value) => ({ ...value, title: e.target.value }))} /></label>
           <label className="form-field"><span>نامک (Slug)</span><input required dir="ltr" value={draft.slug} onChange={(e) => setDraft((value) => ({ ...value, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') }))} /></label>
         </div>
-        <label className="form-field"><span>توضیحات</span><textarea className="admin-textarea" rows={5} required value={draft.description} onChange={(e) => setDraft((value) => ({ ...value, description: e.target.value }))} /></label>
+        <div className="admin-form-row admin-language-pair">
+          <label className="form-field"><span>{t('admin.courses.field.description')}</span><textarea className="admin-textarea" rows={5} required value={draft.description} onChange={(e) => setDraft((value) => ({ ...value, description: e.target.value }))} /></label>
+          <label className="form-field admin-language-field" dir="ltr"><span>{t('admin.courses.field.descriptionEn')}</span><textarea className="admin-textarea" rows={5} value={draft.descriptionEn} onChange={(e) => setDraft((value) => ({ ...value, descriptionEn: e.target.value }))} placeholder="Write the English course description…" /></label>
+        </div>
         <div className="admin-form-row">
           <label className="form-field"><span>آیکن</span><input value={draft.icon} onChange={(e) => setDraft((value) => ({ ...value, icon: e.target.value }))} /></label>
           <label className="form-field"><span>مسیر آموزشی</span><input value={draft.trackKey} onChange={(e) => setDraft((value) => ({ ...value, trackKey: e.target.value }))} /></label>
@@ -215,7 +231,7 @@ export default function AdminEditCoursePage() {
                   <td><span className={`admin-badge${lesson.comingSoon ? ' soon' : ' ok'}`}>{lesson.comingSoon ? 'به‌زودی' : 'فعال'}</span></td>
                   <td className="admin-actions">
                     <label className="admin-link admin-file-action"><Upload size={14} /> بارگذاری<input type="file" accept="video/*" onChange={(event) => void uploadVideo(lesson, event)} /></label>
-                    <button type="button" className="admin-link" onClick={() => { setEditingLesson(lesson); setLessonDraft({ slug: lesson.slug, title: lesson.title, content: lesson.content, durationMin: lesson.durationMin, comingSoon: lesson.comingSoon }); }}><Pencil size={14} /> ویرایش</button>
+                    <button type="button" className="admin-link" onClick={() => { setEditingLesson(lesson); setLessonDraft({ slug: lesson.slug, title: lesson.title, content: lesson.content, contentEn: lesson.contentEn ?? '', durationMin: lesson.durationMin, comingSoon: lesson.comingSoon }); }}><Pencil size={14} /> ویرایش</button>
                     <button type="button" className="admin-link" onClick={() => void updateLesson(lesson, { comingSoon: !lesson.comingSoon })}>{lesson.comingSoon ? 'فعال‌سازی' : 'به‌زودی'}</button>
                     <button type="button" className="admin-link danger" onClick={() => void deleteLesson(lesson)}><Trash2 size={14} /> حذف</button>
                   </td>
@@ -234,7 +250,10 @@ export default function AdminEditCoursePage() {
               <label className="form-field"><span>نامک</span><input required dir="ltr" value={lessonDraft.slug} onChange={(e) => setLessonDraft((value) => ({ ...value, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') }))} /></label>
               <label className="form-field"><span>مدت (دقیقه)</span><input required min="1" type="number" value={lessonDraft.durationMin} onChange={(e) => setLessonDraft((value) => ({ ...value, durationMin: Number(e.target.value) }))} /></label>
             </div>
-            <label className="form-field"><span>محتوا</span><textarea required className="admin-textarea" rows={6} value={lessonDraft.content} onChange={(e) => setLessonDraft((value) => ({ ...value, content: e.target.value }))} /></label>
+            <div className="admin-language-pair admin-form-row">
+              <label className="form-field"><span>{t('admin.courses.contentMarkdown')}</span><textarea required className="admin-textarea" rows={7} value={lessonDraft.content} onChange={(e) => setLessonDraft((value) => ({ ...value, content: e.target.value }))} /></label>
+              <label className="form-field admin-language-field" dir="ltr"><span>{t('admin.courses.contentMarkdownEn')}</span><textarea className="admin-textarea" rows={7} value={lessonDraft.contentEn} onChange={(e) => setLessonDraft((value) => ({ ...value, contentEn: e.target.value }))} placeholder="Write the English lesson content…" /></label>
+            </div>
             <div className="admin-form-actions"><label className="admin-checkbox"><input type="checkbox" checked={lessonDraft.comingSoon} onChange={(e) => setLessonDraft((value) => ({ ...value, comingSoon: e.target.checked }))} /> به‌زودی</label><button type="button" className="admin-link" onClick={() => setEditingLesson(null)}>انصراف</button><button type="submit" className="cta-primary"><Save size={16} /> ذخیرهٔ جلسه</button></div>
           </form>
         ) : null}
@@ -246,7 +265,10 @@ export default function AdminEditCoursePage() {
             <label className="form-field"><span>نامک</span><input required dir="ltr" value={newLesson.slug} onChange={(e) => setNewLesson((value) => ({ ...value, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') }))} /></label>
             <label className="form-field"><span>مدت (دقیقه)</span><input required min="1" type="number" value={newLesson.durationMin} onChange={(e) => setNewLesson((value) => ({ ...value, durationMin: Number(e.target.value) }))} /></label>
           </div>
-          <label className="form-field"><span>محتوا</span><textarea required className="admin-textarea" rows={4} value={newLesson.content} onChange={(e) => setNewLesson((value) => ({ ...value, content: e.target.value }))} /></label>
+          <div className="admin-language-pair admin-form-row">
+            <label className="form-field"><span>{t('admin.courses.contentMarkdown')}</span><textarea required className="admin-textarea" rows={6} value={newLesson.content} onChange={(e) => setNewLesson((value) => ({ ...value, content: e.target.value }))} /></label>
+            <label className="form-field admin-language-field" dir="ltr"><span>{t('admin.courses.contentMarkdownEn')}</span><textarea className="admin-textarea" rows={6} value={newLesson.contentEn} onChange={(e) => setNewLesson((value) => ({ ...value, contentEn: e.target.value }))} placeholder="Write the English lesson content…" /></label>
+          </div>
           <div className="admin-form-actions"><label className="admin-checkbox"><input type="checkbox" checked={newLesson.comingSoon} onChange={(e) => setNewLesson((value) => ({ ...value, comingSoon: e.target.checked }))} /> به‌زودی</label><button type="submit" className="cta-primary" disabled={addingLesson}>{addingLesson ? <Loader2 className="spin" size={16} /> : <Plus size={16} />} {addingLesson ? 'در حال افزودن…' : 'افزودن جلسه'}</button></div>
         </form>
       </section>

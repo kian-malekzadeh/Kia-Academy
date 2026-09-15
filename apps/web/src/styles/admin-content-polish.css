@@ -1,0 +1,107 @@
+/* Admin-v2 visual layer: keeps every existing control and route, but gives the
+   control room the darker glass, gold/periwinkle hierarchy from the reference. */
+.admin-shell--redesigned {
+  --admin-bg: #0b1020;
+  --admin-surface: rgba(25, 31, 54, 0.88);
+  --admin-surface-2: rgba(16, 23, 43, 0.94);
+  --admin-accent: #a8b8ff;
+  --admin-accent-soft: #d9deff;
+  --admin-line: rgba(177, 192, 236, 0.16);
+  --admin-value: #f6cf72;
+  background: radial-gradient(circle at 85% -10%, rgba(112, 128, 242, .28), transparent 32rem),
+    radial-gradient(circle at 8% 105%, rgba(39, 180, 132, .12), transparent 30rem), var(--admin-bg);
+}
+
+.admin-shell--redesigned .admin-card,
+.admin-shell--redesigned .admin-stat-card,
+.admin-shell--redesigned .admin-table-wrap {
+  border-color: rgba(177, 192, 236, .15);
+  background: linear-gradient(145deg, rgba(255,255,255,.07), rgba(255,255,255,.018)), var(--admin-surface);
+  box-shadow: 0 16px 40px rgba(0,0,0,.2);
+}
+
+.admin-shell--redesigned .admin-card:hover,
+.admin-shell--redesigned .admin-stat-card:hover {
+  border-color: rgba(168,184,255,.42);
+  box-shadow: 0 22px 48px rgba(0,0,0,.3), 0 0 24px rgba(119,139,238,.08);
+}
+
+.admin-shell--redesigned .admin-content {
+  max-width: 100rem;
+  padding: clamp(1.15rem, 3vw, 2.75rem);
+}
+
+.admin-shell--redesigned .admin-form,
+.admin-shell--redesigned .admin-inline-form {
+  border: 1px solid var(--admin-line);
+  border-radius: 1.15rem;
+  background: linear-gradient(145deg, rgba(255,255,255,.065), rgba(255,255,255,.018)), var(--admin-surface);
+  box-shadow: 0 16px 40px rgba(0,0,0,.18);
+  padding: clamp(1rem, 2vw, 1.5rem);
+}
+
+.admin-language-pair {
+  align-items: stretch;
+  gap: 1rem;
+}
+
+.admin-language-pair > .form-field {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.admin-language-field {
+  direction: ltr;
+  text-align: left;
+  border-inline-start: 1px solid rgba(168,184,255,.2);
+  padding-inline-start: 1rem;
+}
+
+.admin-language-field input,
+.admin-language-field textarea {
+  font-family: var(--font-fa), Tahoma, sans-serif;
+}
+
+.admin-language-field > span::before {
+  content: 'EN  ';
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.7rem;
+  height: 1.25rem;
+  margin-inline-end: .35rem;
+  border-radius: .35rem;
+  color: #0b1020;
+  background: var(--admin-accent);
+  font-size: .62rem;
+  font-weight: 900;
+}
+
+.admin-shell--redesigned :is(.form-field input, .form-field select, .form-field textarea, .admin-input, .admin-select, .admin-textarea) {
+  border-color: rgba(177,192,236,.2);
+  background: rgba(6, 11, 22, .48);
+  border-radius: .8rem;
+}
+
+.admin-shell--redesigned :is(.form-field input, .form-field select, .form-field textarea, .admin-input, .admin-select, .admin-textarea):focus {
+  border-color: var(--admin-accent);
+  box-shadow: 0 0 0 3px rgba(142,164,255,.18), 0 8px 24px rgba(0,0,0,.12);
+}
+
+.admin-shell--redesigned .admin-btn,
+.admin-shell--redesigned .cta-primary,
+.admin-shell--redesigned .btn-next {
+  background: linear-gradient(135deg, #a8b8ff, #6679df);
+  color: #0b1020;
+  border: 0;
+  border-radius: .8rem;
+  box-shadow: 0 10px 24px rgba(79,94,204,.25);
+}
+
+.admin-shell--redesigned .admin-table tbody tr:hover td {
+  background: rgba(154,172,244,.075);
+}
+
+@media (max-width: 720px) {
+  .admin-language-pair { display: grid; grid-template-columns: 1fr; }
+  .admin-language-field { border-inline-start: 0; border-top: 1px solid rgba(168,184,255,.2); padding-inline-start: 0; padding-top: 1rem; }
+}
