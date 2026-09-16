@@ -1582,6 +1582,7 @@
 
 .admin-icon-button:hover {
   color: var(--admin-text);
+}
 
 /* Header dropdown surface (notifications, profile). */
 .admin-header-dropdown {
@@ -1698,6 +1699,7 @@
   font-size: var(--fs-xs);
   font-weight: 700;
   color: var(--admin-accent-soft);
+}
 
 /* Profile menu */
 .admin-profile-button {
@@ -2030,6 +2032,7 @@
   text-transform: uppercase;
   color: var(--admin-muted);
   opacity: 0.8;
+}
 
 /* --- Skeletons / states ------------------------------------------------------ */
 
@@ -2297,8 +2300,6 @@ a.admin-stat-card:focus-visible .admin-stat-hint {
   }
 }
 
-}
-
 .admin-nav-badge {
   margin-inline-start: auto;
   min-width: 1.25rem;
@@ -2368,14 +2369,9 @@ a.admin-stat-card:focus-visible .admin-stat-hint {
   background: var(--admin-line);
   border: none;
 }
-  text-decoration: none;
-}
 
 .admin-dropdown-footer a:hover {
   text-decoration: underline;
-}
-  border-color: var(--admin-line-strong);
-  background: var(--admin-surface);
 }
 
 .admin-icon-button .admin-count-dot {
