@@ -14,16 +14,16 @@
   },
   "dependencies": {
     "@kia-academy/shared": "workspace:*",
-    "lucide-react": "^1.38.0",
-    "next": "^16.3.3",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "lucide-react": "^1.46.0",
+    "next": "^16.3.5",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.62.0",
-    "@types/node": "^26.4.0",
-    "@types/react": "^19.1.4",
-    "@types/react-dom": "^19.2.5",
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.5.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "typescript": "^5.8.3",
     "vitest": "^4.1.10"
   }
