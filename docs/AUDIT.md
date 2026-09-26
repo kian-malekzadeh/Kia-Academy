@@ -28,7 +28,7 @@ flood caps, bcrypt cost 12, throttled auth endpoints.
 | --- | --- | --- | --- |
 | PAY-1 | P0 | `completePayment` transition guard is `status: { not: 'COMPLETED' }` → `FAILED→COMPLETED` and `REFUNDED→COMPLETED` are accepted, violating the payment state machine | **fixed (Phase 3)** |
 | PAY-2 | P0 | No webhook event idempotency table — Stripe replays rely solely on payment status | **fixed (Phase 3)** |
-| PAY-3 | P1 | `PaymentStatus` enum lacks `CANCELLED`/`PROCESSING`; refund flows cannot be modelled properly | **enum fixed (Phase 3)**; refund admin endpoint still missing (P1 backlog) |
+| PAY-3 | P1 | `PaymentStatus` enum lacks `CANCELLED`/`PROCESSING`; refund flows cannot be modelled properly | **fixed** — enum added (Phase 3); admin refund implemented as `POST /admin/payments/:id/refund` (full or partial, required audit reason, wallet CREDIT ledger entry, order void, concurrency-safe status claim, all in one transaction) |
 | PAY-4 | P1 | Side effects (entitlements, invoice) run outside a DB transaction; email failure cannot rollback payment (good) but entitlement+order+invoice are not atomic | **fixed (Phase 3)** — completion claim + order PAID + invoice + entitlements now commit in one transaction; email/cart outside |
 | PAY-5 | P2 | Client verify callback and webhook both call complete — protected by single-winner claim (good) but no outbox | backlog |
 
@@ -37,7 +37,7 @@ flood caps, bcrypt cost 12, throttled auth endpoints.
 | --- | --- | --- | --- |
 | EXAM-1 | P0 | `submitExam` accepts submissions after `endsAt` (no expiration check on the submit path) | **fixed (Phase 5)** — server-authoritative: `endsAt < now` expires the attempt and rejects the submission; verified on both readiness and course exams |
 | EXAM-2 | P0 | No DB constraint enforcing one active attempt per user/exam — race can create parallel attempts | **fixed (Phase 5)** — partial unique indexes (`status IN (IN_PROGRESS, PROCESSING)`) + atomic IN_PROGRESS→PROCESSING claim; app handles the P2002 race by returning the existing attempt |
-| EXAM-3 | P1 | Exam questions stored as JSON strings without version pinning on the attempt | backlog |
+| EXAM-3 | P1 | Exam questions stored as JSON strings without version pinning on the attempt | **fixed** — both attempt models carry a `questionSnapshot` (migration `20260926120000`); course-exam and readiness attempts pin the full question set at start, serve/grade from the pinned snapshot, and only legacy rows (null snapshot) fall back to the live payload/bank; covered by unit specs on both services |
 | EXAM-4 | P1 | `CourseExamAttempt` allows unlimited attempts with no constraint | backlog (product policy) |
 
 ### Challenges
@@ -65,8 +65,8 @@ flood caps, bcrypt cost 12, throttled auth endpoints.
 ### Infrastructure / CI
 | ID | Severity | Finding | Status |
 | --- | --- | --- | --- |
-| CI-1 | P2 | No dependency/secret/security scan in CI; `pnpm audit` absent | backlog (Phase 15) |
-| CI-2 | P2 | Throttler is in-memory — fine single-instance; distributed limiting needs Redis at scale | backlog (Phase 8) |
+| CI-1 | P2 | No dependency/secret/security scan in CI; `pnpm audit` absent | **fixed** — `.github/workflows/security.yml`: `pnpm audit --prod --audit-level=high`, gitleaks full-history secret scan, CodeQL JS/TS analysis; all actions SHA-pinned |
+| CI-2 | P2 | Throttler is in-memory — fine single-instance; distributed limiting needs Redis at scale | **fixed** — `RateLimitStorageProvider` uses Redis when `REDIS_URL` is set, fail-open to in-memory on connection failure (spec-covered) |
 | CI-3 | P3 | Demo mode (`NEXT_PUBLIC_DEMO_MODE`) is explicit and cannot silently enable — acceptable | verified |
 
 ### Frontend

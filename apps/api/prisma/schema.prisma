@@ -296,6 +296,14 @@ model ExamAttempt {
   blueprintVersion String
   status           ExamAttemptStatus @default(IN_PROGRESS)
   questionIds      Json
+  /**
+   * EXAM-3: immutable snapshot of the full question content (incl. grading keys)
+   * taken when the attempt started. Grading always uses this snapshot so admin
+   * edits to the live question bank can never change the meaning of a question
+   * mid-attempt. Null on legacy attempts created before this column — those
+   * fall back to resolving the question IDs against the live bank.
+   */
+  questions        Json?
   answers          Json              @default("{}")
   startedAt        DateTime          @default(now())
   endsAt           DateTime
@@ -565,6 +573,14 @@ model CourseExamAttempt {
   userId      String
   user        User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
   status      CourseExamAttemptStatus @default(IN_PROGRESS)
+  /**
+   * EXAM-3: immutable snapshot of the exam's question payload (CourseExamQuestion[],
+   * grading keys included) taken when the attempt started, so admin edits to the
+   * exam (or its questions) cannot alter grading for a live attempt. Null on legacy
+   * attempts created before this column — those fall back to the current exam
+   * payload (previous behavior).
+   */
+  questions   Json?
   startedAt   DateTime                @default(now())
   submittedAt DateTime?
   answers     Json?

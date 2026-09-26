@@ -259,8 +259,6 @@ export class PaymentsService {
     // failure — or, with a dev/sandbox provider, a SUCCESS — for that payment.
     // Authenticated callbacks are ownership-checked above and verified
     // server-side through the provider, so they need no extra proof.
-    const statusUpper =
-      dto.status !== undefined && dto.status !== null ? dto.status.toUpperCase() : null;
     if (!userId && dto.authority !== payment.gatewayRef) {
       const redirectUrl = this.resolveUrl(
         paymentCfg.failureUrl,
