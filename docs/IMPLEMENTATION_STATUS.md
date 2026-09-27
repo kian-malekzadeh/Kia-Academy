@@ -21,7 +21,7 @@ now lives in [`AUDIT.md`](./AUDIT.md) and the go-live gates in
 | Seed data present (6 users · 4 courses · 266 lessons) | ✅ |
 | `pnpm typecheck` (shared + api + web) | ✅ |
 | `pnpm lint` (all workspaces) | ✅ |
-| `pnpm test` — 209/209 (shared 41, web 36, api 132) | ✅ |
+| `pnpm test` — 219/219 (shared 46, web 37, api 136) | ✅ |
 | `pnpm build` (production, 344 static pages) | ✅ |
 | Runtime smoke (`scripts/smoke.sh`, 28 probes incl. OTP + password + 2FA flows) | ✅ |
 
@@ -168,10 +168,33 @@ implemented — the backlog docs were stale; both docs refreshed. Lint warning
 (`statusUpper`) fixed; production build + runtime smoke re-run end-to-end
 (all probes PASS, API `/api/health` reports `database: up`).
 
+### ADM-1 — server-issued admin access (implemented this session)
+
+- **One resolver, shared everywhere:** `resolveStaffAdminAccess` in
+  `packages/shared` — per-user override → custom role matrix → site template.
+  The API's `buildAuthUser` (login/2FA/OTP/me payloads) and
+  `ModeratorAccessService` (guard enforcement) both call it, so issuance and
+  enforcement can never drift.
+- **Custom-role gap fixed:** a custom role without its own matrix previously
+  fell back to the client's default template instead of the site template —
+  now resolved server-side exactly like ADMIN.
+- **Client consumes, never derives:** `useAdminAccess` reads
+  `user.adminPanelAccess` verbatim (SUPER_ADMIN gets no field = full access);
+  removed `createDefaultSiteSettings` fallback and all local matrix logic.
+- **Custom roles can reach the panel:** staff gates unified on shared
+  `isStaffRole` (admin shell, login redirect, `resolvePostLoginPath`, TopBar
+  entry point, 2FA page).
+- **Users page seeds the editor from server values:** draft matrix = user
+  override → role matrix → template, mirroring backend order.
+- **Demo mode:** added a moderator persona (`moderator@kia.academy`) whose
+  matrix is explicitly issued by the demo API — the UI still derives nothing.
+- **Tests:** 5 shared resolver specs + 4 API issuance specs + 1 post-login
+  custom-role spec — suite now 136 api / 219 total (was 132/209).
+
 | ID | Sev | Item |
 | --- | --- | --- |
 | EXAM-4 | P1 | Unlimited course-exam attempts — needs a product policy (retake limit) |
-| ADM-1 | P1 | Permission matrix duplicated frontend/backend — frontend should only consume server-issued access |
+| ~~ADM-1~~ | P1 | **RESOLVED** — frontend consumes only server-issued access via unified `resolveStaffAdminAccess` (see AUDIT.md) |
 | CHAL-3 | P1 | `Challenge` model unused by the submission flow |
 | AUTH-6 | P2 | `register` returns `ConflictException('Email already registered')` → enumeration |
 | PAY-5 | P2 | Payment completion has a single-winner claim but no transactional outbox |

@@ -10,6 +10,7 @@ import { PasswordInput } from '@/components/auth/PasswordInput';
 import { useAuth } from '@/context/AuthProvider';
 import { useLanguage } from '@/context/LanguageProvider';
 import { resolvePostLoginPath } from '@/lib/postLoginPath';
+import { isStaffRole } from '@kia-academy/shared';
 import type { TwoFactorChallengeResponse } from '@kia-academy/shared';
 
 function LoginForm() {
@@ -32,7 +33,7 @@ function LoginForm() {
     if (loading) return;
     if (!isAuthenticated || !user?.profileComplete) return;
 
-    const isStaff = user.role === 'SUPER_ADMIN' || user.role === 'ADMIN';
+    const isStaff = isStaffRole(user.role);
     // /admin gate: keep the login form so a learner session can be replaced by admin creds.
     if (nextNeedsAdmin && !isStaff) {
       void logout();
