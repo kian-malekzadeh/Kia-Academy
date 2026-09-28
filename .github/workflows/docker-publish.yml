@@ -38,7 +38,8 @@ jobs:
       - name: Compute image tags
         id: tags
         run: |
-          REPO="ghcr.io/${GITHUB_REPOSITORY}"
+          # GHCR requires lowercase repository names; GITHUB_REPOSITORY may not be.
+          REPO="ghcr.io/$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')"
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             VERSION="${GITHUB_REF#refs/tags/v}"
           else
