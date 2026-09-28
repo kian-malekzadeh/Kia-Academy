@@ -30,13 +30,16 @@ describe('PaymentsService', () => {
     roadmap: {
       findUnique: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     entitlement: {
       upsert: jest.fn(),
       findMany: jest.fn().mockResolvedValue([]),
+      deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     enrollment: {
       upsert: jest.fn(),
+      deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
         user: {
       findUniqueOrThrow: jest.fn(),
@@ -828,6 +831,180 @@ describe('PaymentsService', () => {
         service.handleStripeWebhook(Buffer.from('{}'), 'sig-1'),
       ).resolves.toEqual({ received: true });
       expect(prisma.paymentWebhookEvent.create).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  /* -------------------------------------------------------------- refunds ---- */
+
+  describe('refundPayment', () => {
+    const baseCompletedPayment = {
+      id: 'pay-1',
+      userId: 'user-1',
+      productType: 'COURSE',
+      productRef: 'js-basics',
+      amountCents: 490_000,
+      currency: 'irr',
+      status: 'COMPLETED',
+      orderId: 'ord-1',
+      provider: 'dev',
+      gatewayRef: 'ok',
+      metadata: null,
+      user: { id: 'user-1', name: 'Alex', email: 'a@b.c', phone: null },
+      order: { id: 'ord-1', source: 'DIRECT', items: [] },
+    };
+
+    beforeEach(() => {
+      prisma.payment.updateMany.mockResolvedValue({ count: 1 });
+      prisma.payment.findUnique.mockResolvedValue(baseCompletedPayment);
+      prisma.course.findFirst.mockResolvedValue({ id: 'c-1', slug: 'js-basics' });
+      prisma.roadmap.updateMany.mockResolvedValue({ count: 1 });
+    });
+
+    it('performs a full refund: COMPLETED → REFUNDED with wallet credit + order update', async () => {
+      prisma.payment.findUnique
+        .mockResolvedValueOnce(baseCompletedPayment) // initial fetch
+        .mockResolvedValueOnce({ ...baseCompletedPayment, status: 'REFUNDED' }); // final re-read in tx
+
+      const result = await service.refundPayment('pay-1', undefined, 'duplicate charge');
+
+      expect(result.status).toBe('REFUNDED');
+      expect(prisma.payment.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'pay-1', status: 'COMPLETED' },
+          data: { status: 'REFUNDED' },
+        }),
+      );
+      expect(prisma.walletTransaction.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ type: 'CREDIT', amountCents: 490_000 }),
+        }),
+      );
+      expect(prisma.order.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'ord-1', status: 'PAID' },
+          data: { status: 'REFUNDED' },
+        }),
+      );
+    });
+
+    it('revokes the purchase-sourced entitlement + enrollment on a full COURSE refund', async () => {
+      await service.refundPayment('pay-1', undefined, 'duplicate charge');
+
+      expect(prisma.entitlement.deleteMany).toHaveBeenCalledWith({
+        where: expect.objectContaining({
+          userId: 'user-1',
+          resourceType: 'course',
+          resourceId: 'js-basics',
+        }),
+      });
+      expect(prisma.enrollment.deleteMany).toHaveBeenCalledWith({
+        where: { userId: 'user-1', courseId: 'c-1' },
+      });
+    });
+
+    it('un-enrolls the roadmap on a full ROADMAP_BUNDLE refund', async () => {
+      prisma.payment.findUnique
+        .mockResolvedValueOnce({
+          ...baseCompletedPayment,
+          productType: 'ROADMAP_BUNDLE',
+          productRef: 'rm-1',
+          orderId: null,
+          order: null,
+        })
+        .mockResolvedValueOnce({
+          ...baseCompletedPayment,
+          productType: 'ROADMAP_BUNDLE',
+          productRef: 'rm-1',
+          status: 'REFUNDED',
+          orderId: null,
+          order: null,
+        });
+
+      await service.refundPayment('pay-1', undefined, 'customer request');
+
+      expect(prisma.entitlement.deleteMany).toHaveBeenCalledWith({
+        where: expect.objectContaining({
+          userId: 'user-1',
+          resourceType: 'roadmap',
+          resourceId: 'rm-1',
+        }),
+      });
+      expect(prisma.roadmap.updateMany).toHaveBeenCalledWith({
+        where: { id: 'rm-1', paymentId: 'pay-1' },
+        data: { enrolled: false, paymentId: null },
+      });
+    });
+
+    it('keeps access on a PARTIAL refund (amount below total)', async () => {
+      prisma.payment.findUnique
+        .mockResolvedValueOnce(baseCompletedPayment)
+        .mockResolvedValueOnce({ ...baseCompletedPayment, status: 'PARTIALLY_REFUNDED' });
+
+      const result = await service.refundPayment('pay-1', 100_000, 'goodwill');
+
+      expect(result.status).toBe('PARTIALLY_REFUNDED');
+      expect(prisma.entitlement.deleteMany).not.toHaveBeenCalled();
+      expect(prisma.enrollment.deleteMany).not.toHaveBeenCalled();
+      expect(prisma.order.updateMany).not.toHaveBeenCalled();
+      expect(prisma.walletTransaction.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ type: 'CREDIT', amountCents: 100_000 }),
+        }),
+      );
+    });
+
+    it('rejects refunding a PENDING payment (state machine)', async () => {
+      prisma.payment.findUnique.mockResolvedValue({
+        ...baseCompletedPayment,
+        status: 'PENDING',
+      });
+
+      await expect(service.refundPayment('pay-1', undefined, 'nope')).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+      expect(prisma.payment.updateMany).not.toHaveBeenCalled();
+      expect(prisma.entitlement.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it('rejects a refund exceeding the payment total', async () => {
+      await expect(service.refundPayment('pay-1', 600_000, 'too much')).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+      expect(prisma.payment.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('rejects a zero/negative refund amount', async () => {
+      await expect(service.refundPayment('pay-1', 0, 'zero')).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+      expect(prisma.payment.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('rejects a concurrent double refund via the conditional claim (lost update)', async () => {
+      prisma.payment.updateMany.mockResolvedValue({ count: 0 }); // another admin won
+
+      await expect(service.refundPayment('pay-1', undefined, 'double')).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+      expect(prisma.entitlement.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it('preserves non-purchase grants (admin gift) when revoking', async () => {
+      // deleteMany where-clause must restrict to purchase sources.
+      await service.refundPayment('pay-1', undefined, 'duplicate charge');
+
+      const call = prisma.entitlement.deleteMany.mock.calls[0][0] as {
+        where: { source: { in: string[] } };
+      };
+      expect(call.where.source.in).toEqual(['PURCHASE']);
+    });
+
+    it('404s for an unknown payment id', async () => {
+      prisma.payment.findUnique.mockResolvedValue(null);
+
+      await expect(service.refundPayment('pay-404', undefined, 'x')).rejects.toMatchObject({
+        status: 404,
+      });
     });
   });
 });

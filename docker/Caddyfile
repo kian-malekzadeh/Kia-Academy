@@ -1,0 +1,34 @@
+# =============================================================================
+# Kia Academy — public edge (Caddy)
+#
+# Automatic HTTPS via Let's Encrypt for $SITE_DOMAIN; all HTTP traffic is
+# redirected to HTTPS. The Next.js web container already proxies /api/* to the
+# API container, so one domain serves the whole stack.
+#
+# ACME_EMAIL (optional) sets the Let's Encrypt account address. When empty,
+# Caddy registers with its default internal account — set a real address in
+# .env.docker so expiry/certificate notices reach a human.
+#
+# Both variables are injected by docker-compose.yml from .env.docker.
+# =============================================================================
+
+{
+	# Send ACME issues (rate limits, DNS failures) to a mailbox you read.
+	email {$ACME_EMAIL}
+}
+
+{$SITE_DOMAIN} {
+	# --- security headers (edge-level, complementing Next.js/Helmet) ----------
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	# --- uploads --------------------------------------------------------------
+	# Lesson media lives on the api container's volume (authenticated streaming
+	# is handled by the API itself) — forward everything as-is.
+	reverse_proxy web:3000
+}

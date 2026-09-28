@@ -53,6 +53,9 @@ apps/api/prisma/*.db-journal
 apps/api/uploads/
 uploads/
 
+# Production backups (scripts/backup.sh)
+backups/
+
 # Editors & OS
 .claude/
 .cursor/

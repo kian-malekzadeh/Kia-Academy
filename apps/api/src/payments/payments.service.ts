@@ -346,14 +346,15 @@ export class PaymentsService {
       throw new NotFoundException(`Payment ${paymentId} not found`);
     }
     return this.toResponse(payment);
-  }
-
-  /**
+  }  /**
    * Admin-initiated refund (full or partial). Validates the payment state machine,
-   * transitions the payment, and records a wallet CREDIT inside a single DB
-   * transaction so the ledger and balance stay consistent.
+   * transitions the payment, records a wallet CREDIT, and — on a full refund —
+   * revokes the entitlements the purchase granted, inside a single DB
+   * transaction so the ledger, balance and access all stay consistent.
+   * Gateway-side money movement (e.g. ZarinPal reversal) remains a manual
+   * operator step; see docs/DEPLOY_RUNBOOK.md.
    */
-    async refundPayment(
+  async refundPayment(
     paymentId: string,
     amountCents?: number,
     _reason?: string,
@@ -410,6 +411,12 @@ export class PaymentsService {
         },
         refundAmount,
       );
+
+      // Full refund: revoke exactly the access this payment granted (and only
+      // purchase-sourced grants — admin gifts / challenge rewards survive).
+      if (!isPartial) {
+        await this.revokeEntitlementsTx(tx, payment);
+      }
 
       // Update order status for full refunds.
       if (!isPartial && payment.orderId) {
@@ -600,6 +607,77 @@ export class PaymentsService {
         balanceCents: { decrement: payment.amountCents },
       },
     });
+  }
+
+  /**
+   * Revoke the access a payment granted when its money is fully refunded.
+   * Deletes purchase-sourced entitlements + course enrollments derived from
+   * this payment's product; wallet balances and the ledger row stay (money
+   * returned to the wallet is the learner's). Grants that did not originate
+   * from this purchase (admin grants, challenge rewards) are left intact.
+   */
+  private async revokeEntitlementsTx(
+    tx: Prisma.TransactionClient,
+    payment: {
+      id: string;
+      userId: string;
+      productType: 'READINESS_TEST' | 'ROADMAP_BUNDLE' | 'COURSE';
+      productRef: string | null;
+    },
+  ): Promise<void> {
+    switch (payment.productType) {
+      case 'READINESS_TEST':
+        await tx.entitlement.deleteMany({
+          where: {
+            userId: payment.userId,
+            resourceType: 'readiness',
+            resourceId: 'test',
+            source: { in: ['PURCHASE'] },
+          },
+        });
+        break;
+
+      case 'ROADMAP_BUNDLE': {
+        await tx.entitlement.deleteMany({
+          where: {
+            userId: payment.userId,
+            resourceType: 'roadmap',
+            resourceId: payment.productRef ?? '__none__',
+            source: { in: ['PURCHASE', 'BUNDLE'] },
+          },
+        });
+        if (payment.productRef) {
+          await tx.roadmap.updateMany({
+            where: { id: payment.productRef, paymentId: payment.id },
+            data: { enrolled: false, paymentId: null },
+          });
+        }
+        break;
+      }
+
+      case 'COURSE': {
+        for (const slug of this.parseCourseRefs(payment.productRef)) {
+          const course = await tx.course.findFirst({
+            where: { OR: [{ slug }, { id: slug }] },
+          });
+          const courseSlug = course?.slug ?? slug;
+          await tx.entitlement.deleteMany({
+            where: {
+              userId: payment.userId,
+              resourceType: 'course',
+              resourceId: courseSlug,
+              source: { in: ['PURCHASE'] },
+            },
+          });
+          if (course) {
+            await tx.enrollment.deleteMany({
+              where: { userId: payment.userId, courseId: course.id },
+            });
+          }
+        }
+        break;
+      }
+    }
   }
 
   /**

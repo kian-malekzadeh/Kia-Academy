@@ -1,10 +1,23 @@
 name: kia-academy
 
 # ----------------------------------------------------------------------------
-# Default      → database only            : docker compose up -d     (`pnpm docker:db`)
-# Full stack   → postgres + api + web     : docker compose --profile full up -d
-# Docs         → README.md «Run modes» C
+# Default        → database only              : docker compose up -d     (`pnpm docker:db`)
+# Full stack     → postgres + api + web+caddy : docker compose --profile full up -d
+# With monitoring→ full stack + uptime-kuma   : docker compose --profile monitor up -d
+# Docs           → README.md «Run modes» C + docs/DEPLOY_RUNBOOK.md
+#
+# Edge topology (full stack): Caddy terminates TLS (automatic Let's Encrypt) on
+# 80/443 and proxies to the Next.js web container, which in turn proxies /api/*
+# to the api container. api/web bind to loopback on the host only — nothing but
+# Caddy is reachable from the outside.
 # ----------------------------------------------------------------------------
+
+# Shared log rotation so container JSON logs cannot fill the host disk.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
 
 x-api-env: &api-env
   DATABASE_URL: ${DATABASE_URL:-postgresql://kia_academy:kia_academy@postgres:5432/kia_academy?schema=public}
@@ -17,6 +30,10 @@ x-api-env: &api-env
   JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
   JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?Set JWT_REFRESH_SECRET in .env.docker (min 32 chars)}
   JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+  # First super-admin bootstrap (prod-safe: only creates/promotes when the DB
+  # has zero SUPER_ADMINs; remove both vars after first login).
+  BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
+  BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
   SEED_DATABASE: ${SEED_DATABASE:-false}
   # Explicitly opt-in only; never defaults to exposing OTP codes.
   OTP_DEV_EXPOSE: ${OTP_DEV_EXPOSE:-false}
@@ -41,9 +58,10 @@ services:
     image: postgres:16-alpine
     container_name: kia-postgres
     restart: unless-stopped
+    logging: *default-logging
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-kia_academy}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kia_academy}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.docker}
       POSTGRES_DB: ${POSTGRES_DB:-kia_academy}
     # Loopback binding by default — never expose Postgres on public interfaces.
     ports:
@@ -71,6 +89,7 @@ services:
     profiles: ["full-redis"]
     container_name: kia-redis
     restart: unless-stopped
+    logging: *default-logging
     command: ["redis-server", "--appendonly", "yes", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
     ports:
       - "${REDIS_PORT:-127.0.0.1:6379}:6379"
@@ -94,6 +113,7 @@ services:
     image: kia-academy-api:local
     container_name: kia-api
     restart: unless-stopped
+    logging: *default-logging
     init: true                       # proper PID-1 signal handling & zombie reaping
     security_opt:
       - no-new-privileges:true       # hardening: process tree cannot escalate
@@ -109,8 +129,10 @@ services:
         required: false
     environment:
       <<: *api-env
+    # Host binding is loopback-only: in the full stack Caddy is the public edge;
+    # reach the API directly only from the host itself (smoke tests, psql…).
     ports:
-      - "${API_PORT:-3001}:3001"
+      - "${API_PORT:-127.0.0.1:3001}:3001"
     volumes:
       - api-uploads:/app/apps/api/uploads
     depends_on:
@@ -132,6 +154,7 @@ services:
     image: kia-academy-web:local
     container_name: kia-web
     restart: unless-stopped
+    logging: *default-logging
     init: true
     security_opt:
       - no-new-privileges:true
@@ -146,14 +169,64 @@ services:
       PORT: ${WEB_PORT:-3000}
       HOSTNAME: 0.0.0.0
       API_PROXY_TARGET: ${API_PROXY_TARGET:-http://api:3001}
+    # Loopback-only on the host; Caddy (or any external proxy) fronts it.
     ports:
-      - "${WEB_PORT:-3000}:3000"
+      - "${WEB_PORT:-127.0.0.1:3000}:3000"
     depends_on:
       api:
         condition: service_healthy
     stop_grace_period: 20s
 
+  # ------------------------------------------------------------- caddy ------
+  # Public edge: automatic HTTPS (Let's Encrypt) + HTTP→HTTPS redirect.
+  # SITE_DOMAIN in .env.docker (e.g. kia.example.com) — one domain serves both
+  # web and API because Next.js already proxies /api/* to the api container.
+  caddy:
+    profiles: ["full"]
+    image: caddy:2-alpine
+    container_name: kia-caddy
+    restart: unless-stopped
+    logging: *default-logging
+    cap_add:
+      - NET_BIND_SERVICE   # bind 80/443 as the unprivileged caddy user
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN:?Set SITE_DOMAIN in .env.docker (e.g. kia.example.com)}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"      # HTTP/3
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+    stop_grace_period: 20s
+
+  # -------------------------------------------------------- uptime-kuma -----
+  # Optional (profile "monitor"): self-hosted uptime monitor + alerting.
+  # UI on http://127.0.0.1:3101 — protect it (firewall/SSH tunnel/reverse proxy auth).
+  # Add monitors for https://$SITE_DOMAIN/ and https://$SITE_DOMAIN/api/health.
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    profiles: ["monitor"]
+    container_name: kia-kuma
+    restart: unless-stopped
+    logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - kuma-data:/app/data
+    ports:
+      - "${KUMA_PORT:-127.0.0.1:3101}:3001"
+
 volumes:
   pgdata:
   api-uploads:
   redisdata:
+  caddy_data:
+  caddy_config:
+  kuma-data:
