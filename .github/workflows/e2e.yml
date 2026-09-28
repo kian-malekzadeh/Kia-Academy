@@ -45,7 +45,9 @@ jobs:
       OTP_DEV_EXPOSE: "true"
       JWT_SECRET: e2e-ci-only-secret-value-0123456789abcdef
       JWT_REFRESH_SECRET: e2e-ci-only-refresh-secret-0123456789abcdef
-      PORT: "3001"
+      # NOTE: no PORT here — the API defaults to 3001 and the web server must
+      # stay on 3000 (Playwright polls :3000). A global PORT made `next start`
+      # bind 3001 and the webServer probe time out.
 
     steps:
       # v4.3.1
