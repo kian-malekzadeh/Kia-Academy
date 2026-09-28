@@ -68,6 +68,9 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
     NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL \
     API_PROXY_TARGET=$API_PROXY_TARGET \
     DOCKER_BUILD=true
+# Webpack builds of this app can exceed the default V8 heap on CI runners
+# (7 GB RAM) — raise it explicitly and let Node fall back if unavailable.
+ENV NODE_OPTIONS=--max-old-space-size=6144
 RUN pnpm --filter @kia-academy/web build
 
 # -------------------------------------------------------- api (runtime) ------
