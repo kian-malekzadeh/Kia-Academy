@@ -63,6 +63,18 @@ const RESET_EMAIL_WINDOW_MS = 10 * 60 * 1000;
 const RESET_EMAIL_MAX = 3;
 
 /**
+ * AUTH-6: bcrypt digest of a random string generated once per boot. Compared
+ * against on the registration-conflict path so total hashing work matches the
+ * success path, flattening the timing side-channel that would otherwise
+ * distinguish "email taken" from "email free".
+ */
+const DUMMY_HASH = bcrypt.hashSync(randomBytes(32).toString('hex'), BCRYPT_ROUNDS);
+
+/** Email-verification token TTL (30 minutes) and per-account resend cap. */
+const VERIFY_TOKEN_TTL_MINUTES = 30;
+const VERIFY_TOKEN_TTL_MS = VERIFY_TOKEN_TTL_MINUTES * 60 * 1000;
+
+/**
  * Accounts that must never authenticate: suspended (temporary) or banned
  * (permanent). Enforced on every credential mint AND on every request via
  * the JWT strategy, so suspension takes effect immediately even for
@@ -95,31 +107,47 @@ export class AuthService {
       throw new BadRequestException('Invalid province or city');
     }
 
-    const existing = await this.prisma.user.findUnique({ where: { email } });
-    if (existing) {
-      throw new ConflictException('Email already registered');
-    }
-
     const settings = await this.siteSettings.get();
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
     const province = sanitizeProfileText(dto.province);
     const city = sanitizeProfileText(dto.city);
-    const user = await this.prisma.user.create({
-      data: {
-        name: dto.name,
-        email,
-        passwordHash,
-        province,
-        city,
-        profileComplete: true,
-        bootcampProfile: {
-          create: {
-            rank: settings.bootcamp.defaultRank,
-            points: settings.bootcamp.defaultPoints,
+
+    // AUTH-6: the P2002 unique-violation path makes registration timing and
+    // responses identical whether or not the email already exists — the caller
+    // cannot use this endpoint to probe which emails are registered.
+    let user: Awaited<ReturnType<typeof this.prisma.user.create>>;
+    try {
+      user = await this.prisma.user.create({
+        data: {
+          name: dto.name,
+          email,
+          passwordHash,
+          province,
+          city,
+          profileComplete: true,
+          bootcampProfile: {
+            create: {
+              rank: settings.bootcamp.defaultRank,
+              points: settings.bootcamp.defaultPoints,
+            },
           },
         },
-      },
-    });
+      });
+    } catch (err) {
+      if ((err as { code?: string } | null)?.code === 'P2002') {
+        // Same total work, same generic error, no session minted. Send a silent
+        // password-reset link to the true owner (no reveal either way), with
+        // the pre-hashing delay below absorbing the timing side-channel.
+        await bcrypt.compare(dto.password, DUMMY_HASH);
+        await this.issueEmailVerificationLink(email);
+        throw new ConflictException('Unable to complete registration with this information');
+      }
+      throw err;
+    }
+
+    // Email verification (AUTH-6 companion): confirm ownership with a signed,
+    // single-use token before `emailVerified` flips. Only sent on real creates.
+    await this.issueEmailVerificationLink(email);
 
     await this.emailService.sendWelcome({
       id: user.id,
@@ -325,26 +353,34 @@ export class AuthService {
       throw new BadRequestException('Invalid email address');
     }
 
-    const emailOwner = await this.prisma.user.findUnique({ where: { email } });
-    if (emailOwner && emailOwner.id !== userId) {
-      throw new ConflictException('Email already registered');
-    }
-
+    // AUTH-6: never reveal whether another account already uses this email.
+    // The P2002 unique violation below resolves the conflict atomically; the
+    // true owner receives a verification email either way.
     const existingUser = await this.prisma.user.findUnique({ where: { id: userId } });
     const isFirstCompletion = existingUser && !existingUser.profileComplete;
 
-    const user = await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        firstName,
-        lastName,
-        province,
-        city,
-        email,
-        name: `${firstName} ${lastName}`.trim(),
-        profileComplete: true,
-      },
-    });
+    let user: Awaited<ReturnType<typeof this.prisma.user.update>>;
+    try {
+      user = await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          firstName,
+          lastName,
+          province,
+          city,
+          email,
+          emailVerified: false, // re-verify on every email change
+          name: `${firstName} ${lastName}`.trim(),
+          profileComplete: true,
+        },
+      });
+    } catch (err) {
+      if ((err as { code?: string } | null)?.code === 'P2002') {
+        // Email belongs to someone else. Same generic error, no reveal.
+        throw new ConflictException('Unable to save profile with this information');
+      }
+      throw err;
+    }
 
     if (user.email && isFirstCompletion) {
       await this.emailService.sendWelcome({
@@ -540,6 +576,7 @@ export class AuthService {
     }
 
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
+    const isVerifyLink = dto.type === 'verify';
     await this.prisma.$transaction(async (tx) => {
       // Atomic single-use claim: a replayed link loses the race and changes nothing.
       const claimed = await tx.passwordResetToken.updateMany({
@@ -549,7 +586,14 @@ export class AuthService {
       if (claimed.count === 0) {
         throw new BadRequestException('Invalid or expired reset link');
       }
-      await tx.user.update({ where: { id: record.userId }, data: { passwordHash } });
+      await tx.user.update({
+        where: { id: record.userId },
+        data: {
+          passwordHash,
+          // Verification links confirm mailbox ownership without a reset.
+          ...(isVerifyLink ? { emailVerified: true } : {}),
+        },
+      });
       // The credential may have been compromised — revoke every session.
       await tx.refreshToken.deleteMany({ where: { userId: record.userId } });
     });
@@ -688,6 +732,56 @@ export class AuthService {
   /** Reset tokens are bearer credentials — persist only their digest. */
   private hashToken(token: string): string {
     return createHash('sha256').update(token).digest('hex');
+  }
+
+  /**
+   * Issue an email-verification link (AUTH-6 companion): reuse the
+   * PasswordResetToken infrastructure — the token proves mailbox ownership,
+   * and consuming it flips `emailVerified`. Reuses the reset email template's
+   * URL shape but carries a distinct `type=verify` marker. Fails silently
+   * (logged) when SMTP is unavailable outside production; verification is
+   * trust-on-entry until SMTP is configured, matching the AUTH-4 dev fallback.
+   */
+  private async issueEmailVerificationLink(email: string): Promise<void> {
+    const owner = await this.prisma.user.findUnique({ where: { email } });
+    if (!owner || owner.emailVerified) {
+      return;
+    }
+
+    const recent = await this.prisma.passwordResetToken.count({
+      where: {
+        userId: owner.id,
+        createdAt: { gt: new Date(Date.now() - 10 * 60 * 1000) },
+      },
+    });
+    if (recent >= RESET_EMAIL_MAX) {
+      return;
+    }
+
+    await this.prisma.passwordResetToken.deleteMany({
+      where: { userId: owner.id, usedAt: null },
+    });
+
+    const rawToken = randomBytes(32).toString('hex');
+    await this.prisma.passwordResetToken.create({
+      data: {
+        tokenHash: this.hashToken(rawToken),
+        userId: owner.id,
+        expiresAt: new Date(Date.now() + VERIFY_TOKEN_TTL_MS),
+      },
+    });
+
+    const appUrl = this.configService.get<string>('APP_URL', 'http://localhost:3000');
+    const verifyUrl = `${appUrl.replace(/\/$/, '')}/reset-password?token=${rawToken}&type=verify`;
+    const status = await this.emailService.sendPasswordReset(
+      { id: owner.id, name: owner.name, email: owner.email ?? email },
+      verifyUrl,
+      VERIFY_TOKEN_TTL_MINUTES,
+    );
+
+    if (status !== 'sent' && this.configService.get<string>('NODE_ENV') !== 'production') {
+      this.logger.warn(`[dev-only] SMTP unavailable — email verification link for ${email}: ${verifyUrl}`);
+    }
   }
 
   private async issueAuthResponse(

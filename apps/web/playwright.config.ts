@@ -30,10 +30,18 @@ export default defineConfig({
       },
     },
   ],
-  webServer: {
-    command: 'pnpm dev',
-    url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
-    timeout: 180_000,
-  },
+  webServer: process.env.E2E_PRODUCTION
+    ? // CI: run the built production servers (api + web) exactly as deployed.
+      {
+        command: 'pnpm start',
+        url: 'http://localhost:3000',
+        reuseExistingServer: false,
+        timeout: 180_000,
+      }
+    : {
+        command: 'pnpm dev',
+        url: 'http://localhost:3000',
+        reuseExistingServer: !process.env.CI,
+        timeout: 180_000,
+      },
 });

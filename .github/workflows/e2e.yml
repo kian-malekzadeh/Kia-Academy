@@ -1,0 +1,97 @@
+name: E2E
+
+# Playwright end-to-end flows against a production build with a real Postgres.
+# Runs on every push/PR to main alongside CI (unit tests).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# CI-1 (supply chain): SHA-pinned actions, default-deny permissions.
+permissions: {}
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  playwright:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      contents: read
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: kia_academy
+          POSTGRES_PASSWORD: kia_academy
+          POSTGRES_DB: kia_academy
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U kia_academy"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://kia_academy:kia_academy@localhost:5432/kia_academy?schema=public
+      # OTP codes are exposed only in non-production builds (Joi-enforced).
+      OTP_DEV_EXPOSE: "true"
+      JWT_SECRET: e2e-ci-only-secret-value-0123456789abcdef
+      JWT_REFRESH_SECRET: e2e-ci-only-refresh-secret-0123456789abcdef
+      PORT: "3001"
+
+    steps:
+      # v4.3.1
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      # v4.1.0
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa
+        with:
+          version: 11.19.0
+
+      # v4.2.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Generate Prisma client
+        run: pnpm db:generate
+
+      - name: Build shared package
+        run: pnpm --filter @kia-academy/shared build
+
+      - name: Apply database migrations
+        run: pnpm db:migrate:deploy
+
+      - name: Seed database
+        run: pnpm db:seed
+
+      - name: Install Playwright browsers
+        run: pnpm --filter @kia-academy/web exec playwright install --with-deps chromium
+
+      - name: Build production apps
+        run: pnpm build
+
+      - name: Run e2e tests (production servers)
+        env:
+          E2E_PRODUCTION: "1"
+        run: pnpm test:e2e
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7

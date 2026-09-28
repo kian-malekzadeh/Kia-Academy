@@ -193,20 +193,49 @@ implemented — the backlog docs were stale; both docs refreshed. Lint warning
 
 | ID | Sev | Item |
 | --- | --- | --- |
-| EXAM-4 | P1 | Unlimited course-exam attempts — needs a product policy (retake limit) |
+| ~~EXAM-4~~ | P1 | **RESOLVED** — `CourseExam.maxAttempts` (default 3, admin-tunable 1–10); only SUBMITTED attempts consume budget; EXPIRED terminal |
 | ~~ADM-1~~ | P1 | **RESOLVED** — frontend consumes only server-issued access via unified `resolveStaffAdminAccess` (see AUDIT.md) |
 | CHAL-3 | P1 | `Challenge` model unused by the submission flow |
-| AUTH-6 | P2 | `register` returns `ConflictException('Email already registered')` → enumeration |
+| ~~AUTH-6~~ | P2 | **RESOLVED** — enumeration-safe register (P2002 path, dummy-hash timing equalizer, generic 409) + email verification via `type=verify` reset links |
 | PAY-5 | P2 | Payment completion has a single-winner claim but no transactional outbox |
-| ADM-3 | P2 | AdminAuditLog coverage of all sensitive actions incomplete |
+| ~~ADM-3~~ | P2 | **RESOLVED** — full audit coverage; last gap (`contact.read`) closed |
+| ~~FE-2~~ | P2 | **RESOLVED** — sanitize audit complete; escape-first renderer pinned by tag-vocabulary + injection tests |
 | FE-1 | P2 | Access token in `sessionStorage` — move to HttpOnly cookie pattern long-term |
 | DB-1 ledger | P2 | Wallet ledger table exists but balance has no enforced invariant/consumption model |
 | CHAL-2 sandbox | P2 | Scoring is heuristic/static (no server-side execution) — sandbox model when dynamic scoring is needed |
 
-Closed this session: EXAM-3 (question snapshots), PAY-3b (admin refund — was
-implemented, docs stale), CI-1 (security.yml — verified), CI-2 (Redis throttler
-storage — verified). ADM-2 (IDOR sweep) and DB-2/3/4 were closed in earlier
-sessions.
+Closed this session: EXAM-4 (attempt caps), AUTH-6 (enumeration-safe register
++ email verification), ADM-3 (contact.read audit gap), FE-2 (sanitize audit
+pinned by tests). Previously closed: EXAM-3 (question snapshots), PAY-3b
+(admin refund), CI-1 (security.yml), CI-2 (Redis throttler storage), ADM-2
+(IDOR sweep), DB-2/3/4.
+
+### EXAM-4 / AUTH-6 / ADM-3 / FE-2 — backlog closure (implemented this session)
+
+- **EXAM-4:** `CourseExam.maxAttempts` (migration `20260928100000`, default 3,
+  DTO clamp 1–10, exposed on AdminCourseExam/CourseExamSummary). `startAttempt`
+  counts only SUBMITTED attempts against the cap (403 `Attempt limit reached
+  (n/m)` when exhausted); EXPIRED attempts became terminal — the previous
+  resume-expired quirk let a learner restart an expired try forever; 5 specs.
+- **AUTH-6:** `register` now catches the P2002 unique violation and returns a
+  generic 409 — no `Email already registered` message, no session. A module-
+  level `DUMMY_HASH` (bcrypt 12) absorbs the timing side-channel; a silent
+  verification link is emailed to the true owner. Email verification reuses
+  the AUTH-4 token infra (`ResetPasswordDto.type=verify` flips
+  `emailVerified`), `completeProfile` email changes reset `emailVerified` and
+  resolve conflicts via P2002 instead of a revealing findUnique; 8 specs.
+- **ADM-3:** coverage sweep of all 33 admin mutation routes vs 31 audit
+  entries — the single gap (`contact.read`) now records actor/target/
+  before/after with request meta.
+- **FE-2:** the two `dangerouslySetInnerHTML` sinks audited (layout JSON-LD
+  already `\u003c`-neutralizes; LessonPlayer renders `markdownToHtml`). New
+  test suite pins the emitted tag vocabulary (14 tags) and asserts no
+  script/iframe/object/embed/style/onerror injection survives any block type,
+  no `javascript:`/`data:` hrefs, and no attribute breakout.
+- **CI additions:** `e2e.yml` (Playwright against production build + real
+  Postgres, report artifact on failure, `E2E_PRODUCTION` webServer mode) and
+  `docker-publish.yml` (GHCR publish of api/web images on main pushes and
+  v* tags, SHA-pinned actions, GHA build cache).
 
 ## Environment notes (dev)
 

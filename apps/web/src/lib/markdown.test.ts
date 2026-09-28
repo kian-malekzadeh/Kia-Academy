@@ -61,4 +61,77 @@ describe('markdownToHtml', () => {
     expect(html).not.toContain('<script>');
     expect(html).toContain('&lt;script&gt;');
   });
+
+  /* FE-2 sanitize audit: LessonPlayer renders markdownToHtml output via
+   * dangerouslySetInnerHTML. This suite pins the full attack surface. */
+  describe('FE-2 sanitize guarantees for dangerouslySetInnerHTML sinks', () => {
+    it('neutralizes script/iframe/object/embed/style injection in every block type', () => {
+      const attacks = [
+        '<script>alert(1)</script>',
+        '<iframe src="https://evil.example"></iframe>',
+        '<object data="x"></object>',
+        '<embed src="x">',
+        '<style>body{display:none}</style>',
+        '<img src=x onerror=alert(1)>',
+      ];
+      for (const attack of attacks) {
+        for (const wrap of [
+          (s: string) => s,
+          (s: string) => `# ${s}`,
+          (s: string) => `- ${s}`,
+          (s: string) => `1. ${s}`,
+          (s: string) => `> ${s}`,
+          (s: string) => `\`\`\`\n${s}\n\`\`\``,
+        ]) {
+          const html = markdownToHtml(wrap(attack));
+          // Raw dangerous tags must never be emitted. Escaped *text* that
+          // merely mentions "onerror" is inert and explicitly allowed.
+          expect(html).not.toContain('<script');
+          expect(html).not.toContain('<iframe');
+          expect(html).not.toContain('<object');
+          expect(html).not.toContain('<embed');
+          expect(html).not.toContain('<style');
+          expect(html).not.toContain('<img');
+        }
+      }
+    });
+
+    it('never renders javascript: / data: URLs as links (http(s) and site-relative only)', () => {
+      const html = markdownToHtml('[click](javascript:alert(1)) [x](data:text/html;base64,PHNjcmlwdD4) [y](JAVASCRIPT:x)');
+      // The URL filter means these are not links at all — no anchor, no href.
+      expect(html).not.toContain('<a');
+      expect(html).not.toMatch(/href=/i);
+    });
+
+    it('cannot smuggle a link href through escaped angle brackets', () => {
+      const html = markdownToHtml('[a](https://ok.example/><script>alert(1)</script>)');
+      expect(html).not.toContain('<script');
+    });
+
+    it('escapes quotes so attributes cannot break out of href', () => {
+      // The href regex excludes whitespace, so a quoted payload stays inside the
+      // href value — but a raw quote in the URL must still be escaped upstream.
+      const html = markdownToHtml('[a](https://x.example/"onmouseover=alert(1)') as string;
+      // The unbalanced bracket means this is NOT rendered as a link at all —
+      // it stays escaped paragraph text.
+      expect(html).not.toContain('onmouseover="');
+    });
+
+    it('emits only the known tag vocabulary', () => {
+      const sample = [
+        '# H1', '## H2', '### H3', '', 'para **bold** *it* `code`',
+        '- bullet', '1. ordered', '> quote', '', '```js', 'code();', '```',
+        '[link](https://x.example)', '/relative',
+      ].join('\n');
+      const html = markdownToHtml(sample);
+      const tags = [...html.matchAll(/<\/?([a-z][a-z0-9]*)/g)].map((m) => m[1]);
+      const allowed = new Set([
+        'div', 'h1', 'h2', 'h3', 'p', 'ul', 'ol', 'li', 'blockquote',
+        'pre', 'code', 'strong', 'em', 'a',
+      ]);
+      for (const tag of tags) {
+        expect(allowed.has(tag)).toBe(true);
+      }
+    });
+  });
 });

@@ -69,6 +69,13 @@ export class AdminCreateCourseExamDto {
   @Max(240)
   durationMin?: number;
 
+  /** EXAM-4: how many graded attempts a learner may take (1–10). */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(10)
+  maxAttempts?: number;
+
   @IsOptional()
   @IsBoolean()
   published?: boolean;
@@ -112,6 +119,13 @@ export class AdminUpdateCourseExamDto {
   @Min(1)
   @Max(240)
   durationMin?: number;
+
+  /** EXAM-4: how many graded attempts a learner may take (1–10). */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(10)
+  maxAttempts?: number;
 
   @IsOptional()
   @IsBoolean()

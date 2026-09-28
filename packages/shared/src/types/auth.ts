@@ -85,6 +85,8 @@ export interface ResetPasswordDto {
   token: string;
   password: string;
   passwordConfirm: string;
+  /** `verify` marks a mailbox-ownership link (AUTH-6 companion). */
+  type?: 'reset' | 'verify';
 }
 
 export interface ChangePasswordDto {

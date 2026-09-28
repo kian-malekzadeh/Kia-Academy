@@ -37,6 +37,8 @@ export interface AdminCourseExam {
   description: string;
   passScore: number;
   durationMin: number;
+  /** EXAM-4: maximum graded (SUBMITTED) attempts per learner. */
+  maxAttempts: number;
   published: boolean;
   sortOrder: number;
   kind: CourseExamKind;
@@ -61,6 +63,8 @@ export interface CourseExamSummary {
   descriptionEn?: string | null;
   passScore: number;
   durationMin: number;
+  /** EXAM-4: maximum graded (SUBMITTED) attempts per learner. */
+  maxAttempts: number;
   published: boolean;
   sortOrder: number;
   kind: CourseExamKind;

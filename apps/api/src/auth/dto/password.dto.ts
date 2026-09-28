@@ -1,4 +1,4 @@
-import { IsEmail, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { IsEmail, IsIn, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 import type {
   ChangePasswordDto as ChangePasswordDtoType,
   ForgotPasswordDto as ForgotPasswordDtoType,
@@ -27,6 +27,15 @@ export class ResetPasswordDto implements ResetPasswordDtoType {
 
   @IsString()
   passwordConfirm!: string;
+
+  /**
+   * AUTH-6 companion: `verify` marks a mailbox-ownership confirmation link
+   * (consumes the token and flips emailVerified; password still required to
+   * set a credential). Omitted → classic password reset.
+   */
+  @IsOptional()
+  @IsIn(['reset', 'verify'])
+  type?: 'reset' | 'verify';
 }
 
 export class ChangePasswordDto implements ChangePasswordDtoType {

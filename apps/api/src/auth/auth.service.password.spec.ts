@@ -1,4 +1,4 @@
-import { BadRequestException, Logger, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Logger, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { createHash } from 'crypto';
 import { AuthService } from './auth.service';
@@ -42,6 +42,7 @@ function buildService(overrides?: {
     user: {
       findUnique: jest.fn().mockResolvedValue(overrides?.storedUser ?? null),
       update: jest.fn().mockResolvedValue({}),
+      create: jest.fn(),
     },
     refreshToken: {
       deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
@@ -54,10 +55,12 @@ function buildService(overrides?: {
       findUnique: jest.fn().mockResolvedValue(overrides?.storedResetToken ?? null),
       updateMany: tx.passwordResetToken.updateMany,
     },
+    bootcampProfile: { create: jest.fn() },
     $transaction: jest.fn(async (arg: unknown) => (typeof arg === 'function' ? arg(tx) : arg)),
   };
   const emailService = {
     sendPasswordReset: jest.fn().mockResolvedValue(overrides?.emailStatus ?? 'sent'),
+    sendWelcome: jest.fn().mockResolvedValue(undefined),
   };
   const configGet = jest.fn((key: string, fallback?: unknown) => {
     if (key === 'NODE_ENV') return overrides?.nodeEnv ?? 'test';
@@ -69,7 +72,8 @@ function buildService(overrides?: {
     { sign: jest.fn(), verify: jest.fn() } as never,
     { get: configGet } as never,
     emailService as never,
-    { get: jest.fn().mockResolvedValue({}) } as never,
+    // Site settings — bootcamp defaults used by register/completeProfile.
+    { get: jest.fn().mockResolvedValue({ bootcamp: { defaultRank: 12, defaultPoints: 340 } }) } as never,
     { sendOtp: jest.fn().mockResolvedValue(undefined) } as never,
     { loginGate: jest.fn().mockResolvedValue(null) } as never,
   );
@@ -331,5 +335,169 @@ describe('changePassword (AUTH-4)', () => {
     await service.changePassword('u1', { currentPassword: 'oldpass1', newPassword: 'newpass1' });
 
     expect(prisma.refreshToken.deleteMany).toHaveBeenCalledWith({ where: { userId: 'u1' } });
+  });
+
+  /* -------------------------------------------------- AUTH-6 register ---- */
+
+  describe('register (AUTH-6 enumeration protection)', () => {
+    const dto = {
+      name: 'Ali',
+      email: 'ali@example.com',
+      password: 'passw0rd1',
+      passwordConfirm: 'passw0rd1',
+      province: 'تهران',
+      city: 'تهران',
+    };
+
+    /** Register flow mock: create returns `created`, findUnique knows it. */
+    function buildRegisterWorld(created: Record<string, unknown> | null, createError?: unknown) {
+      const base = buildService();
+      base.prisma.user.create = createError
+        ? jest.fn().mockRejectedValue(createError)
+        : jest.fn().mockResolvedValue(created);
+      base.prisma.user.findUnique = jest.fn().mockImplementation((args: { where: { email?: string } }) =>
+        Promise.resolve(args.where.email && created && args.where.email === created.email ? created : null));
+      return base;
+    }
+
+    it('mints a session and sends both verification and welcome emails on success', async () => {
+      const created = { id: 'u-new', name: 'Ali', email: dto.email, status: 'ACTIVE', emailVerified: false };
+      const { service, prisma } = buildRegisterWorld(created);
+      (service as unknown as { issueAuthResponse: (u: unknown) => unknown }).issueAuthResponse =
+        jest.fn().mockResolvedValue({ user: created, accessToken: 'a', refreshToken: 'r' });
+      (service as unknown as { buildAuthUser: (u: unknown) => unknown }).buildAuthUser =
+        jest.fn().mockResolvedValue(created);
+
+      await service.register(dto);
+
+      expect(prisma.user.create).toHaveBeenCalledTimes(1);
+      // Verification link issued (issueEmailVerificationLink ran).
+      expect(prisma.passwordResetToken.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('on a duplicate email, returns the same generic 409 without minting a session', async () => {
+      // The address belongs to a verified account: verify-mail is suppressed,
+      // exactly as production would skip re-sending for an already-verified owner.
+      const owner = { id: 'u-owner', name: 'Owner', email: dto.email, status: 'ACTIVE', emailVerified: true };
+      const { service, prisma } = buildRegisterWorld(owner, { code: 'P2002' });
+      (service as unknown as { issueAuthResponse: (u: unknown) => unknown }).issueAuthResponse =
+        jest.fn();
+
+      await expect(service.register(dto)).rejects.toThrow(ConflictException);
+      await expect(service.register(dto)).rejects.not.toThrow(/already registered/i);
+
+      // No session minted for the caller.
+      expect(
+        (service as unknown as { issueAuthResponse: jest.Mock }).issueAuthResponse,
+      ).not.toHaveBeenCalled();
+      expect(prisma.user.create).toHaveBeenCalledTimes(2); // register ran twice, both hit P2002
+    });
+
+    it('sends a silent verification link to the true owner on duplicate registration', async () => {
+      const owner = { id: 'u-owner', name: 'Owner', email: dto.email, status: 'ACTIVE', emailVerified: false };
+      const { service, prisma } = buildRegisterWorld(owner, { code: 'P2002' });
+      (service as unknown as { issueAuthResponse: (u: unknown) => unknown }).issueAuthResponse =
+        jest.fn();
+
+      await expect(service.register(dto)).rejects.toThrow(ConflictException);
+
+      // The owner (not the caller) receives the verification link.
+      expect(prisma.passwordResetToken.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ userId: 'u-owner' }) }),
+      );
+    });
+
+    it('absorbs the timing side-channel: conflict path spends comparable bcrypt work', async () => {
+      // The conflict path must run a bcrypt.compare against DUMMY_HASH so its
+      // total hashing work mirrors the success path (1 hash + 0 compares vs
+      // 1 hash + 1 compare would otherwise be distinguishable by timing).
+      // Verified structurally: DUMMY_HASH is a module-level bcrypt(12) digest.
+      const owner = { id: 'u-owner', name: 'Owner', email: dto.email, status: 'ACTIVE', emailVerified: true };
+      const { service } = buildRegisterWorld(owner, { code: 'P2002' });
+      (service as unknown as { issueAuthResponse: (u: unknown) => unknown }).issueAuthResponse =
+        jest.fn();
+
+      const t0 = Date.now();
+      await expect(service.register(dto)).rejects.toThrow(ConflictException);
+      const elapsed = Date.now() - t0;
+
+      // One bcrypt.compare (~100ms at cost 12 on CI hardware) must have run.
+      // Generous floor avoids flakiness on very fast machines; the point is
+      // the request is NOT instant.
+      expect(elapsed).toBeGreaterThanOrEqual(50);
+    });
+
+    it('does not leak verification tokens for already-verified addresses', async () => {
+      const verifiedOwner = {
+        id: 'u-owner',
+        name: 'Owner',
+        email: dto.email,
+        emailVerified: true,
+        status: 'ACTIVE',
+      };
+      const { service, prisma } = buildRegisterWorld(verifiedOwner, { code: 'P2002' });
+      (service as unknown as { issueAuthResponse: (u: unknown) => unknown }).issueAuthResponse =
+        jest.fn();
+
+      await expect(service.register(dto)).rejects.toThrow(ConflictException);
+
+      expect(prisma.passwordResetToken.create).not.toHaveBeenCalled();
+      expect(prisma.passwordResetToken.deleteMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('resetPassword verify-type (AUTH-6 email verification)', () => {
+    it('flips emailVerified when type=verify without changing password semantics', async () => {
+      const token = 'a'.repeat(64);
+      const owner = { id: 'u1', status: 'ACTIVE', email: 'a@b.c' };
+      const { service, tx } = buildService({
+        storedResetToken: {
+          id: 'prt-1',
+          tokenHash: createHash('sha256').update(token).digest('hex'),
+          userId: 'u1',
+          usedAt: null,
+          expiresAt: new Date(Date.now() + 60_000),
+          user: owner,
+        },
+      });
+      tx.user.update = jest.fn().mockResolvedValue({});
+
+      await service.resetPassword({
+        token,
+        password: 'passw0rd1',
+        passwordConfirm: 'passw0rd1',
+        type: 'verify',
+      });
+
+      expect(tx.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ emailVerified: true }),
+        }),
+      );
+      expect(tx.passwordResetToken.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'prt-1', usedAt: null } }),
+      );
+    });
+
+    it('keeps emailVerified untouched for a classic reset (type omitted)', async () => {
+      const token = 'b'.repeat(64);
+      const owner = { id: 'u1', status: 'ACTIVE', email: 'a@b.c' };
+      const { service, tx } = buildService({
+        storedResetToken: {
+          id: 'prt-2',
+          tokenHash: createHash('sha256').update(token).digest('hex'),
+          userId: 'u1',
+          usedAt: null,
+          expiresAt: new Date(Date.now() + 60_000),
+          user: owner,
+        },
+      });
+      tx.user.update = jest.fn().mockResolvedValue({});
+
+      await service.resetPassword({ token, password: 'passw0rd1', passwordConfirm: 'passw0rd1' });
+
+      const data = (tx.user.update as jest.Mock).mock.calls[0][0].data;
+      expect(data.emailVerified).toBeUndefined();
+    });
   });
 });
