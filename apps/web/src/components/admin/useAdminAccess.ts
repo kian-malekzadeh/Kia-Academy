@@ -1,10 +1,9 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 import {
   adminSectionAllowed,
-  createDefaultSiteSettings,
-  normalizeAdminAccess,
+  isStaffRole,
   type AdminAccessSection,
   type AdminSectionPermission,
   type SiteAdminAccessSettings,
@@ -12,10 +11,12 @@ import {
 import { useAuth } from '@/context/AuthProvider';
 
 /**
- * Single source of truth for the panel-side permission model.
- * SUPER_ADMIN sees everything; moderators are limited by their
- * adminPanelAccess matrix (defaulting to the site template).
- * NOTE: this only gates the UI — the API enforces the same rules.
+ * Consume the access the SERVER issued (ADM-1): `AuthUser.adminPanelAccess`
+ * is resolved by the backend via `resolveStaffAdminAccess` (user override →
+ * custom role matrix → site template) and refreshed from `/auth/me`. This hook
+ * performs no local permission derivation — for SUPER_ADMIN the server omits
+ * the field, meaning "everything allowed". UI gating only; the API enforces
+ * the same rules server-side via AdminAccessGuard.
  */
 export function useAdminAccess(): {
   isSuper: boolean;
@@ -26,22 +27,22 @@ export function useAdminAccess(): {
   const { user } = useAuth();
 
   const isSuper = user?.role === 'SUPER_ADMIN';
-  const isStaff = user?.role === 'ADMIN' || isSuper;
+  // Any non-learner role may open the panel (custom roles are matrix-gated).
+  const isStaff = isStaffRole(user?.role);
 
   const access = useMemo((): SiteAdminAccessSettings | null => {
     if (!isStaff || isSuper) return null;
-    if (user?.role === 'ADMIN' && user.adminPanelAccess) {
-      return normalizeAdminAccess(user.adminPanelAccess);
-    }
-    return normalizeAdminAccess(createDefaultSiteSettings().adminAccess);
+    // Trust the server-issued matrix verbatim (already normalized backend-side).
+    return user?.adminPanelAccess ?? null;
   }, [isStaff, isSuper, user]);
 
-  const can = useCallback(
-    (key: AdminAccessSection, level: keyof AdminSectionPermission = 'view') => {
-      if (isSuper) return true;
-      if (!access) return false;
-      return adminSectionAllowed(access, key, level);
-    },
+  const can = useMemo(
+    () =>
+      (key: AdminAccessSection, level: keyof AdminSectionPermission = 'view'): boolean => {
+        if (isSuper) return true;
+        if (!access) return false;
+        return adminSectionAllowed(access, key, level);
+      },
     [isSuper, access],
   );
 

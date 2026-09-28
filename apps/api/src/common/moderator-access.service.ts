@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import {
   adminSectionAllowed,
   normalizeAdminAccess,
-  resolveModeratorAdminAccess,
+  resolveStaffAdminAccess,
   type AuthUser,
   type SiteAdminAccessSettings,
 } from '@kia-academy/shared';
@@ -24,21 +24,18 @@ export class ModeratorAccessService {
       return normalizeAdminAccess({});
     }
     const settings = await this.siteSettings.get();
-    const row = await this.prisma.user.findUnique({
-      where: { id: user.id },
-      select: { adminPanelAccess: true },
-    });
-    if (row?.adminPanelAccess) {
-      return normalizeAdminAccess(row.adminPanelAccess);
-    }
-    // Custom roles fall back to their own access matrix, then the site template.
-    if (user.role !== 'ADMIN') {
-      const role = await this.prisma.role.findUnique({ where: { key: user.role } });
-      if (role?.access) {
-        return normalizeAdminAccess(role.access);
-      }
-    }
-    return resolveModeratorAdminAccess(row?.adminPanelAccess, settings.adminAccess);
+    const [row, roleRow] = await Promise.all([
+      this.prisma.user.findUnique({
+        where: { id: user.id },
+        select: { adminPanelAccess: true },
+      }),
+      // Custom roles resolve from their own matrix before the site template.
+      user.role !== 'ADMIN'
+        ? this.prisma.role.findUnique({ where: { key: user.role } })
+        : Promise.resolve(null),
+    ]);
+    // ADM-1: identical resolution to buildAuthUser (user → role → template).
+    return resolveStaffAdminAccess(row?.adminPanelAccess, roleRow?.access, settings.adminAccess);
   }
 
   async assertAllowed(

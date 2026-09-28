@@ -149,6 +149,34 @@ const DEMO_ADMIN: AuthUser = {
   profileComplete: true,
 };
 
+/**
+ * ADM-1 demo persona: a moderator whose matrix is ISSUED by the (demo)
+ * server and consumed verbatim by the admin UI — never re-derived locally.
+ */
+const DEMO_MODERATOR_ACCESS: SiteAdminAccessSettings = normalizeAdminAccess({
+  stats: { view: true, manage: false, edit: false },
+  users: { view: true, manage: true, edit: false },
+  courses: { view: true, manage: true, edit: true },
+  tests: { view: true, manage: true, edit: true },
+  tickets: { view: true, manage: true, edit: false },
+  messages: { view: true, manage: true, edit: false },
+  challenges: { view: true, manage: false, edit: false },
+  competitions: { view: true, manage: false, edit: false },
+  payments: { view: false, manage: false, edit: false },
+  settings: { view: false, manage: false, edit: false },
+  audit: { view: false, manage: false, edit: false },
+});
+
+const DEMO_MODERATOR: AuthUser = {
+  id: 'demo-moderator',
+  name: 'Panel Moderator',
+  email: 'moderator@kia.academy',
+  phone: null,
+  role: 'ADMIN',
+  profileComplete: true,
+  adminPanelAccess: DEMO_MODERATOR_ACCESS,
+};
+
 const DEMO_CREATED_AT = '2026-01-01T00:00:00.000Z';
 
 let demoTodos: LearnerTodoDto[] = [];
@@ -183,6 +211,16 @@ let demoAdminUsers: AdminUser[] = [
     role: DEMO_ADMIN.role,
     status: 'ACTIVE',
     createdAt: DEMO_CREATED_AT,
+  },
+  {
+    id: DEMO_MODERATOR.id,
+    name: DEMO_MODERATOR.name,
+    email: DEMO_MODERATOR.email,
+    phone: DEMO_MODERATOR.phone,
+    role: DEMO_MODERATOR.role,
+    status: 'ACTIVE',
+    createdAt: DEMO_CREATED_AT,
+    adminPanelAccess: DEMO_MODERATOR_ACCESS,
   },
 ];
 
@@ -1018,9 +1056,13 @@ export const demoApi = {
   async login(dto: LoginDto): Promise<AuthResponse> {
     const email = dto.email.trim().toLowerCase();
     const adminEmail = (DEMO_ADMIN.email ?? '').toLowerCase();
+    const moderatorEmail = (DEMO_MODERATOR.email ?? '').toLowerCase();
     const learnerEmail = (DEMO_LEARNER.email ?? '').toLowerCase();
     if (email === adminEmail) {
       return delay(authResponse(DEMO_ADMIN));
+    }
+    if (email === moderatorEmail) {
+      return delay(authResponse(DEMO_MODERATOR));
     }
     if (email === learnerEmail || email.includes('@')) {
       return delay(
@@ -2745,12 +2787,11 @@ export const demoApi = {
       role,
       status: 'ACTIVE',
       createdAt: new Date().toISOString(),
-      adminPanelAccess:
-        role === 'ADMIN'
+      adminPanelAccess: customRole?.access
+        ? customRole.access
+        : role === 'ADMIN'
           ? normalizeAdminAccess(readDemoSettings().adminAccess)
-          : customRole?.access
-            ? customRole.access
-            : null,
+          : null,
     };
     demoAdminUsers = [created, ...demoAdminUsers];
     return delay({ ...created });

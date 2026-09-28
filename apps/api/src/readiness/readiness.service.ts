@@ -121,6 +121,9 @@ export class ReadinessService {
           blueprintVersion: EXAM_BLUEPRINT_VERSION,
           status: 'IN_PROGRESS',
           questionIds: questions.map((q) => q.id),
+          // EXAM-3: pin the full question content so admin edits to the live
+          // test bank can never change the meaning of a question mid-attempt.
+          questions: questions as unknown as Prisma.InputJsonValue,
           answers: {} as Prisma.InputJsonValue,
           startedAt,
           endsAt,
@@ -219,7 +222,12 @@ export class ReadinessService {
       ...(finalAnswers ? this.sanitizeAnswers(finalAnswers) : {}),
     };
 
-    const questions = await this.questionsForAttempt(attempt.questionIds);
+    // EXAM-3: grade against the pinned snapshot (fallback to the live bank for
+    // legacy attempts created before snapshots existed).
+    const questions = await this.questionsForAttemptWithSnapshot(
+      attempt.questionIds,
+      attempt.questions,
+    );
     const graded = gradeAttempt(questions, answers);
     const settings = await this.siteSettings.get();
     const passThreshold = settings.readiness.passThreshold ?? EXAM_PASS_THRESHOLD;
@@ -661,8 +669,26 @@ export class ReadinessService {
     });
   }
 
+  /**
+   * EXAM-3: prefer the attempt's pinned question snapshot so grading is immune
+   * to admin edits to the live bank; legacy attempts created before snapshots
+   * existed (null snapshot) fall back to resolving IDs against the live bank.
+   */
+  private questionIdList(questionIdsJson: Prisma.JsonValue): string[] {
+    if (Array.isArray(questionIdsJson)) return questionIdsJson.map(String);
+    if (typeof questionIdsJson === 'string' && questionIdsJson.length > 0) {
+      try {
+        const parsed = JSON.parse(questionIdsJson) as unknown;
+        return Array.isArray(parsed) ? parsed.map(String) : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  }
+
   private async questionsForAttempt(questionIdsJson: Prisma.JsonValue): Promise<ExamQuestion[]> {
-    const ids = (Array.isArray(questionIdsJson) ? questionIdsJson : []) as string[];
+    const ids = this.questionIdList(questionIdsJson);
     const bank = await this.testBanks.getExamQuestions();
     const byId = new Map(bank.map((q) => [q.id, q]));
     return ids.map((id) => {
@@ -674,6 +700,22 @@ export class ReadinessService {
     });
   }
 
+  private async questionsForAttemptWithSnapshot(
+    questionIdsJson: Prisma.JsonValue,
+    snapshot: Prisma.JsonValue | null,
+  ): Promise<ExamQuestion[]> {
+    if (Array.isArray(snapshot) && snapshot.length > 0) {
+      const wanted = new Set(this.questionIdList(questionIdsJson));
+      const pinned = (snapshot as unknown as ExamQuestion[]).filter((q) => wanted.has(q.id));
+      // The snapshot is authoritative only when it covers every pinned ID;
+      // anything missing means partial/legacy data — fall back to the live bank.
+      if (pinned.length === wanted.size) {
+        return pinned;
+      }
+    }
+    return this.questionsForAttempt(questionIdsJson);
+  }
+
   private async toSession(attempt: {
     id: string;
     blueprintVersion: string;
@@ -681,10 +723,14 @@ export class ReadinessService {
     endsAt: Date;
     roadmapId: string | null;
     questionIds: Prisma.JsonValue;
+    questions: Prisma.JsonValue | null;
     answers: Prisma.JsonValue;
     status: string;
   }): Promise<ExamAttemptSession> {
-    const questions = await this.questionsForAttempt(attempt.questionIds);
+    const questions = await this.questionsForAttemptWithSnapshot(
+      attempt.questionIds,
+      attempt.questions,
+    );
     // Deterministic shuffle seed from attempt id so refresh keeps same option order.
     const rng = this.rngFromSeed(attempt.id);
     return {

@@ -1,3 +1,5 @@
+import { isStaffRole } from '@kia-academy/shared';
+
 /**
  * Resolve where to send a user after a successful login submit.
  * - Staff always prefer the admin panel (honor /admin* next paths).
@@ -11,8 +13,8 @@ export function resolvePostLoginPath(
   const target =
     raw.startsWith('/') && !raw.startsWith('//') && !raw.startsWith('/login') ? raw : '/dashboard';
 
-  const isStaff = role === 'SUPER_ADMIN' || role === 'ADMIN';
-  if (isStaff) {
+  // ADM-1: shared staff predicate — custom (non-learner) roles are staff too.
+  if (isStaffRole(role)) {
     return target.startsWith('/admin') ? target : '/admin';
   }
 

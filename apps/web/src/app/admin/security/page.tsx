@@ -6,10 +6,11 @@ import { PanelPage } from '@/components/dashboard/DashboardShell';
 import { useAuth } from '@/context/AuthProvider';
 import { useLanguage } from '@/context/LanguageProvider';
 import { api, ApiError } from '@/lib/api';
-import type {
-  TwoFactorSetupResponse,
-  TwoFactorStaffRow,
-  TwoFactorStatusResponse,
+import {
+  isStaffRole,
+  type TwoFactorSetupResponse,
+  type TwoFactorStaffRow,
+  type TwoFactorStatusResponse,
 } from '@kia-academy/shared';
 
 type Stage = 'idle' | 'enrolling' | 'recovery-shown';
@@ -27,12 +28,12 @@ export default function AdminSecurityPage() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
-  const isStaff = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+  const isStaff = isStaffRole(user?.role);
 
   const load = useCallback(async () => {
     try {
       setStatus(await api.twoFactorStatus());
-      if (user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN') {
+      if (isStaffRole(user?.role)) {
         setStaff(await api.adminListStaffTwoFactor());
       }
     } catch (err) {

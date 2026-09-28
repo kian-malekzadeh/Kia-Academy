@@ -88,12 +88,19 @@ export default function AdminUsersPage() {
         setDraftRoles(Object.fromEntries(list.items.map((u) => [u.id, u.role])));
         setDraftAccess(
           Object.fromEntries(
-            list.items.map((u) => [
-              u.id,
-              u.role === 'ADMIN' || (u.role !== 'LEARNER' && u.role !== 'SUPER_ADMIN')
-                ? normalizeAdminAccess(u.adminPanelAccess ?? defaultModeratorAccess())
-                : defaultModeratorAccess(),
-            ]),
+            list.items.map((u) => {
+              if (u.role === 'LEARNER' || u.role === 'SUPER_ADMIN') {
+                return [u.id, defaultModeratorAccess()] as const;
+              }
+              // Seed the editor from server-issued access; fall back to the
+              // custom role's own matrix, then the site template — mirroring
+              // the backend resolution order (ADM-1).
+              const roleMatrix = roleList.find((r) => r.key === u.role)?.access;
+              return [
+                u.id,
+                normalizeAdminAccess(u.adminPanelAccess ?? roleMatrix ?? defaultModeratorAccess()),
+              ] as const;
+            }),
           ),
         );
       } catch (err) {
@@ -175,7 +182,7 @@ export default function AdminUsersPage() {
       const updated = await api.adminUpdateUserRole(user.id, nextRole);
       setUsers((prev) => prev.map((u) => (u.id === user.id ? updated : u)));
       setDraftRoles((prev) => ({ ...prev, [user.id]: updated.role }));
-      if (updated.role === 'ADMIN' && updated.adminPanelAccess) {
+      if (updated.role !== 'LEARNER' && updated.adminPanelAccess) {
         setDraftAccess((prev) => ({
           ...prev,
           [user.id]: normalizeAdminAccess(updated.adminPanelAccess),

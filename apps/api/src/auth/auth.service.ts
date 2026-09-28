@@ -27,9 +27,8 @@ import {
   isValidEmail,
   isValidIranCity,
   isValidIranProvince,
-  normalizeAdminAccess,
   normalizeIranianPhone,
-  resolveModeratorAdminAccess,
+  resolveStaffAdminAccess,
   sanitizeProfileText,
 } from '@kia-academy/shared';
 import * as bcrypt from 'bcrypt';
@@ -772,23 +771,19 @@ export class AuthService {
       profileComplete: Boolean(user.profileComplete),
     };
 
-    if (user.role === 'ADMIN') {
+    if (user.role !== 'LEARNER' && user.role !== 'SUPER_ADMIN') {
+      // ADM-1: the server ISSUES the effective matrix (user override → custom
+      // role matrix → site template) so the admin UI never re-derives it.
       const settings = await this.siteSettings.get();
-      authUser.adminPanelAccess = resolveModeratorAdminAccess(
+      const roleRow =
+        user.role !== 'ADMIN' && !user.adminPanelAccess
+          ? await this.prisma.role.findUnique({ where: { key: user.role } })
+          : null;
+      authUser.adminPanelAccess = resolveStaffAdminAccess(
         user.adminPanelAccess,
+        roleRow?.access,
         settings.adminAccess,
       );
-    } else if (user.role !== 'LEARNER' && user.role !== 'SUPER_ADMIN') {
-      // Custom (dynamic) roles carry their access matrix so the admin UI can
-      // show/hide sections without an extra request.
-      if (user.adminPanelAccess) {
-        authUser.adminPanelAccess = normalizeAdminAccess(user.adminPanelAccess);
-      } else {
-        const role = await this.prisma.role.findUnique({ where: { key: user.role } });
-        if (role?.access) {
-          authUser.adminPanelAccess = normalizeAdminAccess(role.access);
-        }
-      }
     }
 
     return authUser;

@@ -258,6 +258,26 @@ export function resolveModeratorAdminAccess(
   return normalizeAdminAccess(siteTemplate);
 }
 
+/**
+ * Resolve the effective admin-panel permissions for ANY staff role (ADM-1):
+ * per-user override wins, then a custom role's own access matrix, then the
+ * site template. This is the single rule the backend uses to ISSUE access —
+ * the admin UI must consume the issued matrix, never re-derive it locally.
+ */
+export function resolveStaffAdminAccess(
+  userAccess: unknown,
+  roleAccess: unknown,
+  siteTemplate: SiteAdminAccessSettings,
+): SiteAdminAccessSettings {
+  if (userAccess != null && typeof userAccess === 'object') {
+    return normalizeAdminAccess(userAccess);
+  }
+  if (roleAccess != null && typeof roleAccess === 'object') {
+    return normalizeAdminAccess(roleAccess);
+  }
+  return normalizeAdminAccess(siteTemplate);
+}
+
 export interface SiteSettings {
   general: SiteGeneralSettings;
   pricing: SitePricingSettings;

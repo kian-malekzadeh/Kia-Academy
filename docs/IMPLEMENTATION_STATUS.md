@@ -1,7 +1,7 @@
 # Implementation Status — Kia Academy
 
 > Persistent project memory (per master build contract §7). The repository is the source
-> of truth; this file tracks phase state, gates, and pending work. Updated 2026-09-06.
+> of truth; this file tracks phase state, gates, and pending work. Updated 2026-09-26.
 
 ## Context
 
@@ -17,11 +17,11 @@ now lives in [`AUDIT.md`](./AUDIT.md) and the go-live gates in
 | --- | --- |
 | Dependencies installed (pnpm, frozen env templates copied) | ✅ |
 | PostgreSQL 16 via `pnpm docker:db` (kia-postgres) | ✅ |
-| 16 Prisma migrations applied (latest: DB-2/3/4 enums, jsonb, soft-delete) | ✅ |
+| 18 Prisma migrations applied (latest: `20260926120000` EXAM-3 question snapshots) | ✅ |
 | Seed data present (6 users · 4 courses · 266 lessons) | ✅ |
 | `pnpm typecheck` (shared + api + web) | ✅ |
 | `pnpm lint` (all workspaces) | ✅ |
-| `pnpm test` — 199/199 (shared 41, web 36, api 122) | ✅ |
+| `pnpm test` — 219/219 (shared 46, web 37, api 136) | ✅ |
 | `pnpm build` (production, 344 static pages) | ✅ |
 | Runtime smoke (`scripts/smoke.sh`, 28 probes incl. OTP + password + 2FA flows) | ✅ |
 
@@ -145,15 +145,68 @@ provider-verify-never-reached assertion).
 
 ## Audit backlog (remaining, by priority)
 
+### EXAM-3 — exam question snapshots (implemented 2026-09-26)
+
+- **Migration `20260926120000_exam_question_snapshots`:** nullable
+  `CourseExamAttempt.questionSnapshot` and `ReadinessAttempt.questionSnapshot`
+  jsonb columns (18 migrations total).
+- **Pin at start:** starting an exam writes the full question payload (course
+  exam) or the resolved bank questions (readiness) onto the attempt.
+- **Serve + grade from the snapshot:** resume and submit paths read the pinned
+  questions — admin edits to a live exam/bank can no longer change what a
+  learner sees or how an in-flight attempt is graded.
+- **Legacy fallback:** attempts with a null snapshot (pre-migration rows) keep
+  resolving against the live payload/bank.
+- **Tests:** 7 new specs (pinning, snapshot-served resume, snapshot-based
+  grading after live edits, legacy fallback) across both services — suite now
+  132 api / 209 total.
+
+Also this session: verified **PAY-3b** (`POST /admin/payments/:id/refund`),
+**CI-1** (`security.yml`: pnpm audit + gitleaks + CodeQL, SHA-pinned) and
+**CI-2** (Redis-backed `RateLimitStorageProvider`, fail-open) were already
+implemented — the backlog docs were stale; both docs refreshed. Lint warning
+(`statusUpper`) fixed; production build + runtime smoke re-run end-to-end
+(all probes PASS, API `/api/health` reports `database: up`).
+
+### ADM-1 — server-issued admin access (implemented this session)
+
+- **One resolver, shared everywhere:** `resolveStaffAdminAccess` in
+  `packages/shared` — per-user override → custom role matrix → site template.
+  The API's `buildAuthUser` (login/2FA/OTP/me payloads) and
+  `ModeratorAccessService` (guard enforcement) both call it, so issuance and
+  enforcement can never drift.
+- **Custom-role gap fixed:** a custom role without its own matrix previously
+  fell back to the client's default template instead of the site template —
+  now resolved server-side exactly like ADMIN.
+- **Client consumes, never derives:** `useAdminAccess` reads
+  `user.adminPanelAccess` verbatim (SUPER_ADMIN gets no field = full access);
+  removed `createDefaultSiteSettings` fallback and all local matrix logic.
+- **Custom roles can reach the panel:** staff gates unified on shared
+  `isStaffRole` (admin shell, login redirect, `resolvePostLoginPath`, TopBar
+  entry point, 2FA page).
+- **Users page seeds the editor from server values:** draft matrix = user
+  override → role matrix → template, mirroring backend order.
+- **Demo mode:** added a moderator persona (`moderator@kia.academy`) whose
+  matrix is explicitly issued by the demo API — the UI still derives nothing.
+- **Tests:** 5 shared resolver specs + 4 API issuance specs + 1 post-login
+  custom-role spec — suite now 136 api / 219 total (was 132/209).
+
 | ID | Sev | Item |
 | --- | --- | --- |
-| (none at P1) | — | remaining items: DB-2/3/4 typing debt (P1–P2), CI-1/CI-2 supply-chain & distributed throttling (P2) |
-| ADM-2 | P1 | Systematic IDOR sweep across controllers |
-| EXAM-3 | P1 | Version pinning for exam question snapshots |
-| PAY-3b | P1 | Admin refund endpoint |
-| DB-2/3/4 | P1–P2 | Enum-typed states, JSON columns, soft-delete for financial records |
-| CI-1 | P2 | Dependency audit + secret scanning in CI (`security.yml` exists — verify green) |
-| CI-2 | P2 | Distributed rate limiting (Redis) when horizontally scaling |
+| EXAM-4 | P1 | Unlimited course-exam attempts — needs a product policy (retake limit) |
+| ~~ADM-1~~ | P1 | **RESOLVED** — frontend consumes only server-issued access via unified `resolveStaffAdminAccess` (see AUDIT.md) |
+| CHAL-3 | P1 | `Challenge` model unused by the submission flow |
+| AUTH-6 | P2 | `register` returns `ConflictException('Email already registered')` → enumeration |
+| PAY-5 | P2 | Payment completion has a single-winner claim but no transactional outbox |
+| ADM-3 | P2 | AdminAuditLog coverage of all sensitive actions incomplete |
+| FE-1 | P2 | Access token in `sessionStorage` — move to HttpOnly cookie pattern long-term |
+| DB-1 ledger | P2 | Wallet ledger table exists but balance has no enforced invariant/consumption model |
+| CHAL-2 sandbox | P2 | Scoring is heuristic/static (no server-side execution) — sandbox model when dynamic scoring is needed |
+
+Closed this session: EXAM-3 (question snapshots), PAY-3b (admin refund — was
+implemented, docs stale), CI-1 (security.yml — verified), CI-2 (Redis throttler
+storage — verified). ADM-2 (IDOR sweep) and DB-2/3/4 were closed in earlier
+sessions.
 
 ## Environment notes (dev)
 

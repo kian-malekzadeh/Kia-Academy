@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, Library, LogOut, Menu, MoveHorizontal, Shield, Trophy, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { isStaffRole } from '@kia-academy/shared';
 import { BrandMark } from '@/components/brand/BrandMark';
 import { CartBadge } from '@/components/cart/CartBadge';
 import { LanguageSelector } from '@/components/layout/LanguageSelector';
@@ -63,7 +64,8 @@ export function TopBar() {
 
 
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
-  const isAdmin = user?.role === 'ADMIN';
+  // ADM-1: any non-learner role gets the admin-panel entry point.
+  const isAdmin = !isSuperAdmin && isStaffRole(user?.role);
 
   const handleLogoClick = () => {
     if (isSuperAdmin) {

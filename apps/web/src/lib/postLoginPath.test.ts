@@ -7,6 +7,11 @@ describe('resolvePostLoginPath', () => {
     expect(resolvePostLoginPath('ADMIN', '/dashboard')).toBe('/admin');
   });
 
+  it('treats custom (non-learner) roles as staff (ADM-1)', () => {
+    expect(resolvePostLoginPath('support-agent', null)).toBe('/admin');
+    expect(resolvePostLoginPath('support-agent', '/admin/tickets')).toBe('/admin/tickets');
+  });
+
   it('honors admin next paths for staff', () => {
     expect(resolvePostLoginPath('ADMIN', '/admin/users')).toBe('/admin/users');
   });

@@ -150,7 +150,7 @@ export class CourseExamsService {
       orderBy: { startedAt: 'desc' },
     });
 
-    const questions = parseQuestions(exam.questions);
+    const liveQuestions = parseQuestions(exam.questions);
     const durationMin = exam.durationMin;
 
     if (existing) {
@@ -171,14 +171,23 @@ export class CourseExamsService {
         passScore: exam.passScore,
         startedAt: existing.startedAt.toISOString(),
         endsAt: endsAt.toISOString(),
-        questions: questions.map(toPublicQuestion),
+        questions: this.resolveAttemptQuestions(existing.questions, liveQuestions).map(
+          toPublicQuestion,
+        ),
         savedAnswers: this.parseAnswers(existing.answers),
         status,
       };
     }
 
     const attempt = await this.prisma.courseExamAttempt.create({
-      data: { examId: exam.id, userId, status: 'IN_PROGRESS' },
+      data: {
+        examId: exam.id,
+        userId,
+        status: 'IN_PROGRESS',
+        // EXAM-3: pin the question payload so admin edits mid-attempt can never
+        // change what this attempt is served or graded against.
+        questions: liveQuestions as unknown as Prisma.InputJsonValue,
+      },
     }).catch(async (err: unknown) => {
       // Race with an in-flight START from another tab/device: the DB invariant
       // (one active attempt per user/exam) rejects the second create — return
@@ -205,7 +214,7 @@ export class CourseExamsService {
       passScore: exam.passScore,
       startedAt: attempt.startedAt.toISOString(),
       endsAt: endsAt.toISOString(),
-      questions: questions.map(toPublicQuestion),
+      questions: liveQuestions.map(toPublicQuestion),
       savedAnswers: {},
       status: 'IN_PROGRESS',
     };
@@ -347,7 +356,11 @@ export class CourseExamsService {
     if (!exam) throw new NotFoundException('Course exam not found');
 
     if (attempt.status === 'SUBMITTED' && attempt.score !== null) {
-      return this.toSubmitResult(exam, attempt, parseQuestions(exam.questions));
+      return this.toSubmitResult(
+        exam,
+        attempt,
+        this.resolveAttemptQuestions(attempt.questions, parseQuestions(exam.questions)),
+      );
     }
     if (attempt.status !== 'IN_PROGRESS' && attempt.status !== 'EXPIRED') {
       throw new BadRequestException('Attempt cannot be submitted');
@@ -377,7 +390,11 @@ export class CourseExamsService {
         where: { id: attempt.id, userId },
       });
       if (current?.status === 'SUBMITTED' && current.score !== null) {
-        return this.toSubmitResult(exam, current, parseQuestions(exam.questions));
+        return this.toSubmitResult(
+          exam,
+          current,
+          this.resolveAttemptQuestions(current.questions, parseQuestions(exam.questions)),
+        );
       }
       throw new BadRequestException('Attempt cannot be submitted');
     }
@@ -386,7 +403,12 @@ export class CourseExamsService {
       ...this.parseAnswers(attempt.answers),
       ...(dto ? this.sanitizeAnswers(dto.answers) : {}),
     };
-    const questions = parseQuestions(exam.questions);
+    // EXAM-3: grade against the pinned snapshot (fallback to live for legacy
+    // attempts created before snapshots existed).
+    const questions = this.resolveAttemptQuestions(
+      attempt.questions,
+      parseQuestions(exam.questions),
+    );
 
     let correct = 0;
     let points = 0;
@@ -442,11 +464,30 @@ export class CourseExamsService {
     if (attempt.status !== 'SUBMITTED' || attempt.score === null) {
       throw new BadRequestException('Attempt has not been submitted');
     }
-    return this.toSubmitResult(exam, attempt, parseQuestions(exam.questions));
+    return this.toSubmitResult(
+      exam,
+      attempt,
+      this.resolveAttemptQuestions(attempt.questions, parseQuestions(exam.questions)),
+    );
   }
 
 
   // ---------- helpers ----------
+
+  /**
+   * EXAM-3: prefer the attempt's pinned question snapshot so grading is immune
+   * to admin edits; legacy rows without a snapshot fall back to the live payload
+   * (previous behavior).
+   */
+  private resolveAttemptQuestions(
+    snapshot: Prisma.JsonValue | null,
+    live: CourseExamQuestion[],
+  ): CourseExamQuestion[] {
+    return Array.isArray(snapshot) && snapshot.length > 0
+      ? (snapshot as unknown as CourseExamQuestion[])
+      : live;
+  }
+
   private isCorrect(q: CourseExamQuestion, response: CourseExamResponse | undefined): boolean {
     if (!response || response.type !== q.type) return false;
     if (q.type === 'single_choice') {
