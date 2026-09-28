@@ -39,8 +39,17 @@ COPY apps/api/package.json apps/api/
 # Prisma schema ships with the manifest layer: root `postinstall` generates the client.
 COPY apps/api/prisma apps/api/prisma
 COPY apps/web/package.json apps/web/
+# Flaky-registry resilience: retry the whole install up to 5× (each attempt
+# reuses the cached store — only the missing metadata re-downloads). The
+# DOMException timeout seen on slow CI networks happens inside a single
+# install; a fresh attempt with a warm store succeeds quickly.
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile
+    set -eux; \
+    for i in 1 2 3 4 5; do \
+      pnpm install --frozen-lockfile && break; \
+      echo "pnpm install failed (attempt $i) — retrying in 15s" >&2; \
+      sleep 15; \
+    done
 
 # ------------------------------------------------------------ builder -------
 FROM deps AS builder
