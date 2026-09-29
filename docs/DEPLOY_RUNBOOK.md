@@ -157,16 +157,48 @@ crontab -e
 
 ## ۸. به‌روزرسانی و Rollback
 
+دو روش برای استقرار/آپدیت وجود دارد:
+
+### روش الف — Pull ایمیج آماده از GHCR (پیشنهادی؛ نیازی به build روی سرور نیست)
+
+هر push به `main` ایمیج‌های api و web را بیلد و منتشر می‌کند (workflow «Docker Publish»):
+
+- `ghcr.io/kian-malekzadeh/kia-academy-api:main` (+ تگ `sha-<commit>` برای هر کامیت)
+- `ghcr.io/kian-malekzadeh/kia-academy-web:main`
+
+روی سرور یک `docker-compose.override.yml` بسازید:
+
+```yaml
+services:
+  api:
+    image: ghcr.io/kian-malekzadeh/kia-academy-api:main
+  web:
+    image: ghcr.io/kian-malekzadeh/kia-academy-web:main
+```
+
+اگر ریپو/پکیج خصوصی است، یک بار لاگین: `docker login ghcr.io -u <user> -p <PAT با read:packages>`
+
 ```bash
-# انتشار نسخه جدید
+# انتشار نسخه جدید (تگ دقیق‌تر: به‌جای main از sha-<commit> استفاده کنید)
+docker compose --profile full pull api web
+docker compose --profile full up -d
+
+# Rollback: همان دو دستور با تگ قبلی، مثلاً:
+#   image: ghcr.io/kian-malekzadeh/kia-academy-api:sha-<کامیت قبلی>
+```
+
+### روش ب — Build روی سرور (بدون وابستگی به GHCR)
+
+```bash
 git pull && pnpm docker:build && pnpm docker:up -d
-# مهاجرت‌های DB خودکار در boot اجرا می‌شوند (migrate deploy — غیرمخرب)
 
 # Rollback
 git checkout <tag قبلی>
 pnpm docker:build && pnpm docker:up -d
-# اگر مهاجرت جدید اعمال شده: ابتدا ./scripts/restore.sh با آخرین بکاپ قبل از آپدیت
 ```
+
+# مهاجرت‌های DB در هر دو روش، خودکار در boot اجرا می‌شوند (migrate deploy — غیرمخرب)
+# اگر مهاجرت جدید اعمال شده: ابتدا ./scripts/restore.sh با آخرین بکاپ قبل از آپدیت
 
 > قاعده طلایی: قبل از هر آپدیتی که مهاجرت DB دارد، `./scripts/backup.sh` را دستی اجرا کنید.
 
