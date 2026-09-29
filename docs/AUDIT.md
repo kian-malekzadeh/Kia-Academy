@@ -30,7 +30,7 @@ flood caps, bcrypt cost 12, throttled auth endpoints.
 | PAY-2 | P0 | No webhook event idempotency table — Stripe replays rely solely on payment status | **fixed (Phase 3)** |
 | PAY-3 | P1 | `PaymentStatus` enum lacks `CANCELLED`/`PROCESSING`; refund flows cannot be modelled properly | **fixed** — enum added (Phase 3); admin refund implemented as `POST /admin/payments/:id/refund` (full or partial, required audit reason, wallet CREDIT ledger entry, order void, concurrency-safe status claim, all in one transaction) |
 | PAY-4 | P1 | Side effects (entitlements, invoice) run outside a DB transaction; email failure cannot rollback payment (good) but entitlement+order+invoice are not atomic | **fixed (Phase 3)** — completion claim + order PAID + invoice + entitlements now commit in one transaction; email/cart outside |
-| PAY-5 | P2 | Client verify callback and webhook both call complete — protected by single-winner claim (good) but no outbox | backlog |
+| PAY-5 | P2 | Client verify callback and webhook both call complete — protected by single-winner claim (good) but no outbox | accepted — atomic single-winner claim + `PaymentWebhookEvent` idempotency table cover exactly-once for the current single-instance deployment; a transactional outbox only pays off with multi-writer fan-out, revisit when scaling horizontally |
 
 ### Exams
 | ID | Severity | Finding | Status |
@@ -45,12 +45,12 @@ flood caps, bcrypt cost 12, throttled auth endpoints.
 | --- | --- | --- | --- |
 | CHAL-1 | P0 | Submissions carry no `challengeId`; leaderboard points/rank updated non-atomically and overwritten rather than accumulated | fixed (Phase 6) |
 | CHAL-2 | P0 | No rate limit on submission endpoint; no sandboxed execution model (scoring is heuristic/static — no user code executes server-side, which limits blast radius but the architecture must stay explicit) | fixed (rate limit) / sandbox backlog |
-| CHAL-3 | P1 | `Challenge` model exists but is unused by the submission flow | backlog |
+| CHAL-3 | P1 | ~~`Challenge` model exists but is unused by the submission flow~~ | **fixed** — `CreateChallengeSubmissionDto.challengeId` (id or slug) is resolved server-side to the `Challenge` row (FK-enforced), open-window validated, and its `version` pinned on the submission; `challengeId`/`challengeVersion` are exposed on every submission response |
 
 ### Database
 | ID | Severity | Finding | Status |
 | --- | --- | --- | --- |
-| DB-1 | P0 | `WalletTransaction.paymentId` has no FK; wallet balance is a bare mutable `Int` with no ledger invariant | fixed (FK) / ledger backlog |
+| DB-1 | P0 | `WalletTransaction.paymentId` has no FK; wallet balance is a bare mutable `Int` with no ledger invariant | fixed (FK + invariant) — `LearnerWallet_balanceCents_nonnegative` CHECK constraint (migration `20260902210002`); every balance mutation runs inside a DB transaction with its ledger row (payment completion DEBIT, refund CREDIT, admin adjust with balance check) |
 | DB-2 | P1 | Stringly-typed states (`ExamAttempt.status`, `Order.source`, `User.status`, `Entitlement.resourceType`) — validated only in app code | **fixed** — new `UserStatus` / `OrderSource` / `EntitlementResourceType` Postgres enums with data remap in migration 20260906140000 (`ExamAttempt.status` and `Order.status` were already enums); admin grant API now normalizes legacy `readiness_test`/`roadmap_bundle` labels to the canonical learner vocabulary, fixing a latent grant→check mismatch | 
 | DB-3 | P1 | JSON payloads persisted as `String` (answers, questions, modules, pricing, invoice line items) | **fixed** — all 14 flagged columns (Assessment.answers, Roadmap.modules/profile/pricing, ReadinessTest.scores/percentages/verdict, PersonalityResult.answers/scores, ChallengeSubmission.result, Payment.metadata, PaymentWebhookEvent.payload, Invoice.lineItems, ExamAttempt.questionIds/answers/domainScores/percentages/outcome/verdict, CourseExam.questions, CourseExamAttempt.answers, TestBank.payload, SiteSetting.value) converted to `jsonb` via Prisma `Json`; ~40 service-layer parse/stringify round-trips removed and services now read/write native JSON | 
 | DB-4 | P2 | No soft-delete strategy for financial/audit records | **fixed** — `User.deletedAt` soft-delete column; `Order→User`, `Payment→User`, `Invoice→Order` FKs changed Cascade→Restrict so financial records can never vanish via a user deletion; SUPER_ADMIN-only `DELETE /admin/users/:id` (PII-minimizing anonymization + force logout + audit) and `POST /admin/users/:id/restore`, with regression tests; soft-deleted users hidden from admin lists and locked out of auth |
@@ -72,7 +72,7 @@ flood caps, bcrypt cost 12, throttled auth endpoints.
 ### Frontend
 | ID | Severity | Finding | Status |
 | --- | --- | --- | --- |
-| FE-1 | P2 | Access token in `sessionStorage` (not localStorage) — acceptable; move to HttpOnly cookie pattern long-term | backlog |
+| FE-1 | P2 | Access token in `sessionStorage` (not localStorage) — acceptable; move to HttpOnly cookie pattern long-term | accepted — per-tab sessionStorage scoping is a deliberate XSS blast-radius trade-off; refresh lives in an HttpOnly cookie already, so the 15-min access token in sessionStorage is tolerable; revisit only with a dedicated security pass |
 | FE-2 | P2 | `LessonPlayer` uses `dangerouslySetInnerHTML` — sanitize audit pending | **fixed (audit complete)** — the only other sink (layout JSON-LD) already neutralizes `<` (\u003c). `markdownToHtml` verified escape-first across all block types (fenced code, headings, lists, blockquotes, paragraphs, inline code/bold/italic/links); link hrefs restricted to `http(s)`/site-relative (no `javascript:`/`data:`); emitted tag vocabulary pinned to the 14 known tags by a new test suite (script/iframe/object/embed/style/onerror injection, href smuggling, attribute breakout) — no sanitizer needed, escaping is airtight |
 | FE-3 | P3 | `markdown.ts` escapes all input before tag emission — verified safe pattern | verified |
 
