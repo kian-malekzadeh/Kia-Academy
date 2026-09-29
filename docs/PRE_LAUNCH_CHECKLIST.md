@@ -55,6 +55,6 @@ Security deep-dive lives in [`SECURITY_CHECKLIST.md`](./SECURITY_CHECKLIST.md).
 
 ## Known deferred items (explicit human decisions)
 
-- Blocking-mode dependency audit (currently advisory-only) — flip after first triage pass
-- Optional: email-verification of profile email (currently trust-on-entry)
-- Optional: WAF/CDN-level bot rules in front of `/api/auth/*`
+- ~~Blocking-mode dependency audit (currently advisory-only) — flip after first triage pass~~ **DONE 2026-09-29**: tree triaged clean (all 17 advisories resolved via `pnpm-workspace.yaml` overrides — mysql2 ≥3.22, multer ≥2.4, nodemailer ≥9.1.1, qs ≥6.15.4, fast-uri ≥4.1.4, sharp 0.35.5); `security.yml` audit job is now blocking at high+
+- Optional: email-verification of profile email — **DONE** (AUTH-6: type=verify reset links flip `emailVerified`)
+- Optional: WAF/CDN-level bot rules in front of `/api/auth/*` — accept as-is for a self-hosted single-domain launch (Caddy edge + per-route throttling); add a CDN only if attack traffic appears
