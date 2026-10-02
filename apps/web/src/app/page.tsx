@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { BrandMark } from '@/components/brand/BrandMark';
-import { EnamadBadge } from '@/components/layout/EnamadBadge';
 import { LanguageSelector } from '@/components/layout/LanguageSelector';
 import { HOME_PATH } from '@/lib/postLoginPath';
 import { useAuth } from '@/context/AuthProvider';
@@ -71,12 +70,6 @@ export default function HomePage() {
           </Link>
         </header>
       </main>
-
-      <footer className="container landing-min-footer" aria-label={t('nav.footer.legal')}>
-        <Link href="/privacy">{t('nav.footer.privacy')}</Link>
-        <Link href="/terms">{t('nav.footer.terms')}</Link>
-        <EnamadBadge className="landing-enamad" />
-      </footer>
     </div>
   );
 }

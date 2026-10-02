@@ -613,7 +613,6 @@ input[type='tel'],
   .r-item,
   .slider-labels,
   .footer-bottom,
-  .landing-guest-footer,
   .auth-footer-row
 ) > * {
   min-width: 0;

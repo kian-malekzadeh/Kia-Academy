@@ -33,12 +33,15 @@
   padding-bottom: 0;
 }
 
+/* Mark above, wordmark below — the emblem reads as the logo, the name as a
+   caption, so the mark carries more weight than the type. */
 .landing-brand {
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
   font-family: var(--font-display);
-  font-size: clamp(1.85rem, 4.2vw, 2.75rem);
+  font-size: clamp(1.5rem, 3.4vw, 2.25rem);
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1.15;
@@ -53,7 +56,7 @@
 
 .landing-brand-mark {
   display: block;
-  height: clamp(2.25rem, 4.5vw, 3rem);
+  height: clamp(3.5rem, 7vw, 4.75rem);
   width: auto;
   aspect-ratio: 497.37 / 512;
   color: var(--brand-500);
@@ -293,8 +296,7 @@
   }
 
   .landing-intro.container,
-  section.landing-close.container-fluid,
-  footer.landing-guest-footer.container {
+  section.landing-close.container-fluid {
     padding-inline: var(--space-6);
   }
 }
@@ -448,51 +450,6 @@
   color: var(--ink-0);
 }
 
-/* --- guest footer -------------------------------------------------------- */
-.landing-guest-footer {
-  position: relative;
-  z-index: var(--z-raised);
-  margin-top: var(--space-section);
-  padding-top: var(--space-6);
-  border-top: 1px solid var(--border);
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  font-size: var(--fs-xs);
-  color: var(--text-faint);
-}
-
-.landing-guest-brand {
-  font-weight: 700;
-  color: var(--text-dim);
-}
-
-.landing-guest-footer nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3) var(--space-5);
-}
-
-.landing-guest-footer a {
-  color: var(--text-dim);
-  text-decoration: none;
-  transition: color var(--dur-base) var(--ease-out);
-}
-
-.landing-guest-footer a:hover {
-  color: var(--brand);
-}
-
-.landing-guest-footer .enamad-badge {
-  margin-inline-start: auto;
-}
-
-.landing-guest-footer .enamad-badge img {
-  max-width: 72px;
-}
-
 /* --- responsive ---------------------------------------------------------- */
 @media (max-width: 1024px) {
   .journey-rail {
@@ -516,15 +473,6 @@
 
   .journey-rail {
     grid-template-columns: 1fr;
-  }
-
-  .landing-guest-footer {
-    flex-direction: column;
-    text-align: center;
-  }
-
-  .landing-guest-footer nav {
-    justify-content: center;
   }
 }
 
@@ -633,25 +581,6 @@
 }
 
 .landing-min-email:hover {
-  color: var(--brand);
-}
-
-.landing-min-footer {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-4);
-  padding: var(--space-6) 0;
-  color: var(--text-dim);
-  font-size: var(--fs-xs);
-}
-
-.landing-min-footer a {
-  color: inherit;
-  text-decoration: none;
-}
-
-.landing-min-footer a:hover {
   color: var(--brand);
 }
 

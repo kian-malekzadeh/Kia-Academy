@@ -2414,7 +2414,7 @@ export const en = {
         hint: 'Create and approve a Kavenegar SMS template that includes %token%. The API key is never returned on the public settings endpoint. For local development you can use the dev provider with OTP_DEV_EXPOSE=true.',
       },
       enamad: {
-        sub: 'Show the Enamad (e-namad) trust seal in the site footer and on the landing page.',
+        sub: 'Show the Enamad (e-namad) trust seal in the site footer.',
         enabled: 'Show Enamad badge',
         codeId: 'ID (id)',
         codeIdPlaceholder: 'id value from your Enamad snippet',
