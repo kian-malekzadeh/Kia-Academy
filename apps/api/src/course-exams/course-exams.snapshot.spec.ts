@@ -31,6 +31,7 @@ function makePrisma(overrides: Record<string, unknown> = {}) {
     },      courseExamAttempt: {
         findFirst: jest.fn(),
         findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
         create: jest.fn().mockImplementation(async (args: { data: Record<string, unknown> }) => ({
           id: 'at-new',
           examId: 'exam-1',
@@ -228,5 +229,108 @@ describe('CourseExamsService EXAM-3 question snapshots', () => {
     // Live payload (answer 'a') grades the legacy attempt.
     expect(result.score).toBe(0);
     expect(result.passed).toBe(false);
+  });
+
+  /* ------------------------------------------------------------ EXAM-4 ---- */
+
+  describe('EXAM-4 attempt caps', () => {
+    function prismaWithExam(examOverrides: Record<string, unknown>, usedSubmissions = 0) {
+      return makePrisma({
+        courseExam: {
+          ...makePrisma().courseExam,
+          findUnique: jest.fn().mockResolvedValue({
+            ...examRow,
+            maxAttempts: 3,
+            ...examOverrides,
+            questions: liveQuestions,
+          }),
+        },
+        courseExamAttempt: {
+          ...makePrisma().courseExamAttempt,
+          count: jest.fn().mockResolvedValue(usedSubmissions),
+        },
+      });
+    }
+
+    it('starts a fresh attempt while under the cap', async () => {
+      const prisma = prismaWithExam({}, 2); // 2 of 3 used
+      const service = makeService(prisma);
+
+      await expect(service.startAttempt('u1', 'exam-1')).resolves.toMatchObject({
+        status: 'IN_PROGRESS',
+      });
+      expect(prisma.courseExamAttempt.create).toHaveBeenCalled();
+    });
+
+    it('blocks a new attempt once SUBMITTED attempts reach maxAttempts', async () => {
+      const prisma = prismaWithExam({}, 3); // cap reached
+      const service = makeService(prisma);
+
+      await expect(service.startAttempt('u1', 'exam-1')).rejects.toThrow(/Attempt limit reached/);
+      expect(prisma.courseExamAttempt.create).not.toHaveBeenCalled();
+    });
+
+    it('does not count expired/in-progress attempts against the cap', async () => {
+      const baseAttempt = makePrisma().courseExamAttempt;
+      const prisma = makePrisma({
+        courseExam: {
+          ...makePrisma().courseExam,
+          findUnique: jest.fn().mockResolvedValue({
+            ...examRow,
+            maxAttempts: 1,
+            questions: liveQuestions,
+          }),
+        },
+        courseExamAttempt: {
+          ...baseAttempt,
+          // Only SUBMITTED consumes the budget (count returns 0).
+          count: jest.fn().mockResolvedValue(0),
+          // Only IN_PROGRESS/PROCESSING attempts are resumed; the stored one is
+          // EXPIRED, so the service must start a NEW attempt (at-new).
+          findFirst: jest.fn().mockResolvedValue({
+            id: 'at-expired',
+            status: 'EXPIRED',
+            questions: null,
+            answers: {},
+            startedAt: new Date(Date.now() - 120_000),
+          }),
+        },
+      });
+      const service = makeService(prisma);
+
+      // Learner resumes/burns nothing — expired attempts never consume the cap.
+      await expect(service.startAttempt('u1', 'exam-1')).resolves.toMatchObject({
+        attemptId: 'at-new',
+      });
+    });
+
+    it('honors a stricter admin cap (maxAttempts=1) after a single submission', async () => {
+      const prisma = prismaWithExam({ maxAttempts: 1 }, 1);
+      const service = makeService(prisma);
+
+      await expect(service.startAttempt('u1', 'exam-1')).rejects.toThrow(/1 graded attempt/);
+    });
+
+    it('persists maxAttempts on admin create', async () => {
+      const prisma = makePrisma({
+        courseExam: {
+          ...makePrisma().courseExam,
+          create: jest.fn().mockResolvedValue({
+            ...examRow,
+            maxAttempts: 5,
+            questions: [],
+          }),
+        },
+        course: { ...makePrisma().course, findUnique: jest.fn().mockResolvedValue({ id: 'c1' }) },
+      });
+      const service = makeService(prisma);
+
+      await service.createAdmin('javascript', { title: 'Quiz', maxAttempts: 5 });
+      expect(prisma.courseExam.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ maxAttempts: 5 }),
+        }),
+      );
+    });
   });
 });

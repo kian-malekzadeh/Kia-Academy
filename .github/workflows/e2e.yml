@@ -1,4 +1,7 @@
-name: CI
+name: E2E
+
+# Playwright end-to-end flows against a production build with a real Postgres.
+# Runs on every push/PR to main alongside CI (unit tests).
 
 on:
   push:
@@ -6,19 +9,17 @@ on:
   pull_request:
     branches: [main]
 
-# CI-1 (supply chain): every third-party action is pinned to an immutable
-# commit SHA (not a mutable tag) so a compromised action repo cannot push new
-# code into this pipeline. Top-level permissions default-deny; jobs elevate
-# individually only when needed.
+# CI-1 (supply chain): SHA-pinned actions, default-deny permissions.
 permissions: {}
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: e2e-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build-test:
+  playwright:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     permissions:
       contents: read
@@ -40,12 +41,20 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://kia_academy:kia_academy@localhost:5432/kia_academy?schema=public
+      # OTP codes are exposed only in non-production builds (Joi-enforced).
+      OTP_DEV_EXPOSE: "true"
+      JWT_SECRET: e2e-ci-only-secret-value-0123456789abcdef
+      JWT_REFRESH_SECRET: e2e-ci-only-refresh-secret-0123456789abcdef
+      # NOTE: no PORT here — the API defaults to 3001 and the web server must
+      # stay on 3000 (Playwright polls :3000). A global PORT made `next start`
+      # bind 3001 and the webServer probe time out.
 
     steps:
       # v4.3.1
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
 
       # v4.1.0
+      # pnpm/action-setup v4 (tag object f40ffcd…, commit b906affcce14559ad1aafd4ab0e942779e9f58b1)
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
         with:
           version: 11.19.0
@@ -59,20 +68,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
-      # `--ignore-scripts` skips the root postinstall that normally generates
-      # the Prisma client (git-ignored, custom output at apps/api/src/generated).
-      # Generate it explicitly before lint/typecheck/build steps.
       - name: Generate Prisma client
         run: pnpm db:generate
 
       - name: Build shared package
         run: pnpm --filter @kia-academy/shared build
-
-      - name: Lint
-        run: pnpm lint
-
-      - name: Typecheck
-        run: pnpm typecheck
 
       - name: Apply database migrations
         run: pnpm db:migrate:deploy
@@ -80,8 +80,21 @@ jobs:
       - name: Seed database
         run: pnpm db:seed
 
-      - name: Test
-        run: pnpm test
+      - name: Install Playwright browsers
+        run: pnpm --filter @kia-academy/web exec playwright install --with-deps chromium
 
-      - name: Build
+      - name: Build production apps
         run: pnpm build
+
+      - name: Run e2e tests (production servers)
+        env:
+          E2E_PRODUCTION: "1"
+        run: pnpm test:e2e
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7

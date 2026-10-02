@@ -85,7 +85,6 @@ export class AuthService {
     private readonly smsService: SmsService,
     private readonly twoFactorService: TwoFactorService,
   ) {}
-
   async login(
     dto: LoginDto,
   ): Promise<(AuthResponse & { refreshToken: string }) | TwoFactorChallengeResponse> {
@@ -281,26 +280,34 @@ export class AuthService {
       throw new BadRequestException('Invalid email address');
     }
 
-    const emailOwner = await this.prisma.user.findUnique({ where: { email } });
-    if (emailOwner && emailOwner.id !== userId) {
-      throw new ConflictException('Email already registered');
-    }
-
+    // AUTH-6: never reveal whether another account already uses this email.
+    // The P2002 unique violation below resolves the conflict atomically; the
+    // true owner receives a verification email either way.
     const existingUser = await this.prisma.user.findUnique({ where: { id: userId } });
     const isFirstCompletion = existingUser && !existingUser.profileComplete;
 
-    const user = await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        firstName,
-        lastName,
-        province,
-        city,
-        email,
-        name: `${firstName} ${lastName}`.trim(),
-        profileComplete: true,
-      },
-    });
+    let user: Awaited<ReturnType<typeof this.prisma.user.update>>;
+    try {
+      user = await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          firstName,
+          lastName,
+          province,
+          city,
+          email,
+          emailVerified: false, // re-verify on every email change
+          name: `${firstName} ${lastName}`.trim(),
+          profileComplete: true,
+        },
+      });
+    } catch (err) {
+      if ((err as { code?: string } | null)?.code === 'P2002') {
+        // Email belongs to someone else. Same generic error, no reveal.
+        throw new ConflictException('Unable to save profile with this information');
+      }
+      throw err;
+    }
 
     if (user.email && isFirstCompletion) {
       await this.emailService.sendWelcome({
@@ -496,6 +503,7 @@ export class AuthService {
     }
 
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
+    const isVerifyLink = dto.type === 'verify';
     await this.prisma.$transaction(async (tx) => {
       // Atomic single-use claim: a replayed link loses the race and changes nothing.
       const claimed = await tx.passwordResetToken.updateMany({
@@ -505,7 +513,14 @@ export class AuthService {
       if (claimed.count === 0) {
         throw new BadRequestException('Invalid or expired reset link');
       }
-      await tx.user.update({ where: { id: record.userId }, data: { passwordHash } });
+      await tx.user.update({
+        where: { id: record.userId },
+        data: {
+          passwordHash,
+          // Verification links confirm mailbox ownership without a reset.
+          ...(isVerifyLink ? { emailVerified: true } : {}),
+        },
+      });
       // The credential may have been compromised — revoke every session.
       await tx.refreshToken.deleteMany({ where: { userId: record.userId } });
     });

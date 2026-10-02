@@ -21,11 +21,27 @@ now lives in [`AUDIT.md`](./AUDIT.md) and the go-live gates in
 | Seed data present (6 users · 4 courses · 266 lessons) | ✅ |
 | `pnpm typecheck` (shared + api + web) | ✅ |
 | `pnpm lint` (all workspaces) | ✅ |
-| `pnpm test` — 220/220 (shared 46, web 38, api 136) | ✅ |
+| `pnpm test` — 242/242 (shared 46, web 43, api 153) | ✅ |
 | `pnpm build` (production, 344 static pages) | ✅ |
+| `pnpm audit --prod` — 0 vulnerabilities (17 resolved via workspace overrides, 2026-09-29) | ✅ |
 | Runtime smoke (`scripts/smoke.sh`, 29 probes incl. phone-only registration + OTP + password + 2FA flows) | ✅ |
 
 ## New this session
+
+### Merge note — two different "AUTH-6"s reconciled (2026-10-03)
+
+`main` and this session's branch had each closed a different audit item under
+the same AUTH-6 label: `main` hardened the email `register` endpoint against
+enumeration (anti-timing, silent verify link, welcome email), while this
+session **removed** public email registration entirely (phone/OTP-only,
+see AUTH-6 below). On merge, the phone-only product decision won: the
+`register()` service method, its `register.dto.ts` endpoint and the five
+dedicated register specs from the main-side hardening were dropped again,
+along with the now-orphaned `DUMMY_HASH` timing absorber and
+`issueEmailVerificationLink` helper. Everything from main that does not
+depend on email registration is kept — the `type=verify` reset-token
+semantics (used by profile email changes), EXAM-4 retake limits, the e2e/GHCR
+pipelines, Docker fixes and backup/restore scripts.
 
 ### UX-2 — one account menu for sign out, color mode and language (implemented this session)
 
@@ -314,6 +330,21 @@ provider-verify-never-reached assertion).
 
 ## Audit backlog (remaining, by priority)
 
+### Dependency audit closure (implemented 2026-09-29)
+
+- **All 17 audit findings resolved** (10 high / 6 moderate / 1 low) via
+  `pnpm-workspace.yaml` overrides: `mysql2 >=3.22.0` (prisma CLI dep, unused — the
+  app connects through `@prisma/adapter-pg`), `multer >=2.4.0`, `nodemailer >=9.1.1`,
+  `qs >=6.15.4`, `fast-uri >=4.1.4`, `sharp 0.35.5`.
+- **CI-1 flip:** the `security.yml` dependency-audit job is now **blocking**
+  (`continue-on-error` removed) at `--audit-level=high` — a new high+ advisory
+  fails CI until triaged, closing the last "known deferred" pre-launch item.
+- Backlog docs reconciled against the code: CHAL-3 (challenge FK on submissions),
+  DB-1 (wallet CHECK constraint + transactional ledger), PAY-5 (accepted —
+  single-winner claim + webhook idempotency suffice for single-instance),
+  FE-1 (accepted — sessionStorage scoping is a deliberate XSS blast-radius
+  trade-off; refresh token already HttpOnly).
+
 ### EXAM-3 — exam question snapshots (implemented 2026-09-26)
 
 - **Migration `20260926120000_exam_question_snapshots`:** nullable
@@ -362,20 +393,56 @@ implemented — the backlog docs were stale; both docs refreshed. Lint warning
 
 | ID | Sev | Item |
 | --- | --- | --- |
-| EXAM-4 | P1 | Unlimited course-exam attempts — needs a product policy (retake limit) |
+| ~~EXAM-4~~ | P1 | **RESOLVED** — `CourseExam.maxAttempts` (default 3, admin-tunable 1–10); only SUBMITTED attempts consume budget; EXPIRED terminal |
 | ~~ADM-1~~ | P1 | **RESOLVED** — frontend consumes only server-issued access via unified `resolveStaffAdminAccess` (see AUDIT.md) |
-| CHAL-3 | P1 | `Challenge` model unused by the submission flow |
-| AUTH-6 | P2 | `register` returns `ConflictException('Email already registered')` → enumeration |
-| PAY-5 | P2 | Payment completion has a single-winner claim but no transactional outbox |
-| ADM-3 | P2 | AdminAuditLog coverage of all sensitive actions incomplete |
-| FE-1 | P2 | Access token in `sessionStorage` — move to HttpOnly cookie pattern long-term |
-| DB-1 ledger | P2 | Wallet ledger table exists but balance has no enforced invariant/consumption model |
+| ~~CHAL-3~~ | P1 | **RESOLVED** — submissions resolve + FK-enforce the `Challenge` row server-side and pin its version |
+| ~~AUTH-6~~ | P2 | **RESOLVED, then superseded** — main hardened email register (enumeration-safe 409 + timing equalizer); on 2026-10-03 public email registration was removed entirely (phone/OTP-only), making the endpoint — and its hardening — moot. The `type=verify` reset-link semantics remain for profile email changes |
+| ~~PAY-5~~ | P2 | **ACCEPTED** — single-winner completion claim + `PaymentWebhookEvent` idempotency cover exactly-once for single-instance; outbox only pays off with multi-writer fan-out |
+| ~~ADM-3~~ | P2 | **RESOLVED** — full audit coverage; last gap (`contact.read`) closed |
+| ~~FE-2~~ | P2 | **RESOLVED** — sanitize audit complete; escape-first renderer pinned by tag-vocabulary + injection tests |
+| ~~FE-1~~ | P2 | **ACCEPTED** — access token in `sessionStorage` is a deliberate per-tab XSS blast-radius trade-off; refresh token already HttpOnly |
+| ~~DB-1~~ | P2 | **RESOLVED** — `balanceCents` non-negative CHECK constraint; all mutations transactional with ledger rows |
 | CHAL-2 sandbox | P2 | Scoring is heuristic/static (no server-side execution) — sandbox model when dynamic scoring is needed |
 
-Closed this session: EXAM-3 (question snapshots), PAY-3b (admin refund — was
-implemented, docs stale), CI-1 (security.yml — verified), CI-2 (Redis throttler
-storage — verified). ADM-2 (IDOR sweep) and DB-2/3/4 were closed in earlier
-sessions.
+Closed this session: EXAM-4 (attempt caps), AUTH-6 (enumeration-safe register
++ email verification), ADM-3 (contact.read audit gap), FE-2 (sanitize audit
+pinned by tests), CHAL-3 (challenge FK on submissions), DB-1 ledger invariant
+(CHECK constraint + transactional ledger — verified pre-existing), CI-1 flip
+(audit now blocking), dependency-audit closure (17→0 via overrides).
+Accepted with rationale: PAY-5 (outbox — not warranted single-instance),
+FE-1 (sessionStorage — deliberate trade-off). Previously closed: EXAM-3
+(question snapshots), PAY-3b (admin refund), CI-1 (security.yml), CI-2
+(Redis throttler storage), ADM-2 (IDOR sweep), DB-2/3/4.
+
+### EXAM-4 / AUTH-6 / ADM-3 / FE-2 — backlog closure (implemented this session)
+
+- **EXAM-4:** `CourseExam.maxAttempts` (migration `20260928100000`, default 3,
+  DTO clamp 1–10, exposed on AdminCourseExam/CourseExamSummary). `startAttempt`
+  counts only SUBMITTED attempts against the cap (403 `Attempt limit reached
+  (n/m)` when exhausted); EXPIRED attempts became terminal — the previous
+  resume-expired quirk let a learner restart an expired try forever; 5 specs.
+- **AUTH-6:** `register` now catches the P2002 unique violation and returns a
+  generic 409 — no `Email already registered` message, no session. A module-
+  level `DUMMY_HASH` (bcrypt 12) absorbs the timing side-channel; a silent
+  verification link is emailed to the true owner. Email verification reuses
+  the AUTH-4 token infra (`ResetPasswordDto.type=verify` flips
+  `emailVerified`), `completeProfile` email changes reset `emailVerified` and
+  resolve conflicts via P2002 instead of a revealing findUnique; 8 specs.
+  *(Superseded 2026-10-03: the whole email `register` endpoint was removed in
+  favor of phone-only registration — see the merge note at the top; the
+  `type=verify` token semantics survive for profile email changes.)*
+- **ADM-3:** coverage sweep of all 33 admin mutation routes vs 31 audit
+  entries — the single gap (`contact.read`) now records actor/target/
+  before/after with request meta.
+- **FE-2:** the two `dangerouslySetInnerHTML` sinks audited (layout JSON-LD
+  already `\u003c`-neutralizes; LessonPlayer renders `markdownToHtml`). New
+  test suite pins the emitted tag vocabulary (14 tags) and asserts no
+  script/iframe/object/embed/style/onerror injection survives any block type,
+  no `javascript:`/`data:` hrefs, and no attribute breakout.
+- **CI additions:** `e2e.yml` (Playwright against production build + real
+  Postgres, report artifact on failure, `E2E_PRODUCTION` webServer mode) and
+  `docker-publish.yml` (GHCR publish of api/web images on main pushes and
+  v* tags, SHA-pinned actions, GHA build cache).
 
 ## Environment notes (dev)
 

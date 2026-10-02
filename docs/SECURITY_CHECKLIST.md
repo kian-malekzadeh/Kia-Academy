@@ -49,7 +49,8 @@ See also: [`SECURITY.md`](../SECURITY.md) (reporting), [`PRE_LAUNCH_CHECKLIST.md
 
 ## CI / supply chain
 
-- [x] `.github/workflows/security.yml`: pnpm audit (prod, high+), gitleaks secret scan, CodeQL SAST (security-extended) — weekly cron sweep included
+- [x] `.github/workflows/security.yml`: pnpm audit (prod, high+, **blocking**), gitleaks secret scan, CodeQL SAST (security-extended) — weekly cron sweep included
+- [x] Dependency tree triaged clean (2026-09-29): all high/moderate advisories resolved via `pnpm-workspace.yaml` overrides (mysql2/multer/nodemailer/qs/fast-uri/sharp) — `pnpm audit --prod` reports zero
 - [x] CI-1: all third-party GitHub Actions pinned to immutable commit SHAs (no mutable tags); top-level `permissions: {}` default-deny with per-job minimal elevation; CI installs use `--ignore-scripts`
 - [x] Dockerfiles: multi-stage, non-root `node`, pre-owned mount points, healthchecks
 - [x] docker-compose: `no-new-privileges`, resource limits, loopback-only Postgres binding, explicit `OTP_DEV_EXPOSE:false`

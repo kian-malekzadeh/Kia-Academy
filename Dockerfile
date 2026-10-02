@@ -30,6 +30,9 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends python3 make g++ openssl ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json .npmrc ./
+# Root db.json is statically imported by apps/web/src/lib/courseCatalog.ts
+# (demo catalog) — must exist for the Next production build.
+COPY db.json ./
 COPY packages/shared/package.json packages/shared/
 # Shared sources are needed during install because the root `postinstall`
 # compiles @kia-academy/shared (fresh type declarations for API build below).
@@ -39,18 +42,31 @@ COPY apps/api/package.json apps/api/
 # Prisma schema ships with the manifest layer: root `postinstall` generates the client.
 COPY apps/api/prisma apps/api/prisma
 COPY apps/web/package.json apps/web/
+# Flaky-registry resilience: retry the whole install up to 5× (each attempt
+# reuses the cached store — only the missing metadata re-downloads). The
+# DOMException timeout seen on slow CI networks happens inside a single
+# install; a fresh attempt with a warm store succeeds quickly.
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile
+    set -eux; \
+    for i in 1 2 3 4 5; do \
+      pnpm install --frozen-lockfile && break; \
+      echo "pnpm install failed (attempt $i) — retrying in 15s" >&2; \
+      sleep 15; \
+    done
 
 # ------------------------------------------------------------ builder -------
 FROM deps AS builder
 COPY packages/shared packages/shared
 COPY apps/api apps/api
-COPY apps/web apps/web
 
 RUN pnpm --filter @kia-academy/shared build
 RUN pnpm --filter @kia-academy/api exec prisma generate
 RUN pnpm --filter @kia-academy/api build
+
+# ----------------------------------------------------- web builder -----------
+# Separate stage so the api image build does not compile the Next.js app.
+FROM deps AS builder-web
+COPY apps/web apps/web
 
 ARG NEXT_PUBLIC_API_URL=
 ARG NEXT_PUBLIC_APP_URL=http://localhost:3000
@@ -59,6 +75,9 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
     NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL \
     API_PROXY_TARGET=$API_PROXY_TARGET \
     DOCKER_BUILD=true
+# Webpack builds of this app can exceed the default V8 heap on CI runners
+# (7 GB RAM) — raise it explicitly and let Node fall back if unavailable.
+ENV NODE_OPTIONS=--max-old-space-size=6144
 RUN pnpm --filter @kia-academy/web build
 
 # -------------------------------------------------------- api (runtime) ------
@@ -103,9 +122,9 @@ LABEL org.opencontainers.image.title="Kia Academy Web" \
 
 ENV NODE_ENV=production
 WORKDIR /
-COPY --from=builder /app/apps/web/.next/standalone ./
-COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
-COPY --from=builder /app/apps/web/public ./apps/web/public
+COPY --from=builder-web /app/apps/web/.next/standalone ./
+COPY --from=builder-web /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=builder-web /app/apps/web/public ./apps/web/public
 RUN chown -R node:node /apps
 USER node
 

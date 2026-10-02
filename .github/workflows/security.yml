@@ -40,10 +40,10 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
-      # Known-advisory gate. Kept advisory-only (continue-on-error) until triage;
-      # flip to blocking once the backlog is clean.
-      - name: Audit production dependencies (high+)
-        continue-on-error: true
+      # Known-advisory gate — now BLOCKING: the dependency tree was triaged
+      # clean (all high/moderate advisories resolved via workspace overrides)
+      # so a new high+ advisory must fail CI until explicitly triaged.
+      - name: Audit production dependencies (high+, blocking)
         run: pnpm audit --prod --audit-level=high
 
   # ------------------------------------------------------------ secret scan --

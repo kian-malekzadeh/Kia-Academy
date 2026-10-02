@@ -558,6 +558,13 @@ model CourseExam {
    * Payload of CourseExamQuestion[] (server-side grading keys included).
    */
   questions     Json           @default("[]")
+  /**
+   * EXAM-4: maximum graded attempts a learner may take (1–10). The default
+   * 3 keeps a reasonable retry policy; admins can tighten or loosen per exam.
+   * Attempts whose status is IN_PROGRESS/PROCESSING/EXPIRED do not count —
+   * only SUBMITTED ones consume an attempt.
+   */
+  maxAttempts   Int            @default(3)
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 

@@ -42,6 +42,7 @@ function buildService(overrides?: {
     user: {
       findUnique: jest.fn().mockResolvedValue(overrides?.storedUser ?? null),
       update: jest.fn().mockResolvedValue({}),
+      create: jest.fn(),
     },
     refreshToken: {
       deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
@@ -54,10 +55,12 @@ function buildService(overrides?: {
       findUnique: jest.fn().mockResolvedValue(overrides?.storedResetToken ?? null),
       updateMany: tx.passwordResetToken.updateMany,
     },
+    bootcampProfile: { create: jest.fn() },
     $transaction: jest.fn(async (arg: unknown) => (typeof arg === 'function' ? arg(tx) : arg)),
   };
   const emailService = {
     sendPasswordReset: jest.fn().mockResolvedValue(overrides?.emailStatus ?? 'sent'),
+    sendWelcome: jest.fn().mockResolvedValue(undefined),
   };
   const configGet = jest.fn((key: string, fallback?: unknown) => {
     if (key === 'NODE_ENV') return overrides?.nodeEnv ?? 'test';
@@ -69,7 +72,8 @@ function buildService(overrides?: {
     { sign: jest.fn(), verify: jest.fn() } as never,
     { get: configGet } as never,
     emailService as never,
-    { get: jest.fn().mockResolvedValue({}) } as never,
+    // Site settings — bootcamp defaults used by register/completeProfile.
+    { get: jest.fn().mockResolvedValue({ bootcamp: { defaultRank: 12, defaultPoints: 340 } }) } as never,
     { sendOtp: jest.fn().mockResolvedValue(undefined) } as never,
     { loginGate: jest.fn().mockResolvedValue(null) } as never,
   );
@@ -331,5 +335,62 @@ describe('changePassword (AUTH-4)', () => {
     await service.changePassword('u1', { currentPassword: 'oldpass1', newPassword: 'newpass1' });
 
     expect(prisma.refreshToken.deleteMany).toHaveBeenCalledWith({ where: { userId: 'u1' } });
+  });
+
+  /* -------------------------------------------------- AUTH-6 register ---- */
+
+  describe('resetPassword verify-type (AUTH-6 email verification)', () => {
+    it('flips emailVerified when type=verify without changing password semantics', async () => {
+      const token = 'a'.repeat(64);
+      const owner = { id: 'u1', status: 'ACTIVE', email: 'a@b.c' };
+      const { service, tx } = buildService({
+        storedResetToken: {
+          id: 'prt-1',
+          tokenHash: createHash('sha256').update(token).digest('hex'),
+          userId: 'u1',
+          usedAt: null,
+          expiresAt: new Date(Date.now() + 60_000),
+          user: owner,
+        },
+      });
+      tx.user.update = jest.fn().mockResolvedValue({});
+
+      await service.resetPassword({
+        token,
+        password: 'passw0rd1',
+        passwordConfirm: 'passw0rd1',
+        type: 'verify',
+      });
+
+      expect(tx.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ emailVerified: true }),
+        }),
+      );
+      expect(tx.passwordResetToken.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'prt-1', usedAt: null } }),
+      );
+    });
+
+    it('keeps emailVerified untouched for a classic reset (type omitted)', async () => {
+      const token = 'b'.repeat(64);
+      const owner = { id: 'u1', status: 'ACTIVE', email: 'a@b.c' };
+      const { service, tx } = buildService({
+        storedResetToken: {
+          id: 'prt-2',
+          tokenHash: createHash('sha256').update(token).digest('hex'),
+          userId: 'u1',
+          usedAt: null,
+          expiresAt: new Date(Date.now() + 60_000),
+          user: owner,
+        },
+      });
+      tx.user.update = jest.fn().mockResolvedValue({});
+
+      await service.resetPassword({ token, password: 'passw0rd1', passwordConfirm: 'passw0rd1' });
+
+      const data = (tx.user.update as jest.Mock).mock.calls[0][0].data;
+      expect(data.emailVerified).toBeUndefined();
+    });
   });
 });

@@ -331,8 +331,12 @@ export class AdminController {
 
   @Patch('contact/:id/read')
   @AdminAccess('settings', 'edit')
-  markContactMessageRead(@Param('id') id: string) {
-    return this.adminService.markContactMessageRead(id);
+  markContactMessageRead(
+    @CurrentUser() actor: AuthUser,
+    @AuditMeta() auditMeta: AuditRequestMeta,
+    @Param('id') id: string,
+  ) {
+    return this.adminService.markContactMessageRead(id, actor, auditMeta);
   }
 
   @Get('payments')

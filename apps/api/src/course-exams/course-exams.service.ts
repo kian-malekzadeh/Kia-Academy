@@ -30,6 +30,7 @@ interface CourseExamRow {
   description: string;
   passScore: number;
   durationMin: number;
+  maxAttempts: number;
   published: boolean;
   sortOrder: number;
   kind: string;
@@ -145,38 +146,58 @@ export class CourseExamsService {
     if (!exam.published) throw new ForbiddenException('This exam is not published');
     await this.assertEnrolled(userId, exam.courseId);
 
+    // EXAM-4: enforce the exam's attempt cap. Only SUBMITTED attempts consume
+    // the budget — an in-progress, processing or expired attempt never blocks
+    // the learner from resuming their current try.
+    const maxAttempts = exam.maxAttempts ?? 3;
+    const usedAttempts = await this.prisma.courseExamAttempt.count({
+      where: { userId, examId, status: 'SUBMITTED' },
+    });
+    if (usedAttempts >= maxAttempts) {
+      throw new ForbiddenException(
+        `Attempt limit reached (${usedAttempts}/${maxAttempts}) — this exam allows at most ${maxAttempts} graded attempts`,
+      );
+    }
+
+    // Only in-flight attempts are resumable. EXPIRED is terminal (EXAM-4):
+    // a timed-out try never consumes the graded-attempt budget, so the learner
+    // can start a fresh attempt while any budget remains.
     const existing = await this.prisma.courseExamAttempt.findFirst({
-      where: { userId, examId, status: { in: ['IN_PROGRESS', 'EXPIRED'] } },
+      where: { userId, examId, status: { in: ['IN_PROGRESS', 'PROCESSING'] } },
       orderBy: { startedAt: 'desc' },
     });
 
     const liveQuestions = parseQuestions(exam.questions);
     const durationMin = exam.durationMin;
 
-    if (existing) {
+    if (existing && existing.status === 'IN_PROGRESS') {
       const endsAt = new Date(existing.startedAt.getTime() + durationMin * 60_000);
       const now = new Date();
       let status = existing.status as 'IN_PROGRESS' | 'SUBMITTED' | 'EXPIRED';
-      if (status === 'IN_PROGRESS' && now > endsAt) status = 'EXPIRED';
+      if (now > endsAt) status = 'EXPIRED';
       if (status !== existing.status) {
         await this.prisma.courseExamAttempt.update({ where: { id: existing.id }, data: { status } });
       }
-      return {
-        attemptId: existing.id,
-        examId: exam.id,
-        examTitle: exam.title,
-        courseSlug: exam.course.slug,
-        kind: exam.kind === 'MIDTERM' ? 'MIDTERM' : 'FINAL',
-        durationMin,
-        passScore: exam.passScore,
-        startedAt: existing.startedAt.toISOString(),
-        endsAt: endsAt.toISOString(),
-        questions: this.resolveAttemptQuestions(existing.questions, liveQuestions).map(
-          toPublicQuestion,
-        ),
-        savedAnswers: this.parseAnswers(existing.answers),
-        status,
-      };
+      if (status !== 'EXPIRED') {
+        return {
+          attemptId: existing.id,
+          examId: exam.id,
+          examTitle: exam.title,
+          courseSlug: exam.course.slug,
+          kind: exam.kind === 'MIDTERM' ? 'MIDTERM' : 'FINAL',
+          durationMin,
+          passScore: exam.passScore,
+          startedAt: existing.startedAt.toISOString(),
+          endsAt: endsAt.toISOString(),
+          questions: this.resolveAttemptQuestions(existing.questions, liveQuestions).map(
+            toPublicQuestion,
+          ),
+          savedAnswers: this.parseAnswers(existing.answers),
+          status,
+        };
+      }
+      // Timed out while we looked at it — fall through and start a fresh
+      // attempt (the budget check above already ensured one is available).
     }
 
     const attempt = await this.prisma.courseExamAttempt.create({
@@ -234,6 +255,7 @@ export class CourseExamsService {
         description: dto.description ?? '',
         passScore: dto.passScore ?? 60,
         durationMin: dto.durationMin ?? 15,
+        maxAttempts: dto.maxAttempts ?? 3,
         published: dto.published ?? true,
         sortOrder: dto.sortOrder ?? (maxOrder._max.sortOrder ?? 0) + 1,
         kind: this.toDbKind(dto.kind),
@@ -261,6 +283,7 @@ export class CourseExamsService {
         description: dto.description,
         passScore: dto.passScore,
         durationMin: dto.durationMin,
+        maxAttempts: dto.maxAttempts,
         published: dto.published,
         sortOrder: dto.sortOrder,
         kind: dto.kind !== undefined ? this.toDbKind(dto.kind) : undefined,
@@ -614,6 +637,7 @@ export class CourseExamsService {
       description: row.description,
       passScore: row.passScore,
       durationMin: row.durationMin,
+      maxAttempts: row.maxAttempts,
       published: row.published,
       sortOrder: row.sortOrder,
       kind,
@@ -636,6 +660,7 @@ export class CourseExamsService {
       description: row.description,
       passScore: row.passScore,
       durationMin: row.durationMin,
+      maxAttempts: row.maxAttempts,
       published: row.published,
       sortOrder: row.sortOrder,
       kind,

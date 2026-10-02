@@ -1366,7 +1366,11 @@ export class AdminService {
     }));
   }
 
-  async markContactMessageRead(id: string): Promise<AdminContactMessage> {
+  async markContactMessageRead(
+    id: string,
+    actor: AuthUser,
+    requestMeta: AdminRequestMeta = {},
+  ): Promise<AdminContactMessage> {
     const existing = await this.prisma.contactMessage.findUnique({ where: { id } });
     if (!existing) {
       throw new NotFoundException(`Contact message ${id} not found`);
@@ -1374,6 +1378,18 @@ export class AdminService {
     const updated = await this.prisma.contactMessage.update({
       where: { id },
       data: { readAt: existing.readAt ?? new Date() },
+    });
+    // ADM-3: complete audit coverage — the previously un-audited mutation.
+    await this.audit.record({
+      actor,
+      action: 'contact.read',
+      section: 'settings',
+      entityType: 'ContactMessage',
+      entityId: id,
+      target: existing.subject,
+      before: { readAt: existing.readAt?.toISOString() ?? null },
+      after: { readAt: updated.readAt?.toISOString() ?? null },
+      ...requestMeta,
     });
     return {
       id: updated.id,

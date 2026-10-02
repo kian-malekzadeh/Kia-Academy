@@ -470,6 +470,7 @@ function defaultCourses(): DemoCourse[] {
     slug: course.slug,
     title: course.title,
     description: course.description,
+    descriptionEn: course.descriptionEn ?? null,
     icon: course.icon,
     trackKey: course.trackKey,
     sortOrder: course.sortOrder,
@@ -757,6 +758,7 @@ interface DemoStoredExam {
   description: string;
   passScore: number;
   durationMin: number;
+  maxAttempts: number;
   sortOrder: number;
   published: boolean;
   kind: CourseExamKind;
@@ -806,6 +808,7 @@ const DEMO_EXAMS: DemoStoredExam[] = courseCatalog.flatMap((course, courseIdx) =
         : 'پوشش کل دوره — به‌صورت پیش‌فرض ساخته شد.',
     passScore,
     durationMin: 10,
+    maxAttempts: 3,
     sortOrder: courseIdx * 10 + (kind === 'MIDTERM' ? 0 : 1),
     published: true,
     kind,
@@ -900,6 +903,7 @@ function demoExamSummaries(): CourseExamSummary[] {
       description: e.description,
       passScore: e.passScore,
       durationMin: e.durationMin,
+      maxAttempts: e.maxAttempts,
       published: e.published,
       sortOrder: e.sortOrder,
       kind: e.kind,
@@ -932,6 +936,7 @@ function demoAdminExam(e: DemoStoredExam): AdminCourseExam {
     description: e.description,
     passScore: e.passScore,
     durationMin: e.durationMin,
+    maxAttempts: e.maxAttempts,
     published: e.published,
     sortOrder: e.sortOrder,
     kind: e.kind,
@@ -1526,6 +1531,7 @@ export const demoApi = {
       description?: string;
       passScore?: number;
       durationMin?: number;
+      maxAttempts?: number;
       published?: boolean;
       questions: CourseExamQuestion[];
     },
@@ -1547,6 +1553,7 @@ export const demoApi = {
       description: dto.description ?? '',
       passScore: dto.passScore ?? 60,
       durationMin: dto.durationMin ?? 15,
+      maxAttempts: dto.maxAttempts ?? 3,
       sortOrder: maxOrder + 1,
       published: dto.published ?? false,
       kind: dto.kind === 'MIDTERM' ? 'MIDTERM' : 'FINAL',
@@ -1571,6 +1578,7 @@ export const demoApi = {
       description?: string;
       passScore?: number;
       durationMin?: number;
+      maxAttempts?: number;
       published?: boolean;
       questions?: CourseExamQuestion[];
     },
@@ -1583,6 +1591,7 @@ export const demoApi = {
     if (dto.description !== undefined) exam.description = dto.description;
     if (dto.passScore !== undefined) exam.passScore = dto.passScore;
     if (dto.durationMin !== undefined) exam.durationMin = dto.durationMin;
+    if (dto.maxAttempts !== undefined) exam.maxAttempts = dto.maxAttempts;
     if (dto.published !== undefined) exam.published = dto.published;
     if (dto.kind !== undefined) exam.kind = dto.kind;
     if (dto.afterLessonId !== undefined) {
@@ -2393,6 +2402,7 @@ export const demoApi = {
         slug: c.slug,
         title: c.title,
         description: c.description,
+        descriptionEn: c.descriptionEn ?? null,
         icon: c.icon,
         trackKey: c.trackKey,
         sortOrder: c.sortOrder,
@@ -2405,6 +2415,7 @@ export const demoApi = {
             slug: l.slug,
             title: l.title,
             content: l.content,
+            contentEn: l.contentEn ?? null,
             videoUrl: l.videoUrl,
             durationMin: l.durationMin,
             sortOrder: l.sortOrder,
@@ -2468,6 +2479,7 @@ export const demoApi = {
           : 'پوشش کل دوره — به‌صورت پیش‌فرض ساخته شد.',
       passScore,
       durationMin: 10,
+      maxAttempts: 3,
       sortOrder: examStore.exams.length + 1,
       published: true,
       kind,
@@ -2530,6 +2542,7 @@ export const demoApi = {
       slug: updated.slug,
       title: updated.title,
       description: updated.description,
+      descriptionEn: updated.descriptionEn ?? null,
       icon: updated.icon,
       trackKey: updated.trackKey,
       sortOrder: updated.sortOrder,
