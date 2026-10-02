@@ -42,7 +42,7 @@ import { SmsService } from '../sms/sms.service';
 import { TwoFactorService } from './two-factor/two-factor.service';
 import { sniffImageMime } from '../common/utils/image-sniff';
 import { LoginDto } from './dto/login.dto';
-import { RegisterDto } from './dto/register.dto';
+
 import type { TwoFactorChallengeResponse } from './two-factor/two-factor.types';
 import { addDurationToDate, parseExpiresInSeconds } from './auth.utils';
 
@@ -85,50 +85,6 @@ export class AuthService {
     private readonly smsService: SmsService,
     private readonly twoFactorService: TwoFactorService,
   ) {}
-
-  async register(dto: RegisterDto): Promise<AuthResponse & { refreshToken: string }> {
-    const email = dto.email.toLowerCase();
-    if (dto.password !== dto.passwordConfirm) {
-      throw new BadRequestException('Passwords do not match');
-    }
-    if (!isValidIranProvince(dto.province) || !isValidIranCity(dto.province, dto.city)) {
-      throw new BadRequestException('Invalid province or city');
-    }
-
-    const existing = await this.prisma.user.findUnique({ where: { email } });
-    if (existing) {
-      throw new ConflictException('Email already registered');
-    }
-
-    const settings = await this.siteSettings.get();
-    const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
-    const province = sanitizeProfileText(dto.province);
-    const city = sanitizeProfileText(dto.city);
-    const user = await this.prisma.user.create({
-      data: {
-        name: dto.name,
-        email,
-        passwordHash,
-        province,
-        city,
-        profileComplete: true,
-        bootcampProfile: {
-          create: {
-            rank: settings.bootcamp.defaultRank,
-            points: settings.bootcamp.defaultPoints,
-          },
-        },
-      },
-    });
-
-    await this.emailService.sendWelcome({
-      id: user.id,
-      name: user.name,
-      email: user.email ?? email,
-    });
-
-    return this.issueAuthResponse(await this.buildAuthUser(user));
-  }
 
   async login(
     dto: LoginDto,

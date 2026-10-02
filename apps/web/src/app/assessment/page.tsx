@@ -8,6 +8,8 @@ import { RequireAuth } from '@/components/auth/RequireAuth';
 import { useAuth } from '@/context/AuthProvider';
 import { useLanguage } from '@/context/LanguageProvider';
 
+const BACK_PATH = '/tracks/technology';
+
 export default function AssessmentPage() {
   return (
     <RequireAuth nextPath="/assessment" learnerFlow>
@@ -45,8 +47,8 @@ function AssessmentContent() {
   return (
     <div className="page-content">
       <div className="container test-shell">
-        <PageBackButton href="/education" />
-        <UnifiedTestFlow backHref="/education" />
+        <PageBackButton href={BACK_PATH} />
+        <UnifiedTestFlow backHref={BACK_PATH} />
       </div>
     </div>
   );

@@ -14,6 +14,7 @@ import { TestResultsCard } from '@/components/dashboard/TestResultsCard';
 import { TicketsCard } from '@/components/dashboard/TicketsCard';
 import { TodoList } from '@/components/dashboard/TodoList';
 import { ToastProvider } from '@/components/dashboard/ToastProvider';
+import { HubDoors } from '@/components/hub/HubDoors';
 import { useApp } from '@/context/AppProvider';
 import { useAuth } from '@/context/AuthProvider';
 import { useLanguage } from '@/context/LanguageProvider';
@@ -52,6 +53,8 @@ export default function DashboardPage() {
               <p>{t('dashboard.empty.sub')}</p>
             </div>
           </header>
+
+          <HubDoors />
 
           <div className="bento">
             <Link href="/assessment" className="tile tile--half tile--feature">
@@ -92,6 +95,8 @@ export default function DashboardPage() {
             </div>
           </header>
 
+          <HubDoors />
+
           <div className="dash-grid">
             <FinancialCard />
             <BootcampCard />
@@ -108,3 +113,5 @@ export default function DashboardPage() {
     </ToastProvider>
   );
 }
+
+

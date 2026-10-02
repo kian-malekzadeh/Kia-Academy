@@ -7,11 +7,8 @@ import {
   ChevronDown,
   ClipboardList,
   LayoutDashboard,
-  Library,
   MessageSquare,
-  Palette,
   Ticket,
-  UserRound,
   type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -71,20 +68,14 @@ export function LearnerNav({
         icon: LayoutDashboard,
         exact: true,
       },
-      {
-        id: 'my-courses',
-        href: '/dashboard/my-courses',
-        label: t('panel.nav.myCourses'),
-        icon: BookOpen,
-      },
-      {
-        id: 'all-courses',
-        href: '/courses',
-        label: t('nav.allCourses'),
-        icon: Library,
-      },
-      {
-        id: 'tickets',
+    {
+      id: 'my-courses',
+      href: '/dashboard/my-courses',
+      label: t('panel.nav.myCourses'),
+      icon: BookOpen,
+    },
+    {
+      id: 'tickets',
         label: t('panel.nav.tickets'),
         icon: Ticket,
         children: [
@@ -101,26 +92,13 @@ export function LearnerNav({
             exact: true,
           },
         ],
-      },
-      {
-        id: 'messages',
-        href: '/dashboard/messages',
-        label: t('panel.nav.messages'),
-        icon: MessageSquare,
-      },
-      {
-        id: 'profile',
-        href: '/dashboard/profile',
-        label: t('panel.nav.profile'),
-        icon: UserRound,
-      },
-      {
-        id: 'material',
-        href: '/material',
-        label: t('panel.nav.material'),
-        icon: Palette,
-      },
-    ];
+      },{
+      id: 'messages',
+      href: '/dashboard/messages',
+      label: t('panel.nav.messages'),
+      icon: MessageSquare,
+    },
+  ];
   }, [t]);
 
   useEffect(() => {

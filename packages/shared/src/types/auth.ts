@@ -40,15 +40,6 @@ export interface LoginDto {
   password: string;
 }
 
-export interface RegisterDto {
-  name: string;
-  email: string;
-  password: string;
-  passwordConfirm: string;
-  province: string;
-  city: string;
-}
-
 export interface RequestOtpDto {
   phone: string;
 }

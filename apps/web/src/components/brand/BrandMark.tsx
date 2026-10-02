@@ -3,6 +3,9 @@
 /** Native aspect ratio of the Kia mark (viewBox 497.37 × 512). */
 const LOGO_ASPECT = 497.37 / 512;
 
+/** Latin wordmark rendered beside the mark — brand-styled, same in every locale. */
+export const BRAND_WORDMARK = 'KIA ACADEMY';
+
 /** Kia Academy mark — dual-path blue emblem from brand assets. */
 export function BrandMark({
   className = 'brand-mark',

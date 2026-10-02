@@ -210,40 +210,9 @@
     padding: var(--space-3);
   }
 
-  .panel-shell .top-right-tools {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--space-2);
-  }
-
-  /* Desktop order: user → color mode → language */
   .panel-shell .user-menu-wrap {
     order: 1;
     width: 100%;
-  }
-
-  .panel-shell .top-right-tools {
-    order: 2;
-  }
-
-  .panel-shell .top-right-tools .theme-toggle,
-  .panel-shell .top-right-tools .all-courses-btn {
-    order: 1;
-  }
-
-  .panel-shell .top-right-tools .lang-selector {
-    order: 2;
-  }
-
-  .panel-shell .top-right-tools .theme-toggle,
-  .panel-shell .top-right-tools .all-courses-btn,
-  .panel-shell .top-right-tools .lang-toggle,
-  .panel-shell .topbar button.lang-toggle {
-    width: 100%;
-    min-width: 0;
-    justify-content: flex-start;
   }
 
   .panel-shell .user-chip {
@@ -333,16 +302,6 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-}
-
-.top-right-tools {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.top-nav-tools {
-  display: none;
 }
 
 /* --- theme + language controls ------------------------------------------- */

@@ -595,3 +595,110 @@
   font-size: var(--fs-xs);
   color: var(--text-faint);
 }
+
+/* --- minimal guest landing (logo + pitch + single CTA) ------------------- */
+.landing-controls {
+  position: fixed;
+  top: var(--space-4);
+  inset-inline-end: var(--space-4);
+  /* Above .landing-intro (same --z-raised var, but the later DOM node would
+     win the tie and swallow clicks in the overlap area). */
+  z-index: var(--z-sticky);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.landing-min .landing-hero {
+  text-align: center;
+}
+
+.landing-min .landing-brand {
+  justify-content: center;
+}
+
+.landing-min-actions {
+  justify-content: center;
+  margin-top: var(--space-6);
+}
+
+.landing-min-email {
+  display: inline-flex;
+  align-self: center;
+  margin-top: var(--space-3);
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+  text-decoration: none;
+  transition: color var(--dur-base) var(--ease-out);
+}
+
+.landing-min-email:hover {
+  color: var(--brand);
+}
+
+.landing-min-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-6) 0;
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+}
+
+.landing-min-footer a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.landing-min-footer a:hover {
+  color: var(--brand);
+}
+
+/* --- four-department variant (post-auth landing) ------------------------- */
+/* Two columns × two rows — 3-col overflowed the panel rail, 4-col crushed
+   the door copy. */
+.landing-doors--depts {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: 48rem;
+}
+
+@media (max-width: 720px) {
+  .landing-doors--depts {
+    grid-template-columns: 1fr;
+  }
+}
+
+.door--work {
+  border-color: rgba(70, 179, 133, 0.34);
+  background:
+    linear-gradient(160deg, rgba(70, 179, 133, 0.12) 0%, transparent 58%),
+    var(--bg-card);
+}
+
+.door--work:hover {
+  border-color: var(--mint-500);
+}
+
+.door-icon--mint {
+  background: var(--mint-500);
+  color: #ffffff;
+  box-shadow: 0 0 24px rgba(70, 179, 133, 0.35);
+}
+
+.door--events {
+  border-color: var(--sky-hairline);
+  background:
+    linear-gradient(160deg, var(--sky-tint) 0%, transparent 58%),
+    var(--bg-card);
+}
+
+.door--events:hover {
+  border-color: var(--sky-500);
+}
+
+.door-icon--sky {
+  background: var(--sky-500);
+  color: #ffffff;
+  box-shadow: 0 0 24px rgba(46, 155, 234, 0.35);
+}

@@ -43,7 +43,6 @@ import type {
   ReadinessScores,
   ReadinessTestSummary,
   ReadinessTestDto,
-  RegisterDto,
   RequestOtpDto,
   RequestOtpResponse,
   RoadmapResponse,
@@ -167,7 +166,6 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     !skipAuth &&
     path !== '/auth/refresh' &&
     path !== '/auth/login' &&
-    path !== '/auth/register' &&
     path !== '/auth/otp/request' &&
     path !== '/auth/otp/verify'
   ) {
@@ -203,17 +201,6 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 }
 
 const liveApi = {
-  register(dto: RegisterDto): Promise<AuthResponse> {
-    return request<AuthResponse>('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify(dto),
-      skipAuth: true,
-    }).then((res) => {
-      setAccessToken(res.accessToken);
-      return res;
-    });
-  },
-
   login(dto: LoginDto): Promise<AuthResponse | TwoFactorChallengeResponse> {
     return request<AuthResponse | TwoFactorChallengeResponse>('/auth/login', {
       method: 'POST',

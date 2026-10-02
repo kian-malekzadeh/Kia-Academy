@@ -1009,3 +1009,24 @@
     transition: none !important;
   }
 }
+
+/* --- post-login hub doors (employer/freelancer · education · material) --- */
+.dash-doors {
+  margin: var(--space-6) 0;
+}
+
+.dash-doors__heading {
+  margin-bottom: var(--space-4);
+  font-size: var(--fs-h3);
+  font-weight: 800;
+  color: var(--text);
+}
+
+/* The academy name carries the brand colour inside the plain-text heading. */
+.dash-doors__brand {
+  color: var(--brand);
+}
+
+.dash-doors .landing-doors {
+  max-width: none;
+}

@@ -28,7 +28,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
-import { RegisterDto } from './dto/register.dto';
+
 import { CompleteProfileDto, RequestOtpDto, VerifyOtpDto } from './dto/otp.dto';
 import { ChangePasswordDto, ForgotPasswordDto, ResetPasswordDto } from './dto/password.dto';
 import { ConfigService } from '@nestjs/config';
@@ -40,17 +40,6 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
   ) {}
-
-  @Post('register')
-  @Throttle({ default: { limit: 3, ttl: 60_000 } })
-  async register(
-    @Body() dto: RegisterDto,
-    @Res({ passthrough: true }) res: Response,
-  ): Promise<AuthResponse> {
-    const result = await this.authService.register(dto);
-    this.setRefreshCookie(res, result.refreshToken);
-    return this.stripRefreshToken(result);
-  }
 
   @Post('login')
   @Throttle({ default: { limit: 5, ttl: 60_000 } })

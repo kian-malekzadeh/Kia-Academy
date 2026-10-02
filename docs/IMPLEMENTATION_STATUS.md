@@ -21,11 +21,180 @@ now lives in [`AUDIT.md`](./AUDIT.md) and the go-live gates in
 | Seed data present (6 users · 4 courses · 266 lessons) | ✅ |
 | `pnpm typecheck` (shared + api + web) | ✅ |
 | `pnpm lint` (all workspaces) | ✅ |
-| `pnpm test` — 219/219 (shared 46, web 37, api 136) | ✅ |
+| `pnpm test` — 220/220 (shared 46, web 38, api 136) | ✅ |
 | `pnpm build` (production, 344 static pages) | ✅ |
-| Runtime smoke (`scripts/smoke.sh`, 28 probes incl. OTP + password + 2FA flows) | ✅ |
+| Runtime smoke (`scripts/smoke.sh`, 29 probes incl. phone-only registration + OTP + password + 2FA flows) | ✅ |
 
 ## New this session
+
+### UX-2 — one account menu for sign out, color mode and language (implemented this session)
+
+These three controls existed in **three** places at once: a standalone sign-out
+button in the nav, `LanguageSelector` + theme toggle duplicated between the
+desktop `top-right` cluster and the mobile burger sheet. All three now live in a
+single place — the user-chip dropdown (`TopBar`), which is reachable on desktop
+and on mobile:
+
+- **خروج / Sign out** — moved out of `top-nav` into the dropdown (danger row).
+- **حالت / Mode** — one row showing the *current* value («روشن»/«تیره», new
+  `nav.modeLight` / `nav.modeDark` keys) instead of an anonymous ◐ glyph; the
+  icon switches Sun/Moon so state is readable at a glance.
+- **زبان / Language** — the `LanguageSelector` sits inside the dropdown, and its
+  option list was re-skinned to **flow inline** (`position: static`, no float-out
+  box-shadow panel) so it reads as one menu rather than a popover escaping a
+  popover.
+- **ویرایش اطلاعات کاربری** — profile editing (`/dashboard/profile`) joins the
+  menu next to «همه دوره‌ها», reusing the same `panel.nav.profile` label the
+  sidebar shows so the two never disagree. Menu order is now: courses ·
+  profile ————— color mode · language ————— sign out.
+- **Dead CSS removed:** every `.top-nav-tools` rule (layout.css + two
+  responsive.css blocks) went with the element — the mobile sheet is now
+  navigation only, verified in the DOM at 390px.
+- **Duplicate nav entries removed:** «همه دوره‌ها» appeared three times (sidebar,
+  top-right cluster, user menu). The `all-courses` item was dropped from
+  `LearnerNav`, and the standalone `all-courses-btn` (with its whole
+  `.top-right-tools` wrapper) was dropped from `TopBar` — that wrapper held
+  nothing else once language and mode moved into the menu, so ~60 lines of dead
+  CSS across `layout.css` + `responsive.css` went with it (including the
+  `.user-chip-name` hide rule, which was re-scoped rather than deleted). The
+  sidebar is now پنل · دوره‌های من · تیکت‌ها · پیام‌ها · پروفایل · متریال
+  (+ جوایز), and the catalog is reachable from the user menu and the footer.
+- The landing page keeps its own language/theme controls: guests have no user
+  chip, and `SiteChrome` hides the whole bar for them.
+
+### UX-1 — dedicated post-auth landing with only three doors (implemented this session)
+
+Product decision: after registration + profile completion **and** after every
+successful login, the user lands on a page that contains **nothing but three
+buttons** — «کارفرما و فریلنسر»، «آموزش»، «متریال». The full dashboard panel stays
+one click away (sidebar) but is no longer the landing surface.
+
+- **New route `/home`** (`apps/web/src/app/home/page.tsx`): a centered,
+  deliberately sparse page holding nothing but the three doors — the page
+  heading was dropped on review so the choice is the only thing on screen.
+  Gated by `RequireAuth learnerFlow`, so guests are pulled into the phone OTP
+  flow and users with an incomplete profile are sent back to it.
+- **`HubDoors`** (`apps/web/src/components/hub/HubDoors.tsx`): the three-door
+  block was lifted out of the dashboard into a shared component, so `/home` and
+  `/dashboard` can never drift apart.
+- **One source of truth for the path:** `HOME_PATH` is exported from
+  `apps/web/src/lib/postLoginPath.ts` and consumed by the landing redirect,
+  `resolvePostLoginPath`, the education flow, `TopBar`'s logo and the freelance
+  back button.
+- **Entry points retargeted to `/home`:**
+  - `/` — signed-in users with a completed profile `router.replace(HOME_PATH)`.
+  - `resolvePostLoginPath` — learners now default to `/home` (including the
+    `next=/` and rejected-open-redirect fallbacks). Staff still go to `/admin`,
+    and learner **deep links are still honored** (`next=/roadmap` → `/roadmap`).
+  - `education` `continueAfterProfile()` — no `next` deep link means profile
+    completion lands on `/home` instead of the assessment page; its CTA copy
+    became `education.start.homeCta` («مشاهده مسیرها») to match.
+  - `TopBar` logo click — used to fork on `hasRoadmap` (`/dashboard` vs
+    `/education`); now always `/home`, so the `useApp().hasRoadmap` dependency
+    was dropped from that component.
+
+**Follow-up — «آموزش» splits into two directions.** The education door now
+opens `/tracks` instead of the course catalog, and that page holds exactly two
+doors:
+
+- **تکنولوژی** → `/tracks/technology`, which splits once more into **همه دوره‌ها**
+  (`/courses`, the catalog) and **آزمون ارزیابی** (`/assessment`, the wizard →
+  readiness test → roadmap). The assessment page's back button now points at
+  `/tracks/technology` instead of `/education`, so the branch has no dead ends
+  in either direction.
+- **زبان‌های خارجی** → `/tracks/language`, an honest coming-soon page. There is
+  no language content in the catalog today, so rather than ship a dead link it
+  states plainly what is being built (level-adaptive, like the technology
+  path), captures the demand through `/contact`, and offers the technology
+  catalog as an alternative. This is the seam where a real language track
+  (courses + a `language` track key + its own assessment) slots in later.
+- **Doors keep working destinations:** `/freelance`, `/tracks`, `/material`,
+  `/events`. `/freelance`'s back button points at `/home` instead of
+  `/dashboard`.
+
+### UX-3 — fourth department: events (implemented this session)
+
+`/home` (and the dashboard panel) now carry **four** doors — employer/freelancer,
+education, material and **events** — laid out two columns × two rows
+(`.landing-doors--depts`; the old 3-column variant was renamed away since no
+other page used it).
+
+- **Horizontal breathing room.** `.hub` declared `padding: <block> 0 <block>`,
+  and that shorthand zeroed the `.container` inline padding
+  (`var(--space-6)` = 24px) for **every** hub page — so each door grid sat flush
+  against both viewport edges. Switched to `padding-block`, which keeps the
+  container gutter. `/home`, `/tracks`, `/tracks/technology`,
+  `/tracks/language` and `/events` now all measure 24px inset on both sides
+  (verified against `main`'s box, not `innerWidth`, since the panel rail eats
+  one edge).
+- **Brand name highlighted in the departments heading.** `HubDoors` wraps the
+  academy name in `.dash-doors__brand` (brand colour) inside the otherwise
+  plain `dashboard.doors.heading`. The heading stays **one** translated string
+  and is split at render time around `common.brand`, because the two locales
+  put the name in different positions (fa «دپارتمان‌های کیا آکادمی», en «Kia
+  Academy departments») — and separate lead/tail keys could not express "no lead
+  word": `createTranslator` tests `if (primary)`, so an empty-string part is
+  treated as missing and silently falls back to the other locale (caught in the
+  browser — Persian rendered «… کیا آکادمی departments»). If the brand string is
+  ever absent from the heading, it degrades to plain text.
+- **Fourth accent colour.** With four doors the existing three accents no
+  longer gave the events door its own identity — mint/brand/amber were spoken
+  for, and reusing the `danger` ramp would have signalled "error". A small
+  `--sky-*` palette (`300/500/600` plus `--sky-tint` / `--sky-hairline`) was added
+  in `base.css` for both themes, and `.door--events` / `.door-icon--sky` use it.
+  The four doors are now mint · indigo · amber · sky, distinct in both themes
+  (verified by computed `border-top-color` and icon background in light *and*
+  dark).
+- **`/events`** is a new hub for competitions, bootcamps, webinars and meetups.
+  Three of its four tiles lead somewhere real: چالش‌ها و مسابقه‌ها → `/bootcamp`,
+  بوت‌کمپ‌ها → `/bootcamp`, لیدربرد و جوایز → `/rewards`. The fourth
+  (وبینار و میتینگ) is **not a link** — it is marked «به‌زودی», gets
+  `cursor: default` and a neutral hover so it does not read as tappable, and
+  the page closes with a `/contact` CTA plus the weekly challenges as the
+  alternative. Same honesty rule as the foreign-language page: no dead links.
+- **Header trimmed:** the `/events` head is now just the `<h1>` («رویدادها و
+  مسابقات») — the eyebrow badge and subtitle paragraph were removed along with
+  their now-unused `events.badge` / `events.sub` keys in both locales (the
+  dashboard panel's `/dashboard/events` uses its own `panel.events.sub` and
+  is untouched).
+- Verified live in the preview: `/` → `/home`, education start step → `/home`,
+  freelance back → `/home`, `/home` → `/tracks` → `/tracks/technology` →
+  `/assessment`, and the language coming-soon page (a real layout bug was caught
+  and fixed there: `.bento` is a 12-column grid, so bare `.tile` children
+  collapsed to one column — they need `tile--half`).
+
+**Navigation shape now in place:** `/home` (3 doors) → `/tracks` (technology ·
+foreign languages) → `/tracks/technology` (all courses · assessment test). Every
+leaf is a real page.
+
+### AUTH-6 — phone-only public registration (implemented this session)
+
+Product decision: **self-registration happens only through the mobile/OTP
+flow** (`/education`: phone → OTP code → profile). Everything that allowed an
+email+password sign-up is gone, end to end:
+
+- **API:** `POST /auth/register` (controller), `AuthService.register()` and
+  `dto/register.dto.ts` deleted → the endpoint answers **404**. No public path
+  can create a password-holding learner account any more.
+- **Web:** `apps/web/src/app/(auth)/register/page.tsx` is now a redirect to
+  `/education` (old bookmarks/external links land on the phone flow instead of
+  a 404); the login page's «ایجاد حساب» link points at `/education`;
+  `AuthProvider.register`, `api.register` and `demoApi.register` removed;
+  `/register` dropped from `robots.ts`.
+- **Shared:** the now-dead `RegisterDto` type was removed from
+  `@kia-academy/shared`.
+- **Staff provisioning is unchanged:** admins still create account holders with
+  email+password through `POST /admin/users` (admin panel), which is how staff
+  and test accounts are made.
+- **Login, password reset and 2FA stay intact** for accounts that do have a
+  password (staff, admin-created users).
+- `scripts/smoke.sh` now asserts `POST /auth/register → 404` and provisions its
+  password-bearing smoke account through the admin API (29 probes, all green).
+- i18n `auth.register.*` strings were intentionally left in the dictionary: the
+  2FA copy the login screen renders (`auth.login.twoFactor*`) currently lives in
+  that same object, so deleting the whole block would break the login screen.
+- Note: the phone flow still collects an email in its profile step — it is a
+  contact/receipt field, not a credential.
 
 - `scripts/smoke.sh` — one-shot production-build smoke: boots built api+web, probes
   health, public pages, auth gates (401s), SEO artifacts, a real OTP

@@ -4,7 +4,6 @@ import type {
   AuthUser,
   LearnerState,
   LoginDto,
-  RegisterDto,
   TwoFactorChallengeResponse,
 } from '@kia-academy/shared';
 import {
@@ -30,7 +29,6 @@ interface AuthContextValue {
   login: (dto: LoginDto) => Promise<AuthUser | TwoFactorChallengeResponse>;
   /** Complete the 2FA second step (AUTH-5) and hydrate the session. */
   verifyTwoFactorLogin: (challenge: string, code: string) => Promise<AuthUser>;
-  register: (dto: RegisterDto) => Promise<AuthUser>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
 }
@@ -119,17 +117,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [applyLearnerState],
   );
 
-  const register = useCallback(
-    async (dto: RegisterDto) => {
-      const res = await api.register(dto);
-      setUser(res.user);
-      const state = await api.me();
-      applyLearnerState(state);
-      return state.user;
-    },
-    [applyLearnerState],
-  );
-
   const logout = useCallback(async () => {
     try {
       await api.logout();
@@ -146,11 +133,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: !!user,
       login,
       verifyTwoFactorLogin,
-      register,
       logout,
       refreshSession,
     }),
-    [user, learnerState, loading, login, verifyTwoFactorLogin, register, logout, refreshSession],
+    [user, learnerState, loading, login, verifyTwoFactorLogin, logout, refreshSession],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -2,18 +2,17 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChevronDown, Library, LogOut, Menu, MoveHorizontal, Shield, Trophy, X } from 'lucide-react';
+import { ChevronDown, LogOut, Menu, Moon, MoveHorizontal, Shield, Sun, Trophy, UserRound, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { isStaffRole } from '@kia-academy/shared';
-import { BrandMark } from '@/components/brand/BrandMark';
+import { BRAND_WORDMARK, BrandMark } from '@/components/brand/BrandMark';
 import { CartBadge } from '@/components/cart/CartBadge';
 import { LanguageSelector } from '@/components/layout/LanguageSelector';
 import { LearnerNav } from '@/components/layout/LearnerNav';
-import { useApp } from '@/context/AppProvider';
 import { useAuth } from '@/context/AuthProvider';
 import { useLanguage } from '@/context/LanguageProvider';
 import { useTheme } from '@/context/ThemeProvider';
-import { useSiteSettings } from '@/hooks/useSiteSettings';
+import { HOME_PATH } from '@/lib/postLoginPath';
 
 /** Sidebar width presets — 'default' keeps the original 18.5rem panel width. */
 type PanelNavSize = 'compact' | 'default' | 'wide';
@@ -28,10 +27,8 @@ function isPanelNavSize(value: string | null): value is PanelNavSize {
 export function TopBar() {
   const router = useRouter();
   const { t } = useLanguage();
-  const { toggleTheme } = useTheme();
-  const { hasRoadmap } = useApp();
+  const { toggleTheme, theme } = useTheme();
   const { user, logout, loading } = useAuth();
-  const { settings } = useSiteSettings();
   const [menuOpen, setMenuOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
   // Sidebar size starts at the original default; the stored preference is
@@ -72,7 +69,7 @@ export function TopBar() {
       router.push('/admin');
       return;
     }
-    router.push(hasRoadmap ? '/dashboard' : '/education');
+    router.push(HOME_PATH);
   };
 
   useEffect(() => {
@@ -113,20 +110,6 @@ export function TopBar() {
     router.push('/');
   };
 
-  const renderThemeToggle = () => (
-    <button
-      type="button"
-      className="theme-toggle"
-      onClick={toggleTheme}
-      aria-label={t('nav.toggleColorMode')}
-    >
-      <span className="theme-toggle-icon" aria-hidden="true">
-        ◐
-      </span>
-      <span className="theme-toggle-label">{t('nav.mode')}</span>
-    </button>
-  );
-
   const navSizeClass =
     navSize === 'compact'
       ? ' panel-nav--compact'
@@ -145,7 +128,7 @@ export function TopBar() {
       <div className="topbar-primary">
         <button type="button" className="logo" onClick={handleLogoClick}>
           <BrandMark className="logo-mark" size={26} title="" />
-          <span className="logo-text">{settings.general.siteName || t('common.brand')}</span>
+          <span className="logo-text">{BRAND_WORDMARK}</span>
         </button>
 
         <button
@@ -198,41 +181,12 @@ export function TopBar() {
             </Link>
           ) : null}
 
-          {user ? (
-            <button
-              type="button"
-              className="top-nav-link danger"
-              onClick={() => {
-                setNavOpen(false);
-                void handleLogout();
-              }}
-            >
-              <LogOut size={14} aria-hidden="true" />
-              <span className="learner-nav-text">{t('nav.signOut')}</span>
-            </button>
-          ) : null}
-
-          <div className="top-nav-tools">
-            <LanguageSelector />
-            {renderThemeToggle()}
-          </div>
+          {/* Sign out, color mode and language all live in the user menu
+              (top-right), so the mobile sheet carries navigation only. */}
         </nav>
       </div>
 
       <div className="topbar-secondary top-right">
-        <div className="top-right-tools">
-          <Link
-            href="/courses"
-            className="theme-toggle all-courses-btn"
-            aria-label={t('nav.allCourses')}
-          >
-            <Library size={16} aria-hidden="true" />
-            <span className="theme-toggle-label">{t('nav.allCourses')}</span>
-          </Link>
-          <LanguageSelector />
-          {renderThemeToggle()}
-        </div>
-
         {loading || !user ? null : (
           <>
             {!isSuperAdmin ? <CartBadge /> : null}
@@ -254,13 +208,48 @@ export function TopBar() {
                     <span className="ltr-isolate">{user.email || user.phone}</span>
                   </div>
                   <Link
-                    href="/courses"
+                    href="/dashboard/profile"
                     className="user-dropdown-item"
                     onClick={() => setMenuOpen(false)}
                   >
-                    <Library size={14} aria-hidden="true" />
-                    <span>{t('nav.allCourses')}</span>
+                    <UserRound size={14} aria-hidden="true" />
+                    <span>{t('panel.nav.profile')}</span>
                   </Link>
+
+                  <div className="user-dropdown-sep" role="separator" />
+
+                  <button
+                    type="button"
+                    className="user-dropdown-item"
+                    onClick={toggleTheme}
+                    aria-label={t('nav.toggleColorMode')}
+                  >
+                    {theme === 'dark' ? (
+                      <Moon size={14} aria-hidden="true" />
+                    ) : (
+                      <Sun size={14} aria-hidden="true" />
+                    )}
+                    <span>{t('nav.mode')}</span>
+                    <span className="user-dropdown-value">
+                      {theme === 'dark' ? t('nav.modeDark') : t('nav.modeLight')}
+                    </span>
+                  </button>
+
+                  <LanguageSelector />
+
+                  <div className="user-dropdown-sep" role="separator" />
+
+                  <button
+                    type="button"
+                    className="user-dropdown-item danger"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      void handleLogout();
+                    }}
+                  >
+                    <LogOut size={14} aria-hidden="true" />
+                    <span>{t('nav.signOut')}</span>
+                  </button>
                 </div>
               )}
             </div>

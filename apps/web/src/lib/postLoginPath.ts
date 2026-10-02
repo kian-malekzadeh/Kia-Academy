@@ -1,5 +1,8 @@
 import { isStaffRole } from '@kia-academy/shared';
 
+/** Post-auth landing: a single page holding only the three primary doors. */
+export const HOME_PATH = '/home';
+
 /**
  * Resolve where to send a user after a successful login submit.
  * - Staff always prefer the admin panel (honor /admin* next paths).
@@ -11,7 +14,7 @@ export function resolvePostLoginPath(
 ): string {
   const raw = (next ?? '').trim();
   const target =
-    raw.startsWith('/') && !raw.startsWith('//') && !raw.startsWith('/login') ? raw : '/dashboard';
+    raw.startsWith('/') && !raw.startsWith('//') && !raw.startsWith('/login') ? raw : HOME_PATH;
 
   // ADM-1: shared staff predicate — custom (non-learner) roles are staff too.
   if (isStaffRole(role)) {
@@ -21,7 +24,7 @@ export function resolvePostLoginPath(
   // After a learner signs in with next=/admin, send them to the learner home.
   // (The login page itself clears learner sessions when opening the admin gate.)
   if (target === '/' || target.startsWith('/admin')) {
-    return '/dashboard';
+    return HOME_PATH;
   }
   return target;
 }

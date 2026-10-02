@@ -61,6 +61,12 @@
   --danger-600: #c42d40;
   --danger-700: #9b2231;
 
+  /* Fourth accent so a four-department grid stays colour-distinct from
+     brand (indigo), mint (green) and amber — and never borrows `danger`. */
+  --sky-300: #7dc4ff;
+  --sky-500: #2e9bea;
+  --sky-600: #1c7fc9;
+
   /* --- Layer 1: structure ------------------------------------------------ */
   --radius-xs: 6px;
   --radius-sm: 10px;
@@ -155,6 +161,9 @@
   --brand-tint-strong: rgba(100, 100, 255, 0.18);
   --brand-hairline: rgba(100, 100, 255, 0.28);
 
+  --sky-tint: rgba(46, 155, 234, 0.1);
+  --sky-hairline: rgba(46, 155, 234, 0.28);
+
   --progress: var(--mint-700);
   --progress-fill: var(--mint-500);
   --progress-tint: rgba(70, 179, 133, 0.14);
@@ -243,6 +252,9 @@
 
   --negative: var(--danger-400);
   --negative-tint: rgba(240, 120, 127, 0.16);
+
+  --sky-hairline: rgba(46, 155, 234, 0.36);
+  --sky-tint: rgba(46, 155, 234, 0.14);
 
   --code-bg: #0a1120;
   --code-bg-elevated: var(--ink-900);

@@ -39,7 +39,6 @@ import type {
   ReadinessResult,
   ReadinessScores,
   ReadinessTestSummary,
-  RegisterDto,
   RoadmapResponse,
   SiteSettings,
   UpdateChallengeDto,
@@ -1038,21 +1037,6 @@ function demoSubmitResult(exam: DemoStoredExam, attempt: DemoStoredAttempt): Cou
 }
 
 export const demoApi = {
-  async register(dto: RegisterDto): Promise<AuthResponse> {
-    return delay(
-      authResponse({
-        id: `demo-${Date.now()}`,
-        name: dto.name,
-        email: dto.email,
-        phone: null,
-        role: 'LEARNER',
-        profileComplete: true,
-        province: dto.province,
-        city: dto.city,
-      }),
-    );
-  },
-
   async login(dto: LoginDto): Promise<AuthResponse> {
     const email = dto.email.trim().toLowerCase();
     const adminEmail = (DEMO_ADMIN.email ?? '').toLowerCase();

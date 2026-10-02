@@ -546,6 +546,68 @@ button.top-nav-link {
   color: var(--negative);
 }
 
+.user-dropdown-sep {
+  height: 1px;
+  margin: var(--space-2) var(--space-1);
+  background: var(--border-soft);
+}
+
+/* Current value shown at the trailing edge of a menu row. */
+.user-dropdown-value {
+  margin-inline-start: auto;
+  color: var(--text-faint);
+  font-weight: 600;
+}
+
+/* --- language + color mode, folded into the user menu -------------------- */
+/* The language trigger keeps its own identity but is re-skinned as a menu
+   row, and its menu flows inline instead of floating out of the panel. */
+.user-dropdown .lang-selector {
+  display: block;
+}
+
+.user-dropdown .lang-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: var(--space-3);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-align: start;
+  cursor: pointer;
+  transition: background var(--dur-base) var(--ease-out);
+}
+
+.user-dropdown .lang-toggle:hover {
+  background: var(--brand-tint);
+  color: var(--brand);
+}
+
+.user-dropdown .lang-toggle .lang-label,
+.user-dropdown .lang-toggle .lang-code {
+  display: inline-flex;
+}
+
+.user-dropdown .lang-menu {
+  position: static;
+  inset-inline: auto;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  margin-top: var(--space-1);
+  padding: var(--space-1);
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
 /* =============================================================================
    Education funnel
    ========================================================================== */

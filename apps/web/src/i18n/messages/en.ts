@@ -44,10 +44,11 @@ export const en = {
   },
   nav: {
     courses: 'Courses',
-    allCourses: 'All courses',
     admin: 'Admin',
     dashboard: 'Dashboard',
     mode: 'Mode',
+    modeLight: 'Light',
+    modeDark: 'Dark',
     menu: 'Menu',
     resizeMenu: 'Resize menu',
     menuSizeCompact: 'Compact',
@@ -106,6 +107,8 @@ export const en = {
     educationHint: 'Register with your phone and begin learning',
     ctaAssessment: 'Start Your Free Assessment',
     ctaSignIn: 'Sign in',
+    ctaAuth: 'Sign in / Sign up',
+    ctaEmail: 'Sign in with email & password',
     heroNote: 'Open materials freely · Education signup with Iranian phone number',
     proof: {
       match: 'match satisfaction',
@@ -180,6 +183,85 @@ export const en = {
       note: 'Material Studio needs no account. Education uses Iranian phone verification.',
     },
   },
+  freelance: {
+    title: 'Employers & Freelancers',
+    sub: 'The bridge between businesses and Kia Academy-trained talent.',
+    employer: {
+      title: 'Hiring?',
+      body: 'Access talent whose skills are proven through real assessments and challenges, and share your project or hiring need with us.',
+      cta: 'Submit a request →',
+    },
+    freelancer: {
+      title: 'Freelancing?',
+      body: 'Complete your learning path, readiness test and bootcamp challenges to build a credible portfolio and get ready for real projects.',
+      cta: 'Start your path →',
+    },
+    note: 'To get started, send your request through the contact page — the Kia Academy team replies as soon as possible.',
+  },
+  tracks: {
+    title: 'Which path?',
+    sub: 'Kia Academy education splits into two directions. Pick one.',
+    technology: {
+      title: 'Technology',
+      desc: 'An adaptive path through programming, web, AI and data — foundations to shipped projects.',
+      cta: 'Enter the learning path →',
+      sub: 'Two ways in: pick courses yourself, or take the assessment and let it build your path.',
+      courses: {
+        title: 'All courses',
+        desc: 'Browse the full catalog and open each course introduction before buying.',
+        cta: 'Browse the catalog →',
+      },
+      assessment: {
+        title: 'Assessment test',
+        desc: 'Goal and skill assessment, the readiness test, then a roadmap built around you.',
+        cta: 'Start the assessment →',
+      },
+    },
+    language: {
+      title: 'Foreign languages',
+      desc: 'English taught as a structured path, from core vocabulary to conversation and comprehension.',
+      cta: 'See the program →',
+      badge: 'Coming soon',
+      sub: 'The foreign-language path is being prepared. We have not published a course for it yet, and rather than link you to a broken page we tell you plainly.',
+      planning: {
+        title: 'In the works',
+        body: 'Language content adapts to your current level — like the technology path, with an opening assessment and a personal roadmap.',
+        status: 'Under construction',
+      },
+      tellUs: {
+        title: 'Which language matters to you?',
+        body: 'Tell us the language and your level and we will shape the path around it — and notify you first.',
+        status: 'Your request is logged',
+        cta: 'Send a request via the contact page',
+      },
+      alternative: 'Browse technology courses',
+    },
+  },
+  events: {
+    title: 'Events & contests',
+    challenges: {
+      title: 'Challenges & contests',
+      desc: 'Timed weekly coding challenges with points; the strongest entries reach real interviews and projects.',
+      cta: 'Enter the challenges →',
+    },
+    bootcamp: {
+      title: 'Bootcamps',
+      desc: 'Intensive cohorts with a mentor, a capstone project and code review — for getting into the job market faster.',
+      cta: 'See the bootcamp →',
+    },
+    leaderboard: {
+      title: 'Leaderboard & rewards',
+      desc: 'Your weekly ranking and bootcamp points, plus rewards and reward paths.',
+      cta: 'See the ranking →',
+    },
+    webinars: {
+      title: 'Webinars & meetups',
+      desc: 'Live sessions with mentors and specialists, plus in-person meetups. This part of the program is still being prepared.',
+      cta: 'Coming soon',
+      alternative: 'Try the weekly challenges',
+    },
+    tellUs: 'Tell us which event you want',
+  },
   education: {
     phone: {
       title: 'Sign up with phone',
@@ -226,6 +308,7 @@ export const en = {
       body: 'Your profile is complete. Next you will take three short tests that shape your learning path.',
       cta: 'Continue to tests',
       continue: 'Continue',
+      homeCta: 'See the paths',
     },
     stepBadge: '{current} / {total}',
   },
@@ -575,6 +658,17 @@ export const en = {
     },
     hub: {
       sub: 'Pick up where you left off.',
+    },
+    doors: {
+      heading: 'Kia Academy departments',
+      workTitle: 'Employers & Freelancers',
+      workDesc: 'Collaboration and hiring for trained talent',
+      educationTitle: 'Education',
+      educationDesc: 'Courses, roadmap and bootcamp',
+      materialTitle: 'Material',
+      materialDesc: 'Free palette, icon and motion studio',
+      eventsTitle: 'Events',
+      eventsDesc: 'Contests, bootcamp, webinars and meetups',
     },
     tile: {
       roadmap: {

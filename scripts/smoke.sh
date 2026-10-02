@@ -77,12 +77,31 @@ else
   pass "OTP request accepted (dev code not exposed)"
 fi
 
-say "Password reset & change flow (AUTH-4)"
+say "Phone-only registration + password reset (AUTH-4)"
 SMOKE_EMAIL="smoke-$(date +%s)@test.kia"
+
+# Public registration is phone-only: the email/password endpoint must be gone.
 REG=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:3000/api/auth/register \
   -H 'Content-Type: application/json' \
   -d "{\"name\":\"Smoke Tester\",\"email\":\"$SMOKE_EMAIL\",\"password\":\"Smokepass1!\",\"passwordConfirm\":\"Smokepass1!\",\"province\":\"تهران\",\"city\":\"تهران\"}")
-[ "$REG" = "201" -o "$REG" = "200" ] && pass "register test account -> $REG" || fail "register -> $REG"
+[ "$REG" = "404" ] && pass "email/password registration removed -> $REG" \
+  || fail "register endpoint still reachable -> $REG"
+
+# The password-bearing smoke account is provisioned by staff through the admin
+# API; learners self-register only through the phone OTP flow.
+BOOTSTRAP=$(curl -s -X POST http://localhost:3000/api/auth/login \
+  -H 'Content-Type: application/json' -d '{"email":"admin@kia.academy","password":"KiaAcademy123!"}')
+BOOTSTRAP_TOKEN=$(printf '%s' "$BOOTSTRAP" | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{try{console.log(JSON.parse(d).accessToken||'')}catch{console.log('')}})")
+if [ -n "$BOOTSTRAP_TOKEN" ]; then
+  CREATED=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:3000/api/admin/users \
+    -H "Authorization: Bearer $BOOTSTRAP_TOKEN" -H 'Content-Type: application/json' \
+    -d "{\"name\":\"Smoke Tester\",\"email\":\"$SMOKE_EMAIL\",\"password\":\"Smokepass1!\",\"role\":\"LEARNER\"}")
+  [ "$CREATED" = "201" -o "$CREATED" = "200" ] \
+    && pass "provision smoke account via admin API -> $CREATED" \
+    || fail "admin create user -> $CREATED"
+else
+  fail "seeded admin login unavailable — cannot provision the smoke account"
+fi
 
 # Enumeration protection: known and unknown addresses must be indistinguishable.
 KNOWN=$(curl -s -X POST http://localhost:3000/api/auth/forgot-password \
@@ -136,9 +155,14 @@ fi
 say "Two-factor authentication (AUTH-5, staff)"
 ADMIN_EMAIL="admin@kia.academy"
 ADMIN_PW="KiaAcademy123!"
-ADMIN_LOGIN=$(curl -s -X POST http://localhost:3000/api/auth/login \
-  -H 'Content-Type: application/json' -d "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PW\"}")
-ADMIN_ACCESS=$(printf '%s' "$ADMIN_LOGIN" | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{try{console.log(JSON.parse(d).accessToken||'')}catch{console.log('')}})")
+# Reuse the token minted above: login is throttled to 5/min per IP and this
+# run already spends four logins on the password-reset probes.
+ADMIN_ACCESS="$BOOTSTRAP_TOKEN"
+if [ -z "$ADMIN_ACCESS" ]; then
+  ADMIN_LOGIN=$(curl -s -X POST http://localhost:3000/api/auth/login \
+    -H 'Content-Type: application/json' -d "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PW\"}")
+  ADMIN_ACCESS=$(printf '%s' "$ADMIN_LOGIN" | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{try{console.log(JSON.parse(d).accessToken||'')}catch{console.log('')}})")
+fi
 if [ -n "$ADMIN_ACCESS" ]; then
   pass "admin login (pre-2FA) succeeds"
 

@@ -1602,28 +1602,6 @@
   z-index: 3;
 }
 
-.material-studio-root .material-brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  margin-bottom: 0;
-  color: var(--primary-deep);
-  font-weight: 800;
-  font-size: 1rem;
-  text-decoration: none;
-  letter-spacing: -0.02em;
-}
-
-.material-studio-root .material-brand-mark {
-  height: 1.15rem;
-  width: auto;
-  aspect-ratio: 497.37 / 512;
-  color: var(--primary-accent, var(--brand-400));
-  flex: 0 0 auto;
-  display: block;
-  overflow: visible;
-}
-
 .material-studio-root .material-mode {
   position: relative;
   z-index: 2;

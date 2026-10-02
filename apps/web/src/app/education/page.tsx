@@ -18,6 +18,7 @@ import { PageBackButton } from '@/components/layout/PageBackButton';
 import { useAuth } from '@/context/AuthProvider';
 import { useLanguage } from '@/context/LanguageProvider';
 import { api, ApiError } from '@/lib/api';
+import { HOME_PATH } from '@/lib/postLoginPath';
 
 type Step = 'phone' | 'otp' | 'profile' | 'start';
 
@@ -177,7 +178,8 @@ function EducationFlow() {
       router.push(nextPath);
       return;
     }
-    router.push('/assessment');
+    // No deep link: registration/profile completion lands on the three-door page.
+    router.push(HOME_PATH);
   };
 
   if (step === 'start') {
@@ -189,9 +191,9 @@ function EducationFlow() {
             <h1>{t('education.start.title')}</h1>
             <p className="auth-sub">{t('education.start.body')}</p>
             <button type="button" className="cta-primary auth-submit" onClick={continueAfterProfile}>
-              {nextPath ? t('education.start.continue') : t('education.start.cta')}
+              {nextPath ? t('education.start.continue') : t('education.start.homeCta')}
             </button>
-            <Link href="/" className="back-link">
+            <Link href={HOME_PATH} className="back-link">
               {t('common.back')}
             </Link>
           </div>
@@ -368,7 +370,7 @@ function EducationFlow() {
             {busy ? t('education.phone.submitting') : t('education.phone.submit')}
           </button>
         </form>
-        <Link href="/" className="back-link">
+        <Link href={HOME_PATH} className="back-link">
           {t('common.back')}
         </Link>
       </div>

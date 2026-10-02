@@ -177,7 +177,7 @@ function LoginForm() {
           <p className="auth-footer">
             <Link href="/forgot-password">{t('auth.forgotPassword.eyebrow')}</Link>
             {' · '}
-            {t('auth.login.footer')} <Link href="/register">{t('auth.login.createAccount')}</Link>
+            {t('auth.login.footer')} <Link href="/education">{t('auth.login.createAccount')}</Link>
           </p>
         </div>
       </div>

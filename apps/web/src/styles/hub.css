@@ -2,8 +2,11 @@
    Learner hub / dashboard — bento tiles
    ========================================================================== */
 
+/* padding-block only — the `padding` shorthand used to zero the
+   `.container` inline padding, so every hub grid sat flush against the
+   viewport edges. */
 .hub {
-  padding: var(--space-2) 0 var(--space-section);
+  padding-block: var(--space-2) var(--space-section);
 }
 
 .hub h2 {
@@ -291,5 +294,88 @@
   .test-history-item {
     grid-template-columns: 1fr auto;
     row-gap: var(--space-2);
+  }
+}
+
+/* --- employer & freelancer hub ------------------------------------------- */
+.freelance-note {
+  margin-top: var(--space-5);
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+}
+
+/* --- post-auth landing (/home) ------------------------------------------- */
+/* Three doors, nothing else: centred and airy so the choice reads instantly. */
+.home-gate {
+  display: flex;
+  align-items: center;
+  min-height: calc(100dvh - var(--topbar-h, 4rem));
+  padding-block: var(--space-10);
+}
+
+.home-gate .hub {
+  width: 100%;
+  padding-block: 0;
+}
+
+.home-gate .dash-doors {
+  margin: 0;
+}
+
+.home-gate .dash-doors__heading {
+  text-align: center;
+}
+
+/* --- education sub-hub (/tracks) ----------------------------------------- */
+/* Two doors only: technology and foreign languages. */
+.landing-doors--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: 44rem;
+}
+
+.events-page__head {
+  margin-bottom: var(--space-6);
+}
+
+.events-page__grid {
+  margin-top: 0;
+}
+
+/* A "coming soon" tile is informational, not a link — it must not look tappable. */
+.door--soon {
+  cursor: default;
+}
+
+.door--soon:hover {
+  transform: none;
+  box-shadow: var(--shadow-sm);
+}
+
+.tracks-page__doors {
+  margin-top: var(--space-8);
+}
+
+.door .door-cta {
+  margin-top: auto;
+  color: var(--brand-600);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+
+.tracks-language__bento {
+  margin-top: var(--space-6);
+}
+
+/* Shared CTA row under a door grid (language coming-soon, events hub). */
+.hub-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+@media (max-width: 720px) {
+  .landing-doors--two {
+    grid-template-columns: 1fr;
   }
 }
