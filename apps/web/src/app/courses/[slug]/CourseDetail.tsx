@@ -5,7 +5,6 @@ import { BookOpen, Loader2, ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-import { PageBackButton } from '@/components/layout/PageBackButton';
 import { useAuth } from '@/context/AuthProvider';
 import { useCart } from '@/context/CartProvider';
 import { useLanguage } from '@/context/LanguageProvider';
@@ -57,7 +56,6 @@ export default function CoursePage() {
     return (
       <div className="page-content">
         <div className="container auth-shell">
-          <PageBackButton href="/courses" />
           <p className="form-error">{error || t('courses.loadError')}</p>
         </div>
       </div>
@@ -98,7 +96,6 @@ export default function CoursePage() {
   return (
     <div className="page-content">
       <div className="container catalog-shell">
-        <PageBackButton href="/courses" />
         <span className="eyebrow">
           <BookOpen size={14} className="inline-leading-icon" />
           {t('publicCourses.introEyebrow')}
@@ -110,7 +107,7 @@ export default function CoursePage() {
           ) : null}
         </h1>
         <p className="auth-sub">{localizedCourse.description}</p>
-        <div className="catalog-card" style={{ maxWidth: 760 }}>
+        <div className="catalog-panel" style={{ maxWidth: 760 }}>
           <div className="catalog-meta">
             <span>{t('common.lessonsCount', { count: localizedCourse.lessonCount })}</span>
             <span>{t('publicCourses.sessionsLocked')}</span>

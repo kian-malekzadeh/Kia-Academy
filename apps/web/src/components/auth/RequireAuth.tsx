@@ -16,10 +16,11 @@ interface RequireAuthProps {
 export function RequireAuth({ children, nextPath, learnerFlow = false }: RequireAuthProps) {
   const router = useRouter();
   const { t } = useLanguage();
-  const { loading, isAuthenticated, learnerState } = useAuth();
+  const { loading, isAuthenticated, learnerState, signedOut } = useAuth();
 
   useEffect(() => {
-    if (loading) return;
+    // A sign-out navigates to the landing page on its own — never fight it here.
+    if (loading || signedOut) return;
     if (!isAuthenticated) {
       const encoded = encodeURIComponent(nextPath);
       if (learnerFlow) {
@@ -32,9 +33,9 @@ export function RequireAuth({ children, nextPath, learnerFlow = false }: Require
     if (learnerFlow && learnerState && !learnerState.profileComplete) {
       router.replace(`/education?next=${encodeURIComponent(nextPath)}`);
     }
-  }, [loading, isAuthenticated, learnerState, router, nextPath, learnerFlow]);
+  }, [loading, signedOut, isAuthenticated, learnerState, router, nextPath, learnerFlow]);
 
-  if (loading || !isAuthenticated) {
+  if (loading || signedOut || !isAuthenticated) {
     return <div className="page-content auth-loading">{t('common.loading')}</div>;
   }
 

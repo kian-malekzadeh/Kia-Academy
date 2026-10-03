@@ -15,17 +15,18 @@ export function DashboardGate({
   nextPath: string;
 }) {
   const router = useRouter();
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { isAuthenticated, loading: authLoading, signedOut } = useAuth();
   const { t } = useLanguage();
 
   useEffect(() => {
-    if (authLoading) return;
+    // Sign-out owns the navigation (landing page) — do not race it.
+    if (authLoading || signedOut) return;
     if (!isAuthenticated) {
       router.replace(`/education?next=${encodeURIComponent(nextPath)}`);
     }
-  }, [authLoading, isAuthenticated, nextPath, router]);
+  }, [authLoading, signedOut, isAuthenticated, nextPath, router]);
 
-  if (authLoading || !isAuthenticated) {
+  if (authLoading || signedOut || !isAuthenticated) {
     return (
       <div className="page-content auth-loading">
         <Loader2 size={24} className="spin" /> {t('dashboard.loading')}

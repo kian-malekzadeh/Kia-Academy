@@ -1,11 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { BookOpen, ClipboardCheck, Map, Trophy } from 'lucide-react';
 import { BrandMark } from '@/components/brand/BrandMark';
 import { EnamadBadge } from '@/components/layout/EnamadBadge';
 import { useLanguage } from '@/context/LanguageProvider';
+import { HOME_PATH } from '@/lib/postLoginPath';
 
+/**
+ * Minimal site footer: the brand on one side, the trust/meta line on the other,
+ * centred and stacked on phones. No link navigation — the top bar and the
+ * learner menu own the destinations, and repeating them here only pushed the
+ * trust seal off the bottom of every page. The two legal pages stay reachable
+ * as plain text beside the copyright, which is all they ever were.
+ */
 export function Footer() {
   const { t } = useLanguage();
   const year = new Date().getFullYear();
@@ -13,59 +20,27 @@ export function Footer() {
   return (
     <footer className="site-footer">
       <div className="container footer-inner">
-        <div className="footer-main">
-          <div className="footer-brand">
-            <Link href="/dashboard" className="footer-logo" aria-label={t('nav.homeAria')}>
-              <BrandMark className="footer-logo-mark" size={26} title="" />
-              {t('common.brand')}
-            </Link>
-            <p>{t('nav.footer.blurb')}</p>
-            <span className="footer-tagline">{t('nav.footer.tagline')}</span>
-          </div>
+        <Link href={HOME_PATH} className="footer-logo" aria-label={t('nav.homeAria')}>
+          <BrandMark className="footer-logo-mark" size={22} title="" />
+          <span className="footer-logo-text">{t('common.brand')}</span>
+        </Link>
 
-          <nav className="footer-nav-group" aria-label={t('nav.footer.learning')}>
-            <h2>{t('nav.footer.learning')}</h2>
-            <Link href="/assessment">
-              <Map size={15} aria-hidden="true" />
-              {t('nav.footer.freeAssessment')}
+        <div className="footer-meta">
+          <EnamadBadge />
+          <span className="footer-status">
+            <i aria-hidden="true" />
+            {t('nav.footer.status')}
+          </span>
+          <span className="footer-legal">
+            <Link href="/privacy" className="footer-legal-link">
+              {t('legal.privacy.title')}
             </Link>
-            <Link href="/courses">
-              <BookOpen size={15} aria-hidden="true" />
-              {t('nav.courses')}
+            <span aria-hidden="true">·</span>
+            <Link href="/terms" className="footer-legal-link">
+              {t('legal.terms.title')}
             </Link>
-            <Link href="/readiness">
-              <ClipboardCheck size={15} aria-hidden="true" />
-              {t('nav.footer.readinessTest')}
-            </Link>
-          </nav>
-
-          <nav className="footer-nav-group" aria-label={t('nav.footer.explore')}>
-            <h2>{t('nav.footer.explore')}</h2>
-            <Link href="/dashboard">{t('nav.dashboard')}</Link>
-            <Link href="/roadmap">{t('nav.footer.myRoadmap')}</Link>
-            <Link href="/bootcamp">
-              <Trophy size={15} aria-hidden="true" />
-              {t('nav.footer.bootcampArena')}
-            </Link>
-          </nav>
-
-          <nav className="footer-nav-group" aria-label={t('nav.footer.legal')}>
-            <h2>{t('nav.footer.legal')}</h2>
-            <Link href="/contact">{t('nav.footer.contact')}</Link>
-            <Link href="/privacy">{t('nav.footer.privacy')}</Link>
-            <Link href="/terms">{t('nav.footer.terms')}</Link>
-          </nav>
-        </div>
-
-        <div className="footer-bottom">
-          <span>{t('nav.footer.copyright', { year })}</span>
-          <div className="footer-bottom-end">
-            <EnamadBadge />
-            <span className="footer-status">
-              <i aria-hidden="true" />
-              {t('nav.footer.status')}
-            </span>
-          </div>
+          </span>
+          <span className="footer-copy">{t('nav.footer.copyright', { year })}</span>
         </div>
       </div>
     </footer>

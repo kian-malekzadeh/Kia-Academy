@@ -395,12 +395,6 @@
   font-family: var(--font-fa), var(--font-body), Tahoma, sans-serif;
 }
 
-.education-page .back-link {
-  display: inline-flex;
-  margin-top: var(--space-5);
-  text-decoration: none;
-}
-
 /* =============================================================================
    Top bar navigation + account dropdown
    ========================================================================== */

@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { KeyRound, MailCheck } from 'lucide-react';
 import { FormEvent, Suspense, useState } from 'react';
-import { PageBackButton } from '@/components/layout/PageBackButton';
 import { BrandMark } from '@/components/brand/BrandMark';
 import { useLanguage } from '@/context/LanguageProvider';
 import { api, ApiError } from '@/lib/api';
@@ -35,7 +34,6 @@ function ForgotPasswordForm() {
   return (
     <div className="page-content">
       <div className="container auth-shell">
-        <PageBackButton href="/" />
         <div className="auth-card">
           <Link href="/" className="education-brand" aria-label={t('common.brand')}>
             <BrandMark className="education-brand-mark" size={28} title="" />

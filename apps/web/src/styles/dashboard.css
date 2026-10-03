@@ -5,7 +5,7 @@
    ========================================================================== */
 
 .dash-panel {
-  background: var(--gradient-aurora), var(--bg);
+  /* Stays transparent — the shared page background comes from body + .site-aurora. */
   min-height: 100%;
 }
 
@@ -1028,5 +1028,8 @@
 }
 
 .dash-doors .landing-doors {
-  max-width: none;
+  /* Same 48rem cap as the course grid: department doors and course tiles must
+     come out the same size wherever they are rendered. */
+  max-width: 48rem;
+  margin-inline: auto;
 }

@@ -38,8 +38,7 @@
 .btn-next:focus-visible,
 .btn-accent:focus-visible,
 .btn-danger:focus-visible,
-.btn-ghost:focus-visible,
-.back-link:focus-visible {
+.btn-ghost:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
 }
@@ -191,7 +190,6 @@
 }
 
 /* --- links --------------------------------------------------------------- */
-.back-link,
 .link-quiet {
   display: inline-flex;
   align-items: center;
@@ -208,7 +206,6 @@
   transition: color var(--dur-base) var(--ease-out);
 }
 
-.back-link:hover,
 .link-quiet:hover {
   color: var(--brand);
 }

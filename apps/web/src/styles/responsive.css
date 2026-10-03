@@ -89,8 +89,10 @@
     line-height: 1;
   }
 
+  /* Mobile keeps the mark only — the wordmark crowds the burger + chip row.
+     The button stays named via its aria-label. */
   .topbar .logo-text {
-    line-height: 1;
+    display: none;
   }
 
   .topbar .top-nav {
@@ -385,10 +387,6 @@
 }
 
 @media (max-width: 360px) {
-  .logo-text {
-    display: none;
-  }
-
   .topbar {
     width: calc(100% - 16px);
     padding: var(--space-2) var(--space-3);

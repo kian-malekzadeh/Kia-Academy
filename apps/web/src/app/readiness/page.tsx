@@ -2,7 +2,6 @@
 
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
-import { PageBackButton } from '@/components/layout/PageBackButton';
 import { useApp } from '@/context/AppProvider';
 import { useAuth } from '@/context/AuthProvider';
 import { useLanguage } from '@/context/LanguageProvider';
@@ -31,7 +30,6 @@ export default function ReadinessGatePage() {
   return (
     <div className="page-content">
       <div className="container gate exam-gate">
-        <PageBackButton href="/assessment" label={t('readiness.gate.backAssessment')} />
         <span className="eyebrow amber">{t('exam.gate.eyebrow')}</span>
         <h1>{t('exam.gate.title')}</h1>
         <p className="desc">{t('exam.gate.desc')}</p>

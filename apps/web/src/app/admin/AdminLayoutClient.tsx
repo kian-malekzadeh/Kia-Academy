@@ -26,16 +26,18 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   type AdminAccessSection,
 } from '@kia-academy/shared';
 import { BrandMark } from '@/components/brand/BrandMark';
+import { PageBackButton } from '@/components/layout/PageBackButton';
 import AdminCommandPalette, { type PaletteCommand } from '@/components/admin/AdminCommandPalette';
 import AdminNotifications, { useAdminAttention } from '@/components/admin/AdminNotifications';
 import { useAdminAccess } from '@/components/admin/useAdminAccess';
 import { useAuth } from '@/context/AuthProvider';
 import { useLanguage } from '@/context/LanguageProvider';
+import { ADMIN_PAGE_BACK_FALLBACK, showsAdminPageBack } from '@/lib/pageBack';
 
 type AdminSection = AdminAccessSection;
 
@@ -185,14 +187,12 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { t } = useLanguage();
-  const { user, loading, logout } = useAuth();
+  const { user, loading, logout, signedOut } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  /** Skip the login gate while logging out via «بازگشت به سایت». */
-  const leavingToSiteRef = useRef(false);
 
   /* Close the profile dropdown on outside click / Escape. */
   useEffect(() => {
@@ -215,15 +215,15 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const { isSuper, isStaff, access, can } = useAdminAccess();
 
   useEffect(() => {
-    if (loading || leavingToSiteRef.current) return;
+    if (loading || signedOut) return;
     // Guests and learners both get the admin login gate (not the learner dashboard).
     if (!user || !isStaff) {
       router.replace('/login?next=/admin');
     }
-  }, [user, loading, router, isStaff]);
+  }, [user, loading, signedOut, router, isStaff]);
 
-  const handleBackToSite = async () => {
-    leavingToSiteRef.current = true;
+  /** Every sign-out ends on the landing page — never back on a login form. */
+  const handleSignOut = async () => {
     await logout();
     router.replace('/');
   };
@@ -757,7 +757,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                     href="/"
                     role="menuitem"
                     className="admin-menu-item"
-                    onClick={() => void handleBackToSite()}
+                    onClick={() => void handleSignOut()}
                   >
                     <Globe size={14} aria-hidden />
                     {t('admin.backToSite')}
@@ -769,8 +769,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                     className="admin-menu-item danger"
                     onClick={() => {
                       setProfileOpen(false);
-                      void logout();
-                      router.replace('/login?next=/admin');
+                      void handleSignOut();
                     }}
                   >
                     <LogOut size={14} aria-hidden />
@@ -781,6 +780,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </div>
           </div>
         </header>
+
+        {showsAdminPageBack(pathname) ? (
+          <PageBackButton href={ADMIN_PAGE_BACK_FALLBACK} variant="admin" />
+        ) : null}
 
         <div className="admin-page-content">{children}</div>
       </main>

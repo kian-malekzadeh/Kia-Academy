@@ -2,9 +2,7 @@
 
 import Link from 'next/link';
 import { Briefcase, Rocket } from 'lucide-react';
-import { PageBackButton } from '@/components/layout/PageBackButton';
 import { useLanguage } from '@/context/LanguageProvider';
-import { HOME_PATH } from '@/lib/postLoginPath';
 
 /**
  * Employer & freelancer hub — one of the three post-login doors.
@@ -16,7 +14,6 @@ export default function FreelancePage() {
 
   return (
     <div className="page-content freelance-page">
-      <PageBackButton href={HOME_PATH} />
       <div className="container hub">
         <header className="page-head">
           <div>

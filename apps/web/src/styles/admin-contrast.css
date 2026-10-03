@@ -88,14 +88,14 @@
 }
 
 .admin-shell--redesigned
-  :is(.admin-link, .admin-link-btn, .admin-back, .admin-dropdown-footer a, .admin-quick-links a) {
+  :is(.admin-link, .admin-link-btn, .admin-dropdown-footer a, .admin-quick-links a) {
   color: var(--admin-accent-soft);
   text-decoration-thickness: 0.1em;
   text-underline-offset: 0.18em;
 }
 
 .admin-shell--redesigned
-  :is(.admin-link:hover, .admin-link-btn:hover, .admin-back:hover, .admin-dropdown-footer a:hover) {
+  :is(.admin-link:hover, .admin-link-btn:hover, .admin-dropdown-footer a:hover) {
   color: #fff8d1;
 }
 

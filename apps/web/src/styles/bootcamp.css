@@ -3,7 +3,7 @@
    ========================================================================== */
 
 .dash {
-  padding: var(--space-2) 0 var(--space-section);
+  padding-block: var(--space-2) var(--space-section);
 }
 
 .dash-head {
@@ -232,7 +232,7 @@
    ========================================================================== */
 
 .challenge-shell {
-  padding: var(--space-2) 0 var(--space-section);
+  padding-block: var(--space-2) var(--space-section);
 }
 
 .ch-top {
@@ -242,10 +242,6 @@
   margin-bottom: var(--space-6);
   flex-wrap: wrap;
   gap: var(--space-4);
-}
-
-.ch-top .page-back-wrap {
-  margin-bottom: 0;
 }
 
 .timer-box {
@@ -394,7 +390,7 @@
    ========================================================================== */
 
 .rewards {
-  padding: var(--space-2) 0 var(--space-section);
+  padding-block: var(--space-2) var(--space-section);
 }
 
 .rewards h2 {

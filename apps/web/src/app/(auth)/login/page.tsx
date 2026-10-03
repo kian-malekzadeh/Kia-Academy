@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { LogIn, ShieldCheck } from 'lucide-react';
 import { FormEvent, Suspense, useEffect, useState } from 'react';
-import { PageBackButton } from '@/components/layout/PageBackButton';
 import { BrandMark } from '@/components/brand/BrandMark';
 import { PasswordInput } from '@/components/auth/PasswordInput';
 import { useAuth } from '@/context/AuthProvider';
@@ -26,8 +25,10 @@ function LoginForm() {
   const [twoFactorCode, setTwoFactorCode] = useState('');
   const [twoFactorSubmitting, setTwoFactorSubmitting] = useState(false);
 
-  const next = searchParams.get('next') ?? '/dashboard';
-  const nextNeedsAdmin = next.startsWith('/admin');
+  // No `?next` means a plain sign-in: the learner lands on the departments
+  // page. Only an explicit deep link (a gate that sent them here) overrides it.
+  const next = searchParams.get('next');
+  const nextNeedsAdmin = next?.startsWith('/admin') ?? false;
 
   useEffect(() => {
     if (loading) return;
@@ -36,7 +37,7 @@ function LoginForm() {
     const isStaff = isStaffRole(user.role);
     // /admin gate: keep the login form so a learner session can be replaced by admin creds.
     if (nextNeedsAdmin && !isStaff) {
-      void logout();
+      void logout({ keepPage: true });
       return;
     }
 
@@ -83,7 +84,6 @@ function LoginForm() {
     return (
       <div className="page-content">
         <div className="container auth-shell">
-          <PageBackButton href="/" />
           <div className="auth-card">
             <Link href="/" className="education-brand" aria-label={t('common.brand')}>
               <BrandMark className="education-brand-mark" size={28} title="" />
@@ -130,7 +130,6 @@ function LoginForm() {
   return (
     <div className="page-content">
       <div className="container auth-shell">
-        <PageBackButton href="/" />
         <div className="auth-card">
           <Link href="/" className="education-brand" aria-label={t('common.brand')}>
             <BrandMark className="education-brand-mark" size={28} title="" />

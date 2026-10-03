@@ -4,7 +4,6 @@ import { scoreFizzBuzz } from '@kia-academy/shared';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { RequireAuth } from '@/components/auth/RequireAuth';
-import { PageBackButton } from '@/components/layout/PageBackButton';
 import { useApp } from '@/context/AppProvider';
 import { useLanguage } from '@/context/LanguageProvider';
 
@@ -70,7 +69,6 @@ function ChallengeContent() {
     <div className="page-content">
       <div className="container challenge-shell">
         <div className="ch-top">
-          <PageBackButton href="/bootcamp" label={t('bootcamp.solver.back')} />
           <div
             className="timer-box"
             style={{ color: seconds < 60 ? 'var(--indigo-bright)' : 'var(--amber)' }}

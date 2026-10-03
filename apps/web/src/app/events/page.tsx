@@ -2,9 +2,7 @@
 
 import Link from 'next/link';
 import { MessageSquare, Radio, Trophy, Video } from 'lucide-react';
-import { PageBackButton } from '@/components/layout/PageBackButton';
 import { useLanguage } from '@/context/LanguageProvider';
-import { HOME_PATH } from '@/lib/postLoginPath';
 
 /**
  * Events hub — competitions, bootcamp, webinars and meetups in one place.
@@ -18,15 +16,14 @@ export default function EventsPage() {
 
   return (
     <div className="page-content events-page">
-      <PageBackButton href={HOME_PATH} />
       <div className="container hub">
         <header className="page-head events-page__head">
           <h1>{t('events.title')}</h1>
         </header>
 
         <div className="landing-doors landing-doors--depts events-page__grid">
-          <Link href="/bootcamp" className="door door--primary">
-            <span className="door-icon door-icon--brand" aria-hidden="true">
+          <Link href="/bootcamp" className="door tint--brand">
+            <span className="door-icon" aria-hidden="true">
               <Radio size={20} />
             </span>
             <h2 className="door-title">{t('events.bootcamp.title')}</h2>
@@ -34,8 +31,8 @@ export default function EventsPage() {
             <span className="door-cta">{t('events.bootcamp.cta')}</span>
           </Link>
 
-          <Link href="/bootcamp" className="door door--work">
-            <span className="door-icon door-icon--mint" aria-hidden="true">
+          <Link href="/bootcamp" className="door tint--mint">
+            <span className="door-icon" aria-hidden="true">
               <Trophy size={20} />
             </span>
             <h2 className="door-title">{t('events.challenges.title')}</h2>
@@ -43,8 +40,8 @@ export default function EventsPage() {
             <span className="door-cta">{t('events.challenges.cta')}</span>
           </Link>
 
-          <Link href="/rewards" className="door door--material">
-            <span className="door-icon door-icon--amber" aria-hidden="true">
+          <Link href="/rewards" className="door tint--amber">
+            <span className="door-icon" aria-hidden="true">
               <Trophy size={20} />
             </span>
             <h2 className="door-title">{t('events.leaderboard.title')}</h2>
@@ -52,8 +49,8 @@ export default function EventsPage() {
             <span className="door-cta">{t('events.leaderboard.cta')}</span>
           </Link>
 
-          <div className="door door--events door--soon">
-            <span className="door-icon door-icon--sky" aria-hidden="true">
+          <div className="door door--soon tint--sky">
+            <span className="door-icon" aria-hidden="true">
               <Video size={20} />
             </span>
             <h2 className="door-title">{t('events.webinars.title')}</h2>

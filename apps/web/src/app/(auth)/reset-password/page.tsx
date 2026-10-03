@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { KeyRound, ShieldCheck } from 'lucide-react';
 import { FormEvent, Suspense, useState } from 'react';
-import { PageBackButton } from '@/components/layout/PageBackButton';
 import { BrandMark } from '@/components/brand/BrandMark';
 import { PasswordInput } from '@/components/auth/PasswordInput';
 import { useLanguage } from '@/context/LanguageProvider';
@@ -48,7 +47,6 @@ function ResetPasswordForm() {
   return (
     <div className="page-content">
       <div className="container auth-shell">
-        <PageBackButton href="/" />
         <div className="auth-card">
           <Link href="/" className="education-brand" aria-label={t('common.brand')}>
             <BrandMark className="education-brand-mark" size={28} title="" />

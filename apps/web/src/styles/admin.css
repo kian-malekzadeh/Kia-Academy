@@ -461,19 +461,6 @@
   color: var(--admin-danger);
 }
 
-.admin-back {
-  display: inline-block;
-  font-size: var(--fs-xs);
-  font-weight: 700;
-  color: var(--admin-muted);
-  text-decoration: none;
-  margin-bottom: var(--space-4);
-}
-
-.admin-back:hover {
-  color: var(--admin-accent-soft);
-}
-
 /* Admin surfaces are dark in both themes, so global buttons need a dark skin. */
 .admin-shell .cta-secondary,
 .admin-shell .btn--secondary {

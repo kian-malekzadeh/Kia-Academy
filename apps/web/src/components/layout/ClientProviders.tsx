@@ -1,5 +1,6 @@
 'use client';
 
+import { HistoryTracker } from '@/components/layout/HistoryTracker';
 import { Modal } from '@/components/ui/Modal';
 import { AppProvider, useApp } from '@/context/AppProvider';
 import { AuthProvider } from '@/context/AuthProvider';
@@ -26,6 +27,7 @@ export function ClientProviders({
         <AuthProvider>
           <CartProvider>
             <AppProvider>
+              <HistoryTracker />
               {children}
               <ModalBridge />
             </AppProvider>

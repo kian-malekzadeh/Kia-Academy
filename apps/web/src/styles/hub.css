@@ -357,7 +357,7 @@
 
 .door .door-cta {
   margin-top: auto;
-  color: var(--brand-600);
+  color: var(--tile-fill);
   font-size: var(--fs-sm);
   font-weight: 700;
 }

@@ -17,7 +17,7 @@
    ========================================================================== */
 
 .gate {
-  padding: var(--space-2) 0 var(--space-section);
+  padding-block: var(--space-2) var(--space-section);
   max-width: 940px;
   margin: 0 auto;
 }
@@ -116,7 +116,7 @@
    ========================================================================== */
 
 .test-shell {
-  padding: var(--space-2) 0 var(--space-section);
+  padding-block: var(--space-2) var(--space-section);
   max-width: 940px;
   margin: 0 auto;
 }
@@ -407,7 +407,7 @@
    ========================================================================== */
 
 .results {
-  padding: var(--space-2) 0 var(--space-section);
+  padding-block: var(--space-2) var(--space-section);
   max-width: 940px;
   margin: 0 auto;
 }

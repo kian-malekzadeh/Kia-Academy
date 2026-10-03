@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useState } from 'react';
 import type { UserRole } from '@kia-academy/shared';
@@ -44,9 +43,6 @@ export default function AdminCreateUserPage() {
 
   return (
     <div className="admin-content">
-      <Link href="/admin/users" className="admin-back">
-        {t('common.back')}
-      </Link>
       <h1>{t('admin.users.createTitle')}</h1>
       <p className="admin-sub">{t('admin.users.createSub')}</p>
 

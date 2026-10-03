@@ -4,7 +4,6 @@ import { hasRoadmapEntitlement } from '@kia-academy/shared';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { buildRoadmapFromAnswers } from '@kia-academy/shared';
-import { PageBackButton } from '@/components/layout/PageBackButton';
 import { PurchaseSection } from '@/components/roadmap/PurchaseSection';
 import { RoadmapTree } from '@/components/roadmap/RoadmapTree';
 import { useApp } from '@/context/AppProvider';
@@ -14,7 +13,7 @@ import { goalMessageKey, levelMessageKey, styleMessageKey, trackMessageKey } fro
 
 export default function RoadmapPage() {
   const router = useRouter();
-  const { answers, roadmap, enrollBundle, hydrated, testCompleted } = useApp();
+  const { answers, roadmap, enrollBundle, hydrated } = useApp();
   const { isAuthenticated, learnerState, loading: authLoading } = useAuth();
   const { t, format } = useLanguage();
 
@@ -52,10 +51,6 @@ export default function RoadmapPage() {
   return (
     <div className="page-content">
       <div className="container result-shell">
-        <PageBackButton
-          href={testCompleted ? '/readiness/results' : '/readiness'}
-          label={t('roadmap.backResults')}
-        />
         <div className="aha">{t('roadmap.aha')}</div>
         <h2>{t('roadmap.title', { trackName })}</h2>
         <div className="profile-strip">

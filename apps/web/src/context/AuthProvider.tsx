@@ -25,11 +25,25 @@ interface AuthContextValue {
   learnerState: LearnerState | null;
   loading: boolean;
   isAuthenticated: boolean;
+  /**
+   * True from `logout()` until the next successful sign-in. Auth gates must not
+   * redirect while it is set: a deliberate sign-out already owns the navigation
+   * (to the landing page), and a gate racing it would drop the user on the login
+   * or phone-OTP screen instead.
+   */
+  signedOut: boolean;
   /** Resolves with the signed-in user, or a 2FA challenge the caller must complete. */
   login: (dto: LoginDto) => Promise<AuthUser | TwoFactorChallengeResponse>;
   /** Complete the 2FA second step (AUTH-5) and hydrate the session. */
   verifyTwoFactorLogin: (challenge: string, code: string) => Promise<AuthUser>;
-  logout: () => Promise<void>;
+  /**
+   * Ends the session. `keepPage` is for the login screen swapping a learner
+   * session for staff credentials: it must not hand navigation to the sign-out
+   * path, which lands on the landing page.
+   */
+  logout: (options?: { keepPage?: boolean }) => Promise<void>;
+  /** Ends the sign-out transition once the landing page is on screen. */
+  finishSignOut: () => void;
   refreshSession: () => Promise<void>;
 }
 
@@ -39,10 +53,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [learnerState, setLearnerState] = useState<LearnerState | null>(null);
   const [loading, setLoading] = useState(true);
+  const [signedOut, setSignedOut] = useState(false);
 
   const applyLearnerState = useCallback((state: LearnerState) => {
     setUser(state.user);
     setLearnerState(state);
+    setSignedOut(false);
   }, []);
 
   const clearSession = useCallback(() => {
@@ -117,7 +133,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [applyLearnerState],
   );
 
-  const logout = useCallback(async () => {
+  const logout = useCallback(async (options?: { keepPage?: boolean }) => {
+    // Set before the session clears so the gates' effects and the current page
+    // unmount in the same render batch and stand down.
+    if (!options?.keepPage) setSignedOut(true);
     try {
       await api.logout();
     } finally {
@@ -125,18 +144,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [clearSession]);
 
+  const finishSignOut = useCallback(() => setSignedOut(false), []);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
       learnerState,
       loading,
       isAuthenticated: !!user,
+      signedOut,
       login,
       verifyTwoFactorLogin,
       logout,
+      finishSignOut,
       refreshSession,
     }),
-    [user, learnerState, loading, login, verifyTwoFactorLogin, logout, refreshSession],
+    [user, learnerState, loading, signedOut, login, verifyTwoFactorLogin, logout, refreshSession],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

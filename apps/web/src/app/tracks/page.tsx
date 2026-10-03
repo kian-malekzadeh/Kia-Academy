@@ -2,10 +2,8 @@
 
 import Link from 'next/link';
 import { BookOpen, Languages } from 'lucide-react';
-import { PageBackButton } from '@/components/layout/PageBackButton';
 import { RequireAuth } from '@/components/auth/RequireAuth';
 import { useLanguage } from '@/context/LanguageProvider';
-import { HOME_PATH } from '@/lib/postLoginPath';
 
 /**
  * «آموزش» sub-hub — the education door splits into exactly two directions:
@@ -24,7 +22,6 @@ function TracksGate() {
 
   return (
     <div className="page-content tracks-page">
-      <PageBackButton href={HOME_PATH} />
       <div className="container hub">
         <header className="page-head tracks-page__head">
           <div>
@@ -34,8 +31,8 @@ function TracksGate() {
         </header>
 
         <div className="landing-doors landing-doors--two tracks-page__doors">
-          <Link href="/tracks/technology" className="door door--primary">
-            <span className="door-icon door-icon--brand" aria-hidden="true">
+          <Link href="/tracks/technology" className="door tint--brand">
+            <span className="door-icon" aria-hidden="true">
               <BookOpen size={20} />
             </span>
             <h2 className="door-title">{t('tracks.technology.title')}</h2>
@@ -43,8 +40,8 @@ function TracksGate() {
             <span className="door-cta">{t('tracks.technology.cta')}</span>
           </Link>
 
-          <Link href="/tracks/language" className="door door--material">
-            <span className="door-icon door-icon--amber" aria-hidden="true">
+          <Link href="/tracks/language" className="door tint--amber">
+            <span className="door-icon" aria-hidden="true">
               <Languages size={20} />
             </span>
             <h2 className="door-title">{t('tracks.language.title')}</h2>

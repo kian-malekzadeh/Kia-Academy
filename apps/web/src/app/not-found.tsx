@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { noIndexRobots } from '@/lib/seo';
 
 export const metadata: Metadata = {
@@ -14,9 +13,7 @@ export default function NotFound() {
       <div className="container">
         <h1>صفحه پیدا نشد</h1>
         <p className="auth-sub">این مسیر بخشی از کیا آکادمی نیست.</p>
-        <Link href="/" className="cta-primary">
-          بازگشت به خانه
-        </Link>
+        {/* The shell renders the one «بازگشت» control, so no CTA is needed here. */}
       </div>
     </div>
   );

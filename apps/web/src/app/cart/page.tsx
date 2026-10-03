@@ -4,7 +4,6 @@ import { Loader2, ShoppingCart, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { RequireAuth } from '@/components/auth/RequireAuth';
-import { PageBackButton } from '@/components/layout/PageBackButton';
 import { useCart } from '@/context/CartProvider';
 import { useLanguage } from '@/context/LanguageProvider';
 import { ApiError } from '@/lib/api';
@@ -33,7 +32,6 @@ function CartContent() {
   return (
     <div className="page-content">
       <div className="container cart-shell">
-        <PageBackButton href="/courses" />
         <span className="eyebrow">
           <ShoppingCart size={14} className="inline-leading-icon" />
           {t('nav.cart')}

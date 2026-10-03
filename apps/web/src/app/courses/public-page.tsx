@@ -4,9 +4,10 @@ import type { CourseSummary } from '@kia-academy/shared';
 import { BookOpen, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { PageBackButton } from '@/components/layout/PageBackButton';
+import { CourseTileIcon } from '@/components/catalog/CourseTileIcon';
 import { useLanguage } from '@/context/LanguageProvider';
 import { api, ApiError } from '@/lib/api';
+import { assignCardAccents, tintClass } from '@/lib/cardAccent';
 import { localizeCourse } from '@/lib/courseLocalization';
 
 export function PublicCoursesPage() {
@@ -27,6 +28,11 @@ export function PublicCoursesPage() {
     () => courses.map((course) => localizeCourse(course, locale)),
     [courses, locale],
   );
+  // Each course gets its own hue, stable across pages (see lib/cardAccent).
+  const accents = useMemo(
+    () => assignCardAccents(localizedCourses.map((course) => course.slug)),
+    [localizedCourses],
+  );
 
   if (loading) {
     return <div className="page-content auth-loading"><Loader2 size={24} className="spin" /> {t('courses.loading')}</div>;
@@ -35,15 +41,14 @@ export function PublicCoursesPage() {
   return (
     <div className="page-content">
       <div className="container catalog-shell">
-        <PageBackButton href="/" />
         <span className="eyebrow"><BookOpen size={14} className="inline-leading-icon" />{t('publicCourses.eyebrow')}</span>
         <h1>{t('publicCourses.title')}</h1>
         <p className="auth-sub">{t('publicCourses.sub')}</p>
         {error ? <p className="form-error">{error}</p> : null}
         <div className="catalog-grid">
-          {localizedCourses.map((course) => (
-            <article key={course.id} className="catalog-card">
-              <span className="catalog-icon">{course.icon}</span>
+          {localizedCourses.map((course, index) => (
+            <article key={course.id} className={`catalog-card ${tintClass(accents[index])}`}>
+              <CourseTileIcon icon={course.icon} />
               <h3>
                 {course.title}
                 {course.comingSoon ? (

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { MaterialController } from "./MaterialController";
 import "./material-studio.css";
@@ -17,20 +16,11 @@ export function MaterialStudio() {
 
   return (
     <div ref={rootRef} className="material-studio-root">
-      <div className="bg-orb orb-a" aria-hidden="true" />
-      <div className="bg-orb orb-b" aria-hidden="true" />
-
       <section
         id="material-mode"
         className="view material-mode active"
         aria-label="استودیوی متریال"
       >
-        <div className="material-topbar">
-          <Link className="home-btn" href="/">
-            بازگشت
-          </Link>
-        </div>
-
         <div className="material-head">
           <h2>استودیوی متریال</h2>
           <p>

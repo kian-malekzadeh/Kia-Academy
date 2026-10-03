@@ -2,7 +2,6 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { PageBackButton } from '@/components/layout/PageBackButton';
 import { UnifiedTestFlow } from '@/components/test/UnifiedTestFlow';
 import { RequireAuth } from '@/components/auth/RequireAuth';
 import { useAuth } from '@/context/AuthProvider';
@@ -21,14 +20,14 @@ export default function AssessmentPage() {
 function AssessmentContent() {
   const router = useRouter();
   const { t } = useLanguage();
-  const { user, learnerState, loading } = useAuth();
+  const { user, learnerState, loading, signedOut } = useAuth();
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || signedOut) return;
     if (!user?.profileComplete && !learnerState?.profileComplete) {
       router.replace('/education');
     }
-  }, [loading, user, learnerState, router]);
+  }, [loading, signedOut, user, learnerState, router]);
 
   if (loading) {
     return (
@@ -47,7 +46,6 @@ function AssessmentContent() {
   return (
     <div className="page-content">
       <div className="container test-shell">
-        <PageBackButton href={BACK_PATH} />
         <UnifiedTestFlow backHref={BACK_PATH} />
       </div>
     </div>

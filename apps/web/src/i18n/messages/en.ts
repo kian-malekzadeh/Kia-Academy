@@ -65,19 +65,6 @@ export const en = {
     homeAria: 'Kia Academy home',
     cart: 'Cart',
     footer: {
-      tagline: 'Learn with direction.',
-      blurb: 'Adaptive learning paths built around your goals, skills, and available time.',
-      learning: 'Learning',
-      explore: 'Explore',
-      legal: 'Legal',
-      freeAssessment: 'Free assessment',
-      courseLibrary: 'Course library',
-      readinessTest: 'Readiness test',
-      myRoadmap: 'My roadmap',
-      bootcampArena: 'Bootcamp arena',
-      privacy: 'Privacy policy',
-      terms: 'Terms of service',
-      contact: 'Contact us',
       copyright: '© {year} Kia Academy. All rights reserved.',
       status: 'Adaptive learning platform',
       enamad: 'E-Namad trust seal',
@@ -303,13 +290,6 @@ export const en = {
       unsafe: 'This field contains unsafe or spam-like content.',
       required: 'This field is required.',
     },
-    start: {
-      title: 'You are ready',
-      body: 'Your profile is complete. Next you will take three short tests that shape your learning path.',
-      cta: 'Continue to tests',
-      continue: 'Continue',
-      homeCta: 'See the paths',
-    },
     stepBadge: '{current} / {total}',
   },
   tests: {
@@ -482,7 +462,6 @@ export const en = {
       sentTitle: 'Check your inbox',
       sentBody:
         'If an account exists for that email, a reset link is on its way. It expires in 30 minutes and can be used once.',
-      backToLogin: 'Back to sign in',
       error: 'Something went wrong. Please try again.',
     },
     resetPassword: {
@@ -992,7 +971,6 @@ export const en = {
     },
   },
   roadmap: {
-    backResults: '← Back to preparations results',
     aha: 'Your roadmap is ready',
     title: 'Your {trackName} path is ready.',
     bundleSuffix: 'Roadmap',
@@ -1083,7 +1061,6 @@ export const en = {
       loading: 'Loading…',
       viewResults: 'View results',
       viewRoadmap: 'View roadmap',
-      backAssessment: 'Back to assessment',
       start: 'Start test',
       viewCourses: 'View courses',
       unlock: 'Unlock & Start — $19',
@@ -1182,7 +1159,6 @@ export const en = {
       backDashboard: 'Back to My Dashboard',
       browseCourses: 'Browse courses',
       viewRoadmap: 'View my roadmap',
-      backTest: '← Back to preparations test',
     },
     verdict: {
       pass: {
@@ -1315,7 +1291,6 @@ export const en = {
     loading: 'Loading lesson…',
     loadError: 'Failed to load lesson.',
     notFound: 'Lesson not found.',
-    backToCourses: '← Back to courses',
     completed: 'Completed',
     markComplete: 'Mark complete',
     saving: 'Saving…',
@@ -1361,7 +1336,6 @@ export const en = {
     },
   },
   bootcamp: {
-    backDashboard: '← Back to Dashboard',
     title: 'Bootcamp Arena',
     sub: "Weekly challenges to sharpen what you're learning — and earn real unlocks.",
     rankLabel: 'your rank · {points} pts',
@@ -1387,7 +1361,6 @@ export const en = {
       },
     },
     solver: {
-      back: '← Back to Arena',
       title: 'FizzBuzz, Refactored',
       prompt:
         'Write a function fizzbuzz(n) that returns "Fizz" if n is divisible by 3, "Buzz" if divisible by 5, "FizzBuzz" if divisible by both, and the number itself otherwise — without using an if/else chain.',
@@ -1436,7 +1409,6 @@ export const en = {
     eyebrow: 'Support',
     title: 'Contact us',
     sub: 'Questions, feedback, or technical issues? Send a message and the Kia team will respond soon.',
-    backHome: 'Back to home',
     infoTitle: 'Contact information',
     infoBody: 'Reach out for technical support, course questions, or partnership inquiries.',
     phone: '+98 21 1234 5678',
@@ -2226,7 +2198,6 @@ export const en = {
         actions: 'Actions',
         video: 'Video',
       },
-      back: '← Back to courses',
       newTitle: 'New course',
       newSub: 'Create a course, then add lessons on the edit page.',
       field: {

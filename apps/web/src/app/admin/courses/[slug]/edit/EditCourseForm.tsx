@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { Loader2, Trash2, Upload } from 'lucide-react';
@@ -238,9 +237,6 @@ export default function AdminEditCoursePage() {
 
   return (
     <div className="admin-content">
-      <Link href="/admin/courses" className="admin-back">
-        {t('admin.courses.back')}
-      </Link>
       <h1>{t('admin.courses.editTitle', { title: course.title })}</h1>
       <p className="admin-sub">
         {t('admin.courses.slugLabel')} <code>{slug}</code>

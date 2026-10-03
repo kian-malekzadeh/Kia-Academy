@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { Loader2, Pencil, Plus, Save, Trash2, Upload } from 'lucide-react';
 import { type ChangeEvent, type FormEvent, useCallback, useEffect, useState } from 'react';
@@ -185,7 +184,6 @@ export default function AdminEditCoursePage() {
 
   return (
     <div className="admin-content">
-      <Link href="/admin/courses" className="admin-back">بازگشت به دوره‌ها</Link>
       <div className="admin-header-row">
         <div>
           <h1>ویرایش دوره</h1>

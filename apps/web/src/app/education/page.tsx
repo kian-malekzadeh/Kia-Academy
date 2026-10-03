@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { FormEvent, Suspense, useEffect, useState } from 'react';
 import {
   containsUnsafeText,
@@ -14,18 +14,16 @@ import {
 import { RequireAuth } from '@/components/auth/RequireAuth';
 import { ProvinceCityFields } from '@/components/auth/ProvinceCityFields';
 import { BrandMark } from '@/components/brand/BrandMark';
-import { PageBackButton } from '@/components/layout/PageBackButton';
 import { useAuth } from '@/context/AuthProvider';
 import { useLanguage } from '@/context/LanguageProvider';
 import { api, ApiError } from '@/lib/api';
-import { HOME_PATH } from '@/lib/postLoginPath';
+import { HOME_PATH, resolveInternalNext } from '@/lib/postLoginPath';
 
-type Step = 'phone' | 'otp' | 'profile' | 'start';
+type Step = 'phone' | 'otp' | 'profile' | 'redirect';
 
 export default function EducationPage() {
   return (
     <div className="page-content education-page">
-      <PageBackButton href="/" />
       <Suspense fallback={<div className="container auth-shell auth-loading" />}>
         <EducationFlow />
       </Suspense>
@@ -35,6 +33,7 @@ export default function EducationPage() {
 
 function EducationFlow() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const nextPath = searchParams.get('next');
   const { t } = useLanguage();
@@ -57,14 +56,21 @@ function EducationFlow() {
   useEffect(() => {
     if (authLoading) return;
     if (user?.profileComplete || learnerState?.profileComplete) {
-      setStep('start');
-      if (user?.phone) setPhone(user.phone);
+      // Registration is done, so this page has nothing left to ask for: send the
+      // learner onward (their deep link when a gate sent them here, otherwise the
+      // departments page) instead of parking them on a confirmation screen.
+      // A `next` pointing at this very page (RequireAuth re-entry) is not a
+      // destination — forwarding to it would only re-enter this flow.
+      const dest = resolveInternalNext(nextPath);
+      const target = dest === pathname ? HOME_PATH : dest;
+      setStep('redirect');
+      router.replace(target);
       return;
     }
     if (!otpVerified) {
       setStep('phone');
     }
-  }, [authLoading, user, learnerState, otpVerified]);
+  }, [authLoading, user, learnerState, otpVerified, nextPath, pathname, router]);
 
   const clearErrors = () => {
     setErrors({});
@@ -104,9 +110,9 @@ function EducationFlow() {
       const res = await api.verifyOtp({ phone, code: code.trim() });
       await refreshSession();
       setOtpVerified(true);
-      if (res.user.profileComplete) {
-        setStep('start');
-      } else {
+      // A phone that is already registered needs no profile step; the effect
+      // above forwards the learner as soon as the session says so.
+      if (!res.user.profileComplete) {
         setStep('profile');
       }
     } catch (err) {
@@ -154,8 +160,9 @@ function EducationFlow() {
         city: cleanCity,
         email: cleanEmail,
       });
+      // Single navigation owner: the effect forwards the learner once the
+      // refreshed session reports a complete profile.
       await refreshSession();
-      setStep('start');
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : t('common.errorFallback'));
     } finally {
@@ -163,42 +170,13 @@ function EducationFlow() {
     }
   };
 
-  if (authLoading) {
+  if (authLoading || step === 'redirect') {
     return (
       <div className="container auth-shell">
         <div className="auth-card education-card">
           <p className="auth-loading-inline">{t('common.loading')}</p>
         </div>
       </div>
-    );
-  }
-
-  const continueAfterProfile = () => {
-    if (nextPath && nextPath.startsWith('/')) {
-      router.push(nextPath);
-      return;
-    }
-    // No deep link: registration/profile completion lands on the three-door page.
-    router.push(HOME_PATH);
-  };
-
-  if (step === 'start') {
-    return (
-      <RequireAuth nextPath="/education">
-        <div className="container auth-shell">
-          <div className="auth-card education-card">
-            <span className="auth-step-badge">{t('education.start.title')}</span>
-            <h1>{t('education.start.title')}</h1>
-            <p className="auth-sub">{t('education.start.body')}</p>
-            <button type="button" className="cta-primary auth-submit" onClick={continueAfterProfile}>
-              {nextPath ? t('education.start.continue') : t('education.start.homeCta')}
-            </button>
-            <Link href={HOME_PATH} className="back-link">
-              {t('common.back')}
-            </Link>
-          </div>
-        </div>
-      </RequireAuth>
     );
   }
 
@@ -370,9 +348,6 @@ function EducationFlow() {
             {busy ? t('education.phone.submitting') : t('education.phone.submit')}
           </button>
         </form>
-        <Link href={HOME_PATH} className="back-link">
-          {t('common.back')}
-        </Link>
       </div>
     </div>
   );

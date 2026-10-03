@@ -204,11 +204,6 @@
 
   --gradient-brand: linear-gradient(135deg, var(--brand-500) 0%, var(--brand-700) 100%);
   --gradient-ink: linear-gradient(150deg, var(--ink-900) 0%, var(--ink-950) 100%);
-  --gradient-aurora:
-    radial-gradient(ellipse 70% 50% at 78% -8%, rgba(100, 100, 255, 0.16), transparent 62%),
-    radial-gradient(ellipse 58% 44% at 8% 4%, rgba(196, 238, 217, 0.4), transparent 60%),
-    radial-gradient(ellipse 50% 38% at 50% 108%, rgba(255, 200, 100, 0.14), transparent 62%);
-  --gradient-hero: var(--gradient-aurora);
 }
 
 /* =============================================================================
@@ -275,11 +270,6 @@
 
   --gradient-brand: linear-gradient(135deg, var(--brand-500) 0%, var(--brand-800) 100%);
   --gradient-ink: linear-gradient(150deg, var(--ink-800) 0%, var(--ink-950) 100%);
-  --gradient-aurora:
-    radial-gradient(ellipse 70% 50% at 78% -8%, rgba(100, 100, 255, 0.22), transparent 62%),
-    radial-gradient(ellipse 58% 44% at 8% 4%, rgba(46, 146, 105, 0.18), transparent 60%),
-    radial-gradient(ellipse 50% 38% at 50% 108%, rgba(255, 200, 100, 0.1), transparent 62%);
-  --gradient-hero: var(--gradient-aurora);
 }
 
 /* =============================================================================
@@ -338,9 +328,11 @@ html {
 }
 
 body {
+  /* The page background has exactly one owner: this flat base colour plus the
+     fixed `.site-aurora` wash in components/layout/SiteAurora.tsx. Route
+     shells stay transparent so every page inherits the same background —
+     never repaint it locally (see .dash-panel, .material-studio-root). */
   background: var(--bg);
-  background-image: var(--gradient-aurora);
-  background-attachment: fixed;
   color: var(--text);
   display: flex;
   flex-direction: column;
@@ -509,8 +501,6 @@ canvas {
 
 [dir='rtl'] .eyebrow,
 [dir='rtl'] .label-micro,
-[dir='rtl'] .footer-tagline,
-[dir='rtl'] .footer-nav-group h2,
 [dir='rtl'] .stage-label,
 [dir='rtl'] .tile .t-status,
 [dir='rtl'] .tile .t-eyebrow,
@@ -599,7 +589,6 @@ input[type='tel'],
   .course-picker-item,
   .course-picker-total,
   .test-history-item,
-  .door-top,
   .page-head,
   .user-chip,
   .results-summary-card,
@@ -612,7 +601,6 @@ input[type='tel'],
   .test-top,
   .r-item,
   .slider-labels,
-  .footer-bottom,
   .auth-footer-row
 ) > * {
   min-width: 0;
@@ -668,7 +656,9 @@ input[type='tel'],
   min-height: 100vh;
 }
 
-/* Fixed aurora wash — animations sit on the body plane behind transparent chrome */
+/* The site's single aurora layer — fixed on the body plane behind transparent
+   chrome, so every non-admin route shares one background. Admin brings its own
+   dark shell and skips it. Do not add a second page-level gradient elsewhere. */
 .site-aurora {
   position: fixed;
   inset: 0;
@@ -720,6 +710,120 @@ input[type='tel'],
 }
 
 /* =============================================================================
+   Card tile — the one card look used by every tile in the product
+   Department doors (`.door`) and course tiles (`.catalog-card`) share surface,
+   padding, radius, shadow, hover and icon geometry; only the accent differs,
+   and it comes from a `tint--*` class. Without a tint class a tile keeps the
+   brand accent, so adding a tile never means re-inventing its box.
+   ========================================================================== */
+
+.door,
+.catalog-card {
+  --tile-hairline: var(--brand-hairline);
+  --tile-tint: var(--brand-tint);
+  --tile-fill: var(--brand-fill);
+  --tile-on-fill: var(--on-fill);
+  --tile-glow: var(--glow-brand);
+  --tile-border-hover: var(--brand-500);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  /* Same floor everywhere, so a department door and a course tile read as the
+     same object; longer content still grows the box. */
+  min-height: 13rem;
+  padding: var(--space-5) var(--space-6);
+  border: 1px solid var(--tile-hairline);
+  border-radius: var(--radius-xl);
+  background: linear-gradient(160deg, var(--tile-tint) 0%, transparent 58%), var(--bg-card);
+  box-shadow: var(--shadow-sm);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    border-color var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out),
+    transform var(--dur-base) var(--ease-out);
+}
+
+.door:hover,
+.catalog-card:hover {
+  border-color: var(--tile-border-hover);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-3px);
+}
+
+/* Icon tile — 44px rounded square filled with the card accent. */
+.door-icon,
+.catalog-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  border-radius: var(--radius-md);
+  background: var(--tile-fill);
+  color: var(--tile-on-fill);
+  box-shadow: var(--tile-glow);
+}
+
+/* --- accents ------------------------------------------------------------ */
+
+.tint--brand {
+  --tile-hairline: var(--brand-hairline);
+  --tile-tint: var(--brand-tint);
+  --tile-fill: var(--brand-fill);
+  --tile-on-fill: var(--on-fill);
+  --tile-glow: var(--glow-brand);
+  --tile-border-hover: var(--brand-500);
+}
+
+.tint--sky {
+  --tile-hairline: var(--sky-hairline);
+  --tile-tint: var(--sky-tint);
+  --tile-fill: var(--sky-500);
+  --tile-on-fill: #ffffff;
+  --tile-glow: 0 14px 34px -14px rgba(46, 155, 234, 0.5);
+  --tile-border-hover: var(--sky-600);
+}
+
+.tint--mint {
+  --tile-hairline: color-mix(in srgb, var(--mint-500) 40%, transparent);
+  --tile-tint: color-mix(in srgb, var(--mint-500) 12%, transparent);
+  --tile-fill: var(--mint-500);
+  --tile-on-fill: #ffffff;
+  --tile-glow: var(--glow-mint);
+  --tile-border-hover: var(--mint-600);
+}
+
+.tint--amber {
+  --tile-hairline: color-mix(in srgb, var(--amber-400) 38%, transparent);
+  --tile-tint: var(--value-tint);
+  --tile-fill: var(--amber-400);
+  --tile-on-fill: var(--value-on-fill);
+  --tile-glow: var(--glow-amber);
+  --tile-border-hover: var(--amber-500);
+}
+
+.tint--rose {
+  --tile-hairline: color-mix(in srgb, var(--danger-500) 34%, transparent);
+  --tile-tint: color-mix(in srgb, var(--danger-500) 11%, transparent);
+  --tile-fill: var(--danger-500);
+  --tile-on-fill: #ffffff;
+  --tile-glow: 0 14px 34px -14px rgba(224, 73, 90, 0.45);
+  --tile-border-hover: var(--danger-600);
+}
+
+.tint--violet {
+  --tile-hairline: color-mix(in srgb, var(--brand-500) 45%, transparent);
+  --tile-tint: color-mix(in srgb, var(--danger-500) 16%, transparent);
+  --tile-fill: color-mix(in srgb, var(--brand-500) 45%, var(--danger-500));
+  --tile-on-fill: #ffffff;
+  --tile-glow: 0 14px 34px -14px rgba(150, 70, 220, 0.45);
+  --tile-border-hover: color-mix(in srgb, var(--brand-500) 35%, var(--danger-600));
+}
+
+/* =============================================================================
    Layout containers — shared section width options
    .container       → centered, capped at --shell-max
    .container-fluid → full-bleed width, same horizontal padding
@@ -728,6 +832,10 @@ input[type='tel'],
 
 .container,
 .app {
+  /* Page shells that add vertical rhythm (`.catalog-shell`, `.results`, …) must
+     use `padding-block`, never the `padding` shorthand: a shorthand with `0` on
+     the sides has the same specificity and lands later in the cascade, so it
+     wins here and leaves the page flush against the column edge. */
   max-width: var(--shell-max);
   margin-inline: auto;
   padding-inline: var(--space-6);

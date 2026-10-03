@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useState } from 'react';
 import { useLanguage } from '@/context/LanguageProvider';
@@ -43,9 +42,6 @@ export default function AdminNewCoursePage() {
 
   return (
     <div className="admin-content">
-      <Link href="/admin/courses" className="admin-back">
-        {t('admin.courses.back')}
-      </Link>
       <h1>{t('admin.courses.newTitle')}</h1>
       <p className="admin-sub">{t('admin.courses.newSub')}</p>
 

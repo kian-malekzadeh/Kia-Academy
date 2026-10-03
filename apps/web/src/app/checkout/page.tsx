@@ -5,7 +5,6 @@ import { Check, CreditCard, Loader2, ShoppingCart } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { RequireAuth } from '@/components/auth/RequireAuth';
-import { PageBackButton } from '@/components/layout/PageBackButton';
 import { api, ApiError } from '@/lib/api';
 import { useApp } from '@/context/AppProvider';
 import { useAuth } from '@/context/AuthProvider';
@@ -209,14 +208,6 @@ function CheckoutContent() {
     }
   };
 
-  const backHref = fromCart
-    ? '/cart'
-    : product === 'COURSE'
-      ? '/courses'
-      : roadmapId
-        ? `/roadmap?roadmapId=${encodeURIComponent(roadmapId)}`
-        : '/roadmap';
-
   const payDisabled =
     loading ||
     returnProcessing ||
@@ -228,7 +219,6 @@ function CheckoutContent() {
   return (
     <div className="page-content">
       <div className="container checkout-shell">
-        <PageBackButton href={backHref} />
         <span className="eyebrow amber">
           <CreditCard size={14} className="inline-leading-icon" />
           {t('checkout.eyebrow')}

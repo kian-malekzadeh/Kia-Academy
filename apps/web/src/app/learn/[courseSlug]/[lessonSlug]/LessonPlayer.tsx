@@ -18,7 +18,6 @@ import { parseLessonContent } from '@kia-academy/shared';
 import { RequireAuth } from '@/components/auth/RequireAuth';
 import { LessonPlayground } from '@/components/lesson/LessonPlayground';
 import { LessonVideo } from '@/components/lesson/LessonVideo';
-import { PageBackButton } from '@/components/layout/PageBackButton';
 import { useLanguage } from '@/context/LanguageProvider';
 import { api, ApiError } from '@/lib/api';
 import { markdownToHtml } from '@/lib/markdown';
@@ -289,9 +288,6 @@ function LessonPlayerContent({
       <div className="page-content">
         <div className="container lesson-shell kia-lesson-shell">
           <p className="form-error">{error || t('lesson.notFound')}</p>
-          <Link href="/courses" className="back-link">
-            {t('lesson.backToCourses')}
-          </Link>
         </div>
       </div>
     );
@@ -401,7 +397,6 @@ function LessonPlayerContent({
             <article className="lesson-content-card glass-panel">
               <div className="lesson-top-row">
                 <div>
-                  <PageBackButton href="/courses" label={t('lesson.backToCourses')} />
                   <h1>{lesson.title}</h1>
                   <div className="lesson-meta">
                     <span className="meta-chip">{format.durationMinutes(lesson.durationMin)}</span>

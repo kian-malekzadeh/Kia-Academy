@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { BookOpen, ClipboardCheck } from 'lucide-react';
 import { RequireAuth } from '@/components/auth/RequireAuth';
-import { PageBackButton } from '@/components/layout/PageBackButton';
 import { useLanguage } from '@/context/LanguageProvider';
 
 /**
@@ -23,7 +22,6 @@ function TechnologyGate() {
 
   return (
     <div className="page-content tracks-page">
-      <PageBackButton href="/tracks" />
       <div className="container hub">
         <header className="page-head tracks-page__head">
           <div>
@@ -33,8 +31,8 @@ function TechnologyGate() {
         </header>
 
         <div className="landing-doors landing-doors--two tracks-page__doors">
-          <Link href="/courses" className="door door--primary">
-            <span className="door-icon door-icon--brand" aria-hidden="true">
+          <Link href="/courses" className="door tint--brand">
+            <span className="door-icon" aria-hidden="true">
               <BookOpen size={20} />
             </span>
             <h2 className="door-title">{t('tracks.technology.courses.title')}</h2>
@@ -42,8 +40,8 @@ function TechnologyGate() {
             <span className="door-cta">{t('tracks.technology.courses.cta')}</span>
           </Link>
 
-          <Link href="/assessment" className="door door--work">
-            <span className="door-icon door-icon--mint" aria-hidden="true">
+          <Link href="/assessment" className="door tint--mint">
+            <span className="door-icon" aria-hidden="true">
               <ClipboardCheck size={20} />
             </span>
             <h2 className="door-title">{t('tracks.technology.assessment.title')}</h2>

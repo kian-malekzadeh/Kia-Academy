@@ -3,7 +3,7 @@
    ========================================================================== */
 
 .catalog-shell {
-  padding: var(--space-2) 0 var(--space-section);
+  padding-block: var(--space-2) var(--space-section);
 }
 
 .catalog-shell h1 {
@@ -12,57 +12,73 @@
   margin: var(--space-3) 0;
 }
 
+/* Course tiles use the shared card tile from base.css, so they match the
+   department doors box-for-box; the grid repeats the two-column rhythm of the
+   departments page instead of packing three narrow tiles per row. */
 .catalog-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--bento-gap);
-  margin-top: var(--space-6);
+  max-width: 48rem;
+  margin: var(--space-6) auto 0;
 }
 
-.catalog-card {
-  background: var(--bg-card);
+@media (max-width: 720px) {
+  .catalog-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* A content panel that borrows the tile surface (course intro, exam result).
+   Same box, no accent and no tile height floor — it is not a link card. */
+.catalog-panel {
+  padding: var(--space-6);
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
-  padding: var(--space-6);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+  background: var(--bg-card);
   box-shadow: var(--shadow-xs);
-  transition:
-    border-color var(--dur-base) var(--ease-out),
-    box-shadow var(--dur-base) var(--ease-out),
-    transform var(--dur-base) var(--ease-out);
 }
 
-.catalog-card:hover {
-  border-color: var(--brand-hairline);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
+.catalog-panel > * + * {
+  margin-top: var(--space-3);
 }
 
+.catalog-panel h3 {
+  font-size: var(--fs-h3);
+  font-weight: 700;
+}
+
+/* The icon tile geometry comes from base.css; the fallback mark (emoji or two
+   letters) is centred in the same square. */
 .catalog-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: max-content;
-  height: 44px;
-  border-radius: var(--radius-md);
-  background: var(--brand-tint);
-  border: 1px solid var(--brand-hairline);
-  color: var(--brand);
-  font-size: 1rem;
-  padding: 0 0.7rem;
+  width: 44px;
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .catalog-card h3 {
-  font-size: var(--fs-h3);
-  font-weight: 700;
+  font-size: var(--fs-h2);
+  font-weight: 800;
+  color: var(--text);
 }
 
 .catalog-card p {
   font-size: var(--fs-sm);
   color: var(--text-dim);
-  flex: 1;
+  flex: 1 1 auto;
+}
+
+/* The action wears the tile accent so the whole card reads as one object. */
+.catalog-actions .btn {
+  background: var(--tile-fill);
+  color: var(--tile-on-fill);
+  border-color: transparent;
+}
+
+.catalog-actions .btn:hover {
+  background: color-mix(in srgb, var(--tile-fill) 86%, #000000);
+  color: var(--tile-on-fill);
 }
 
 .catalog-meta {
@@ -94,7 +110,7 @@
 
 .lesson-shell {
   max-width: 1360px;
-  padding: var(--space-2) 0 var(--space-section);
+  padding-block: var(--space-2) var(--space-section);
 }
 
 .kia-lesson-shell .learn-layout {
@@ -747,9 +763,10 @@
 }
 
 @media (max-width: 640px) {
+  /* Narrow screens only tighten the gutter; it must never reach the edge. */
   .kia-lesson-shell .lesson-shell,
   .lesson-shell {
-    padding-inline: 0;
+    padding-inline: var(--space-3);
   }
 
   .kia-lesson-shell .lesson-content-card,
@@ -842,7 +859,7 @@
 
 .legal-shell {
   max-width: 720px;
-  padding: var(--space-2) 0 var(--space-section);
+  padding-block: var(--space-2) var(--space-section);
 }
 
 .legal-shell h1 {

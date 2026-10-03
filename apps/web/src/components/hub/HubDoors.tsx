@@ -39,32 +39,32 @@ export function HubDoors({ showHeading = true }: { showHeading?: boolean }) {
       ) : null}
 
       <div className="landing-doors landing-doors--depts">
-        <Link href="/tracks" className="door door--primary">
-          <span className="door-icon door-icon--brand" aria-hidden="true">
+        <Link href="/tracks" className="door tint--brand">
+          <span className="door-icon" aria-hidden="true">
             <GraduationCap size={20} />
           </span>
           <h3 className="door-title">{t('dashboard.doors.educationTitle')}</h3>
           <p className="door-desc">{t('dashboard.doors.educationDesc')}</p>
         </Link>
 
-        <Link href="/freelance" className="door door--work">
-          <span className="door-icon door-icon--mint" aria-hidden="true">
+        <Link href="/freelance" className="door tint--mint">
+          <span className="door-icon" aria-hidden="true">
             <Briefcase size={20} />
           </span>
           <h3 className="door-title">{t('dashboard.doors.workTitle')}</h3>
           <p className="door-desc">{t('dashboard.doors.workDesc')}</p>
         </Link>
 
-        <Link href="/material" className="door door--material">
-          <span className="door-icon door-icon--amber" aria-hidden="true">
+        <Link href="/material" className="door tint--amber">
+          <span className="door-icon" aria-hidden="true">
             <Palette size={20} />
           </span>
           <h3 className="door-title">{t('dashboard.doors.materialTitle')}</h3>
           <p className="door-desc">{t('dashboard.doors.materialDesc')}</p>
         </Link>
 
-        <Link href="/events" className="door door--events">
-          <span className="door-icon door-icon--sky" aria-hidden="true">
+        <Link href="/events" className="door tint--sky">
+          <span className="door-icon" aria-hidden="true">
             <CalendarDays size={20} />
           </span>
           <h3 className="door-title">{t('dashboard.doors.eventsTitle')}</h3>

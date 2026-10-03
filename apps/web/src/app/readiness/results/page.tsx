@@ -9,7 +9,6 @@ import {
   type LearnerTestReportReadiness,
 } from '@kia-academy/shared';
 import { RequireAuth } from '@/components/auth/RequireAuth';
-import { PageBackButton } from '@/components/layout/PageBackButton';
 import { FullTestReport } from '@/components/test/FullTestReport';
 import { useApp } from '@/context/AppProvider';
 import { useLanguage } from '@/context/LanguageProvider';
@@ -183,10 +182,6 @@ function ReadinessResultsContent() {
   return (
     <div className="page-content">
       <div className="container results exam-results">
-        <PageBackButton
-          href={testId ? '/dashboard' : '/readiness'}
-          label={testId ? t('readiness.results.backDashboard') : t('readiness.results.backTest')}
-        />
         <div className="results-tag">{t('tests.report.tag')}</div>
         <h2>{t('tests.report.title')}</h2>
         <p className="sub">{t('tests.report.sub')}</p>

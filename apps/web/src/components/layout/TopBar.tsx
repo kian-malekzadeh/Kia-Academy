@@ -104,10 +104,11 @@ export function TopBar() {
     };
   }, [navOpen]);
 
+  /** Sign out lands on the landing page; `replace` keeps Back out of the session. */
   const handleLogout = async () => {
     setMenuOpen(false);
     await logout();
-    router.push('/');
+    router.replace('/');
   };
 
   const navSizeClass =
@@ -126,7 +127,14 @@ export function TopBar() {
   return (
     <div className={`topbar${navSizeClass}`} ref={topbarRef}>
       <div className="topbar-primary">
-        <button type="button" className="logo" onClick={handleLogoClick}>
+        {/* `aria-label` keeps the button named on mobile, where the wordmark is
+            hidden and the mark alone would leave it unlabelled. */}
+        <button
+          type="button"
+          className="logo"
+          onClick={handleLogoClick}
+          aria-label={BRAND_WORDMARK}
+        >
           <BrandMark className="logo-mark" size={26} title="" />
           <span className="logo-text">{BRAND_WORDMARK}</span>
         </button>
@@ -161,10 +169,7 @@ export function TopBar() {
             </Link>
           ) : (
             <>
-              <LearnerNav
-                onNavigate={() => setNavOpen(false)}
-                compact={navSize === 'compact'}
-              />
+              <LearnerNav onNavigate={() => setNavOpen(false)} />
               {isAdmin && (
                 <Link href="/admin" className="top-nav-link" onClick={() => setNavOpen(false)}>
                   <Shield size={14} />

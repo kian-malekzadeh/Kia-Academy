@@ -1,5 +1,5 @@
 /* =============================================================================
-   Site footer
+   Site footer — brand + trust line, no link navigation
    ========================================================================== */
 
 .site-footer {
@@ -14,46 +14,45 @@
   /* UI body font — never JetBrains Mono (latin-only next/font → blank Persian glyphs). */
   font-family: var(--font-body);
   font-size: var(--fs-xs);
-  line-height: 1.7;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
 
 [dir='rtl'] .site-footer {
   font-family: var(--font-fa);
   font-feature-settings: 'ss01' 1;
-  line-height: 1.85;
+  line-height: 1.75;
 }
 
-.site-footer :is(p, a, span, h2, .footer-logo, .footer-status) {
+.site-footer :is(a, span, .footer-logo, .footer-status) {
   font-family: inherit;
 }
 
+/* `padding-block` only — a `padding` shorthand with 0 on the sides would zero
+   the `.container` gutter and drop the footer against the column edge. */
 .footer-inner {
-  padding-top: var(--space-14);
-  padding-bottom: var(--space-6);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-6);
+  padding-block: var(--space-5);
 }
 
-.footer-main {
-  display: grid;
-  grid-template-columns: minmax(min(240px, 100%), 1.8fr) repeat(3, minmax(min(130px, 100%), 1fr));
-  gap: var(--space-10);
-  padding-bottom: var(--space-10);
-}
-
-.footer-brand {
-  max-width: 320px;
-}
-
+/* --- brand ---------------------------------------------------------------- */
 .footer-logo {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
+  flex: 0 0 auto;
   color: var(--text);
   font-family: var(--font-display);
-  font-size: 1.1875rem;
+  font-size: 1rem;
   font-weight: 800;
   letter-spacing: -0.02em;
   text-decoration: none;
+  white-space: nowrap;
+  transition: color var(--dur-base) var(--ease-out);
 }
 
 [dir='rtl'] .footer-logo {
@@ -66,7 +65,7 @@
 
 .footer-logo-mark {
   display: block;
-  height: 26px;
+  height: 22px;
   width: auto;
   aspect-ratio: 497.37 / 512;
   flex: 0 0 auto;
@@ -74,74 +73,36 @@
   overflow: visible;
 }
 
-.footer-brand p {
-  max-width: 300px;
-  margin-top: var(--space-4);
-  color: var(--text-dim);
-}
-
-.footer-tagline {
-  display: inline-block;
-  margin-top: var(--space-4);
-  color: var(--brand);
-  font-family: inherit;
-  font-size: var(--fs-micro);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.footer-nav-group {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-3);
-}
-
-.footer-nav-group h2 {
-  margin-bottom: 2px;
-  color: var(--text);
-  font-family: inherit;
-  font-size: var(--fs-micro);
-  font-weight: 700;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-}
-
-.footer-nav-group a {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  color: var(--text-dim);
-  text-decoration: none;
-  transition:
-    color var(--dur-base) var(--ease-out),
-    transform var(--dur-base) var(--ease-out);
-}
-
-.footer-nav-group a:hover {
-  color: var(--brand);
-  transform: translateX(2px);
-}
-
-[dir='rtl'] .footer-nav-group a:hover {
-  transform: translateX(-2px);
-}
-
-.footer-bottom {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--space-5);
-  padding-top: var(--space-5);
-  border-top: 1px solid var(--border-soft);
-  color: var(--text-faint);
-}
-
-.footer-bottom-end {
+/* --- trust + copyright ---------------------------------------------------- */
+.footer-meta {
   display: flex;
   align-items: center;
   gap: var(--space-4);
+  color: var(--text-faint);
+  font-size: var(--fs-micro);
+}
+
+.footer-copy {
+  white-space: nowrap;
+}
+
+/* The two legal pages, as plain text beside the copyright — not a nav. */
+.footer-legal {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+
+.footer-legal-link {
+  color: inherit;
+  text-decoration: none;
+  transition: color var(--dur-base) var(--ease-out);
+}
+
+.footer-legal-link:hover {
+  color: var(--brand);
+  text-decoration: underline;
 }
 
 .enamad-badge {
@@ -155,76 +116,46 @@
 }
 
 .footer-status {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  font-family: inherit;
-  font-size: var(--fs-micro);
   font-weight: 600;
+  white-space: nowrap;
   color: var(--progress);
 }
 
 .footer-status i {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: var(--progress-fill);
-  box-shadow: 0 0 0 4px var(--progress-tint);
+  box-shadow: 0 0 0 3px var(--progress-tint);
 }
 
-@media (max-width: 800px) {
-  .footer-main {
-    grid-template-columns: 1.5fr 1fr 1fr;
-    gap: var(--space-8) var(--space-6);
-  }
-
-  .footer-brand {
-    grid-column: 1 / -1;
-    max-width: none;
-  }
-}
-
+/* --- phones: the smallest version that stays readable ---------------------- */
 @media (max-width: 640px) {
   .footer-inner {
-    text-align: center;
+    justify-content: center;
+    gap: var(--space-3);
+    padding-block: var(--space-4);
   }
 
-  .footer-brand {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    max-width: none;
-    width: 100%;
+  .footer-logo {
+    font-size: 0.9375rem;
   }
 
-  .footer-brand p {
-    max-width: none;
-    width: 100%;
-    margin-inline: 0;
+  .footer-logo-mark {
+    height: 20px;
   }
 
-  .footer-nav-group {
-    align-items: center;
+  .footer-meta {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-3);
   }
 
-  .footer-bottom {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-  }
-
-  .footer-bottom-end {
-    flex-direction: column;
-  }
-}
-
-@media (max-width: 560px) {
-  .footer-main {
-    grid-template-columns: 1fr 1fr;
-    gap: var(--space-8) var(--space-5);
-  }
-
-  .footer-brand {
-    grid-column: 1 / -1;
+  /* Marketing label — the trust seal and the copyright stay. */
+  .footer-status {
+    display: none;
   }
 }

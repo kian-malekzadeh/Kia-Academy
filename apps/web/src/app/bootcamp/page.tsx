@@ -2,7 +2,6 @@
 
 import { useRouter } from 'next/navigation';
 import { RequireAuth } from '@/components/auth/RequireAuth';
-import { PageBackButton } from '@/components/layout/PageBackButton';
 import { ChallengeCard } from '@/components/bootcamp/ChallengeCard';
 import { Leaderboard } from '@/components/bootcamp/Leaderboard';
 import { useLanguage } from '@/context/LanguageProvider';
@@ -17,7 +16,6 @@ export default function BootcampPage() {
     <RequireAuth nextPath="/bootcamp">
       <div className="page-content">
         <div className="container dash">
-          <PageBackButton href="/dashboard" label={t('bootcamp.backDashboard')} />
           <div className="dash-head">
             <div>
               <h1>{t('bootcamp.title')}</h1>

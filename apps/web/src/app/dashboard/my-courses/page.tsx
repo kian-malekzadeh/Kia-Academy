@@ -5,9 +5,11 @@ import { BookOpen, Loader2, Paperclip, Ticket } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
+import { CourseTileIcon } from '@/components/catalog/CourseTileIcon';
 import { useAuth } from '@/context/AuthProvider';
 import { useLanguage } from '@/context/LanguageProvider';
 import { api, ApiError } from '@/lib/api';
+import { assignCardAccents, tintClass } from '@/lib/cardAccent';
 import { localizeCourse } from '@/lib/courseLocalization';
 
 export default function MyCoursesPage() {
@@ -63,6 +65,11 @@ export default function MyCoursesPage() {
     () => courses.map((course) => localizeCourse(course, locale)),
     [courses, locale],
   );
+  // Same accents as the public catalog: a course keeps its colour on both grids.
+  const accents = useMemo(
+    () => assignCardAccents(localizedCourses.map((course) => course.slug)),
+    [localizedCourses],
+  );
 
   if (authLoading || loading) {
     return (
@@ -83,11 +90,11 @@ export default function MyCoursesPage() {
         <p className="auth-sub">{t('courses.sub')}</p>
         {error ? <p className="form-error">{error}</p> : null}
         <div className="catalog-grid">
-          {localizedCourses.map((course) => {
+          {localizedCourses.map((course, index) => {
             const attachments = attachmentsBySlug[course.slug] ?? [];
             return (
-              <article key={course.id} className="catalog-card">
-                <span className="catalog-icon">{course.icon}</span>
+              <article key={course.id} className={`catalog-card ${tintClass(accents[index])}`}>
+                <CourseTileIcon icon={course.icon} />
                 <h3>
                   {course.title}
                   {course.comingSoon ? (

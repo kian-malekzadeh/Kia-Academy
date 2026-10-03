@@ -41,8 +41,6 @@
   --ms-hover-b: rgba(219, 234, 254, 0.7);
   --ms-hover-c: rgba(219, 234, 254, 0.75);
   --ms-sticky: rgb(248, 250, 252);
-  --ms-root-a: rgba(233, 240, 250, 0.95);
-  --ms-root-b: rgba(214, 227, 240, 0.9);
 }
 
 .material-studio-root ::selection {
@@ -62,62 +60,6 @@
 
 .material-studio-root *::-webkit-scrollbar-track {
   background: var(--ms-glass-35);
-}
-
-.material-studio-root .bg-orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(8px);
-  pointer-events: none;
-  z-index: 0;
-}
-
-.material-studio-root .orb-a {
-  width: 380px;
-  height: 380px;
-  background: radial-gradient(
-    circle,
-    rgba(100, 100, 255, 0.28),
-    transparent 65%
-  );
-  top: -120px;
-  right: -80px;
-  animation: driftA 12s ease-in-out infinite;
-}
-
-.material-studio-root .orb-b {
-  width: 320px;
-  height: 320px;
-  background: radial-gradient(
-    circle,
-    rgba(196, 238, 217, 0.5),
-    transparent 65%
-  );
-  bottom: -120px;
-  left: -90px;
-  animation: driftB 10s ease-in-out infinite;
-}
-
-@keyframes driftA {
-  0%,
-  100% {
-    transform: translate(0, 0);
-  }
-
-  50% {
-    transform: translate(-25px, 15px);
-  }
-}
-
-@keyframes driftB {
-  0%,
-  100% {
-    transform: translate(0, 0);
-  }
-
-  50% {
-    transform: translate(18px, -20px);
-  }
 }
 
 .app-shell {
@@ -270,7 +212,6 @@
   padding: 0.1rem 0.35rem;
 }
 
-.home-btn,
 .pill-btn,
 .tab-btn,
 .control-chip,
@@ -283,7 +224,6 @@
   border-radius: var(--radius-pill);
 }
 
-.home-btn,
 .pill-btn,
 .tab-btn,
 .control-chip,
@@ -306,7 +246,6 @@
   box-shadow: var(--focus-ring);
 }
 
-.home-btn,
 .pill-btn {
   padding: 0.5rem 0.95rem;
 }
@@ -319,7 +258,6 @@
   opacity: 0.62;
 }
 
-.home-btn:hover,
 .pill-btn:hover,
 .tab-btn:hover,
 .control-chip:hover,
@@ -328,13 +266,6 @@
   box-shadow: 0 12px 20px -15px rgba(0, 21, 32, 0.75);
 }
 
-.home-btn {
-  position: static;
-  display: inline-flex;
-  align-items: center;
-  margin: 0 0 0.85rem;
-  z-index: 3;
-}
 
 .learn-layout {
   margin-top: 2rem;
@@ -1402,17 +1333,6 @@
     padding: 0.85rem 1rem 1.75rem;
   }
 
-  .material-studio-root .material-topbar {
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.65rem;
-    padding-inline: 0.15rem;
-  }
-
-  .material-studio-root a.home-btn {
-    width: 100%;
-    justify-content: center;
-  }
 
   .material-studio-root .font-card {
     font-size: 0.85rem !important;
@@ -1538,10 +1458,6 @@
     padding-inline: 0.6rem;
   }
 
-  .home-btn {
-    position: static;
-    margin-bottom: 0.6rem;
-  }
 }
 
 @media (max-width: 460px) {
@@ -1584,23 +1500,14 @@
   padding: 1rem 1.25rem 2rem;
   font-family: var(--font-fa), var(--font-body), Tahoma, sans-serif;
   color: var(--text-main);
-  background: radial-gradient(circle at top, var(--ms-root-a) 0%, var(--ms-root-b) 100%);
+  /* Transparent root — the studio shares the site background (body + .site-aurora). */
   /* clip (not hidden): overflow-x:hidden forces overflow-y:auto via axis coupling,
-     so decorative orbs (bottom:-120px) create a nested secondary page scroll. */
+     so tall panels would create a nested secondary page scroll. */
   overflow-x: clip;
   line-height: 1.5;
   z-index: 1;
 }
 
-.material-studio-root .material-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 0.85rem;
-  position: relative;
-  z-index: 3;
-}
 
 .material-studio-root .material-mode {
   position: relative;
@@ -1611,14 +1518,6 @@
   display: block;
 }
 
-.material-studio-root a.home-btn {
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  position: static;
-  margin: 0;
-  flex: 0 0 auto;
-}
 
 /* Page-level scroll only — keep panels out of the overflow axis-coupling trap */
 .material-studio-root .tab-panel,
@@ -1691,8 +1590,6 @@
   --ms-hover-b: rgba(129, 140, 248, 0.22);
   --ms-hover-c: rgba(129, 140, 248, 0.2);
   --ms-sticky: rgb(15, 23, 42);
-  --ms-root-a: rgba(15, 23, 42, 0.96);
-  --ms-root-b: rgba(2, 6, 23, 0.92);
 }
 
 [data-theme='dark'] .material-studio-root ::selection {

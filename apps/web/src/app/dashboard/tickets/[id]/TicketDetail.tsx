@@ -10,7 +10,6 @@ import {
 import { Loader2, Ticket } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { FormEvent, useEffect, useState } from 'react';
-import { PageBackButton } from '@/components/layout/PageBackButton';
 import { DashboardGate, PanelPage } from '@/components/dashboard/DashboardShell';
 import { TicketAttachmentList } from '@/components/dashboard/TicketAttachmentList';
 import {
@@ -107,7 +106,6 @@ export default function TicketDetailPage() {
         }
         title={ticket?.subject || t('panel.tickets.detailTitle')}
         sub={ticket ? format.date(ticket.createdAt) : undefined}
-        actions={<PageBackButton href="/dashboard/tickets" />}
       >
         {loading ? (
           <p className="auth-loading">

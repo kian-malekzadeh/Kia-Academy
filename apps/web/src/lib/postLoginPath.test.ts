@@ -1,5 +1,31 @@
 import { describe, expect, it } from 'vitest';
-import { HOME_PATH, resolvePostLoginPath } from './postLoginPath';
+import { HOME_PATH, resolveInternalNext, resolvePostLoginPath } from './postLoginPath';
+
+describe('resolveInternalNext', () => {
+  it('defaults to the departments page when there is no deep link', () => {
+    expect(resolveInternalNext(null)).toBe(HOME_PATH);
+    expect(resolveInternalNext(undefined)).toBe(HOME_PATH);
+    expect(resolveInternalNext('')).toBe(HOME_PATH);
+    expect(resolveInternalNext('   ')).toBe(HOME_PATH);
+  });
+
+  it('honors an internal deep link', () => {
+    expect(resolveInternalNext('/roadmap')).toBe('/roadmap');
+    expect(resolveInternalNext('/education?next=%2Fcheckout')).toBe('/education?next=%2Fcheckout');
+  });
+
+  it('folds the landing page and the login screen into HOME_PATH', () => {
+    expect(resolveInternalNext('/')).toBe(HOME_PATH);
+    expect(resolveInternalNext('/login')).toBe(HOME_PATH);
+    expect(resolveInternalNext('/login?next=%2Fadmin')).toBe(HOME_PATH);
+  });
+
+  it('rejects off-site values (open redirects)', () => {
+    expect(resolveInternalNext('//evil.example')).toBe(HOME_PATH);
+    expect(resolveInternalNext('https://evil.example')).toBe(HOME_PATH);
+    expect(resolveInternalNext('javascript:alert(1)')).toBe(HOME_PATH);
+  });
+});
 
 describe('resolvePostLoginPath', () => {
   it('sends staff to admin by default', () => {

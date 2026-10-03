@@ -9,7 +9,6 @@ import { CheckCircle2, Loader2, Timer, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { PageBackButton } from '@/components/layout/PageBackButton';
 import { useLanguage } from '@/context/LanguageProvider';
 import { api, ApiError } from '@/lib/api';
 
@@ -175,7 +174,6 @@ export default function CourseExamRunner() {
     return (
       <div className="page-content">
         <div className="container auth-shell">
-          <PageBackButton href={`/courses/${slug}`} />
           <p className="form-error">{error || t('courses.runner.loadError')}</p>
         </div>
       </div>
@@ -186,10 +184,9 @@ export default function CourseExamRunner() {
     return (
       <div className="page-content">
         <div className="container auth-shell">
-          <PageBackButton href={`/courses/${slug}`} />
           <h1>{t('courses.runner.resultTitle')}</h1>
           <p className="auth-sub">{session.examTitle}</p>
-          <div className="catalog-card" style={{ maxWidth: 640 }}>
+          <div className="catalog-panel" style={{ maxWidth: 640 }}>
             {result.passed ? (
               <p className="form-success">
                 <CheckCircle2 size={16} className="inline-leading-icon" />{' '}
@@ -236,7 +233,6 @@ export default function CourseExamRunner() {
   return (
     <div className="page-content">
       <div className="container auth-shell">
-        <PageBackButton href={`/courses/${slug}`} />
         <h1>{session.examTitle}</h1>
         <div
           className="catalog-meta"

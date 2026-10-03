@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { Clock, MessageSquare } from 'lucide-react';
-import { PageBackButton } from '@/components/layout/PageBackButton';
 import { useLanguage } from '@/context/LanguageProvider';
 
 /**
@@ -15,7 +14,6 @@ export default function LanguageTracksPage() {
 
   return (
     <div className="page-content tracks-page">
-      <PageBackButton href="/tracks" />
       <div className="container hub">
         <header className="page-head tracks-page__head">
           <div>

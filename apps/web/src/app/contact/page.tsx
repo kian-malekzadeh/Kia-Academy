@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { Loader2, Mail, MapPin, Phone } from 'lucide-react';
 import { FormEvent, useState } from 'react';
-import { PageBackButton } from '@/components/layout/PageBackButton';
 import { useLanguage } from '@/context/LanguageProvider';
 import { useSiteSettings } from '@/hooks/useSiteSettings';
 import { api, ApiError } from '@/lib/api';
@@ -67,7 +66,6 @@ export default function ContactPage() {
   return (
     <div className="page-content">
       <div className="container contact-shell">
-        <PageBackButton href="/" label={t('contact.backHome')} />
 
         <span className="eyebrow">
           <Mail size={14} className="inline-leading-icon" />

@@ -115,9 +115,7 @@
   .panel-shell .topbar.panel-nav--compact .lang-toggle .lang-label,
   .panel-shell .topbar.panel-nav--compact .user-chip-name,
   .panel-shell .topbar.panel-nav--compact .user-chip svg,
-  .panel-shell .topbar.panel-nav--compact .learner-nav-text,
-  .panel-shell .topbar.panel-nav--compact .learner-nav-children,
-  .panel-shell .topbar.panel-nav--compact .learner-nav-chevron {
+  .panel-shell .topbar.panel-nav--compact .learner-nav-text {
     display: none;
   }
 
@@ -517,18 +515,34 @@ a.theme-toggle {
 }
 
 /* --- page back ----------------------------------------------------------- */
+/* One fixed slot for the whole product: the shells render it as the first
+   child of the page main, above any page content, aligned with .container. */
 .page-back-wrap {
   display: flex;
-  margin: 0 0 var(--space-5);
-  padding-inline: var(--space-6);
+  width: 100%;
+  max-width: var(--shell-max);
+  margin: 0 auto var(--space-5);
+  padding: var(--space-5) var(--space-6) 0;
+  box-sizing: border-box;
   position: relative;
   z-index: var(--z-raised);
 }
 
-/* Avoid double inset when the back control already lives inside .container */
-.container .page-back-wrap,
-.auth-shell .page-back-wrap {
-  padding-inline: 0;
+/* Admin pages use their own dark surfaces; same slot, same pill, dark skin. */
+.page-back-wrap--admin {
+  max-width: min(1600px, 100%);
+}
+
+.admin-shell .page-back-wrap--admin .page-back-btn {
+  background: var(--admin-surface);
+  border-color: var(--admin-line);
+  color: var(--admin-muted);
+  box-shadow: none;
+}
+
+.admin-shell .page-back-wrap--admin .page-back-btn:hover {
+  color: var(--admin-accent-soft);
+  border-color: var(--admin-accent);
 }
 
 .page-back-btn {
