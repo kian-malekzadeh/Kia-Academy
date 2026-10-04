@@ -101,7 +101,6 @@ export default function MyCoursesPage() {
                     <span className="catalog-soon">{t('common.comingSoon')}</span>
                   ) : null}
                 </h3>
-                <p>{course.description}</p>
                 <div className="catalog-meta">
                   <span>{t('common.percentComplete', { pct: course.progressPct })}</span>
                   <span>{t('common.lessonsCount', { count: course.lessonCount })}</span>

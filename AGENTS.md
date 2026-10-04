@@ -2,7 +2,8 @@
 
 ## Cursor Cloud specific instructions
 
-**کیا آکادمی (Kia Academy)** — Persian-first adaptive learning platform. Architecture notes: `docs/REBUILD_ARCHITECTURE.md`.
+**کیا گروه (Kia Group)** — Persian-first platform with six departments: KIA Academy, KIA Work,
+KIA Material, KIA Events, KIA Community, KIA Labs (tagline: آموزش · اشتغال · نوآوری · ارتباط · توسعه). Architecture notes: `docs/REBUILD_ARCHITECTURE.md`.
 
 Monorepo: Node `>=22.13`, pnpm `11.13.0` via Corepack. Standard commands live in root `package.json` and `README.md`.
 

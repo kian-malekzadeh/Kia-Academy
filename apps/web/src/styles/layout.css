@@ -34,6 +34,13 @@
   display: none;
 }
 
+/* UX-20: the shared preferences parent belongs to the rail. Below 901px the
+   bar is horizontal and has no room for three stacked rows, so the account menu
+   carries color mode + language instead (see `.user-dropdown-platform`). */
+.rail-controls {
+  display: none;
+}
+
 /* --- logged-in panel shell (sidebar on desktop) -------------------------- */
 .panel-shell {
   display: flex;
@@ -81,12 +88,124 @@
     align-items: stretch;
     justify-content: flex-start;
     gap: var(--space-5);
-    /* Scroll lives on .learner-nav so expanded groups never cover secondary. */
-    overflow: hidden;
-    /* Animate the learner-driven sidebar resize (compact / default / wide). */
+    /* Visible, not hidden: the account menu and the mini-cart are absolutely
+       positioned and open *outside* this rail. `hidden` clipped them to a
+       sliver of the 76px compact rail (the 240px menu showed as a 68px strip).
+       Scroll and clipping for the nav list live on `.learner-nav` instead. */
+    overflow: visible;
+    /* Animate the learner-driven sidebar resize (compact / default). */
     transition:
       flex-basis var(--dur-slow) var(--ease-out),
       width var(--dur-slow) var(--ease-out);
+  }
+
+  /* UX-20 — on the rail, theme and language live in `.rail-controls`, so the
+     account menu drops them (and the dividers that framed them, or two
+     separators would end up back to back). */
+  .panel-shell .user-dropdown-platform,
+  .panel-shell .user-dropdown-sep--platform {
+    display: none;
+  }
+
+  /* UX-20 — the three preferences (color mode, language, sidebar width) share
+     one parent pinned to the rail's foot, so they never drift as the nav grows.
+     `order: 4` clears the logo (1), account cluster (2) and nav (3). */
+  .panel-shell .rail-controls {
+    order: 4;
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    width: 100%;
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--border-soft);
+  }
+
+  .panel-shell .rail-control {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--space-3);
+    width: 100%;
+    padding: var(--space-3);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text-faint);
+    font-family: inherit;
+    font-size: var(--fs-micro);
+    font-weight: 600;
+    text-align: start;
+    cursor: pointer;
+    transition:
+      color var(--dur-base) var(--ease-out),
+      border-color var(--dur-base) var(--ease-out);
+  }
+
+  .panel-shell .rail-control:hover {
+    color: var(--text-dim);
+    border-color: var(--border-strong);
+  }
+
+  .panel-shell .rail-control-label {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-2);
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* `LanguageSelector` ships its own pill styling for the account menu; inside
+     the rail it has to read as one more full-width row. */
+  .panel-shell .rail-controls .lang-selector,
+  .panel-shell .rail-controls .lang-toggle {
+    width: 100%;
+  }
+
+  .panel-shell .rail-controls .lang-toggle {
+    justify-content: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    /* `.theme-toggle` sets a 12px line-height; the rail rows use `normal`
+       (22.2px), which left this row 2px shorter than its two neighbours. */
+    line-height: normal;
+    /* `.topbar button.lang-toggle` pins `min-width: 86px` so the pill reads the
+       same in the mobile bar. Inside the 59px rail that overhung the row and
+       pushed its icon 13px off the icon column. */
+    min-width: 0;
+  }
+
+  /* The preferences sit at the rail's foot, so the language list has to open
+     upward: anchored below the toggle it ran 46px past the viewport bottom and
+     hid «فارسی». The rail is `overflow: visible`, so it escapes cleanly.
+     It also has to open *inward*, like `.mini-cart` and `.user-dropdown`: the
+     global `inset-inline-end: 0` anchors the menu's left edge in RTL, so in the
+     59px compact rail the 190px list hung 131px past the right of the screen and
+     showed as a 67px strip clipped by `.panel-shell`'s `overflow-x: clip`. */
+  .panel-shell .rail-controls .lang-menu {
+    top: auto;
+    bottom: calc(100% + var(--space-2));
+    inset-inline-start: 0;
+    inset-inline-end: auto;
+  }
+
+  /* One height for all three rows. Left to their own content they disagreed
+     (48.19 / 46 / 48.19) because `.lang-code` is an 11px span while
+     `.rail-control-label` is a 12px one. The rows must out-specify both
+     `.rail-control` and the old `.panel-nav-size-toggle` sizing. */
+  .panel-shell .rail-controls > .rail-control,
+  .panel-shell .rail-controls .lang-toggle {
+    min-height: var(--control-h-lg);
+  }
+
+  /* The rail hugs the viewport edge, so its popovers must open *inward* — the
+     cart pill's default `inset-inline-end` anchoring pushed 203px of the 270px
+     mini-cart past the right of the screen in the 76px compact rail. This
+     matches `.user-dropdown`; the mobile bar keeps its own direction. */
+  .panel-shell .mini-cart {
+    inset-inline-start: 0;
+    inset-inline-end: auto;
   }
 
   /* Icon-only compact sidebar: narrow rail, texts hidden, icons centered. */
@@ -98,14 +217,52 @@
     align-items: center;
   }
 
-  .panel-shell .topbar.panel-nav--compact .logo,
   .panel-shell .topbar.panel-nav--compact .panel-nav-size-toggle,
   .panel-shell .topbar.panel-nav--compact .theme-toggle,
   .panel-shell .topbar.panel-nav--compact .lang-toggle,
   .panel-shell .topbar.panel-nav--compact .user-chip,
-  .panel-shell .topbar.panel-nav--compact .top-nav-link {
+  .panel-shell .topbar.panel-nav--compact .top-nav-link,
+  .panel-shell .topbar.panel-nav--compact .rail-control,
+  .panel-shell .topbar.panel-nav--compact .rail-controls .lang-toggle {
     justify-content: center;
     padding-inline: 0;
+  }
+
+  /* The logo column centres on `align-items`, not `justify-content`, and the
+     tagline never shows in the icon-only rail. */
+  .panel-shell .topbar.panel-nav--compact .logo {
+    align-items: center;
+    padding-inline: 0;
+  }
+
+  .panel-shell .topbar.panel-nav--compact .brand-tagline {
+    display: none;
+  }
+
+  /* The icon-only rail has one centred emblem and no room for a rule, so the
+     chip alone carries the department — the same way the gold mark carries the
+     group on a rail outside any department. */
+  .panel-shell .topbar.panel-nav--compact .logo-dept-bar {
+    display: none;
+  }
+
+  /* Full-width rail: the rule is the department's second signal, next to the
+     chip. It spans the logo button's own width, never the rail's. Qualified by
+     `.logo--dept` because this block sits above the global `display: none` and
+     a media query adds no specificity of its own. */
+  .logo--dept .logo-dept-bar {
+    display: block;
+  }
+
+  /* The cart button is `inline-flex`, so it shrink-wrapped to its 18px icon and
+     hugged the start edge — `justify-content: center` above had nothing to
+     center inside, leaving the basket 20px off the icon column while every
+     other row sat centred. Centering the *wrap* keeps the button shrink-wrapped,
+     which the count badge depends on: `.cart-badge-count` is positioned against
+     the button, so widening the button would strand the badge mid-row. */
+  .panel-shell .topbar.panel-nav--compact .cart-badge-wrap {
+    display: flex;
+    justify-content: center;
   }
 
   .panel-shell .topbar.panel-nav--compact .logo-text,
@@ -114,27 +271,22 @@
   .panel-shell .topbar.panel-nav--compact .lang-toggle .lang-code,
   .panel-shell .topbar.panel-nav--compact .lang-toggle .lang-label,
   .panel-shell .topbar.panel-nav--compact .user-chip-name,
-  .panel-shell .topbar.panel-nav--compact .user-chip svg,
+  .panel-shell .topbar.panel-nav--compact .user-chip-caret,
+  .panel-shell .topbar.panel-nav--compact .rail-control-label,
   .panel-shell .topbar.panel-nav--compact .learner-nav-text {
     display: none;
   }
 
-  .panel-shell .topbar.panel-nav--wide {
-    flex-basis: 23rem;
-    width: 23rem;
-    max-width: 23rem;
-  }
-
-  /* Resize control sits right after the logo inside the sidebar. */
+  /* Resize control — now a `.rail-control` row in the shared preferences parent
+     at the rail's foot (UX-20); `.rail-control` owns the geometry. */
   .panel-shell .panel-nav-size-toggle {
-    order: 1;
+    flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
     justify-content: flex-start;
     gap: var(--space-2);
     width: 100%;
-    min-height: var(--control-h-sm);
-    padding: 0 var(--space-2);
+    padding: var(--space-3);
     background: none;
     border: 1px dashed var(--border);
     border-radius: var(--radius-md);
@@ -142,6 +294,7 @@
     font-family: inherit;
     font-size: var(--fs-micro);
     font-weight: 600;
+    text-align: start;
     cursor: pointer;
     transition:
       color var(--dur-base) var(--ease-out),
@@ -162,8 +315,19 @@
     order: 1;
     width: 100%;
     justify-content: flex-start;
-    padding-inline: var(--space-2);
     flex: 0 0 auto;
+  }
+
+  /* Optical centring for the wordmark. `align-items: center` already puts the
+     line box dead centre in `.logo`, but the *ink* is not: `[dir='rtl'] .logo`
+     renders the Latin caps in yekanBakh, whose font box reserves 17px ascent +
+     9px descent for Persian glyphs (ی، ج، …) that "KIA GROUP" never draws. The
+     cap band therefore rides ~2px above the button's middle — and above the
+     brand mark, whose box centre is the same 39.72px line. The offset is
+     line-height-independent (half-leading cancels), so it needs a real nudge:
+     measured 2px down puts the ink's bbox centre on the parent centre. */
+  .panel-shell .logo .logo-text {
+    transform: translateY(2px);
   }
 
   /* Fixed account/tools cluster — stays fully visible above the nav. */
@@ -194,8 +358,18 @@
     overflow: hidden;
   }
 
+  /* One icon column: the brand mark, the account chips and the nav links all
+     start 12px from the inline-start edge. The chips used `.user-chip`'s 4px
+     inset, which put their icons 8px right of the nav icons. */
+  .panel-shell .logo,
+  .panel-shell .user-chip {
+    padding-inline: var(--space-3);
+  }
+
+  /* The nav list no longer stretches, so the width control follows the last
+     link instead of floating at the bottom of a 400px void. */
   .panel-shell .learner-nav {
-    flex: 1 1 auto;
+    flex: 0 0 auto;
     min-height: 0;
     overflow-x: hidden;
     overflow-y: hidden;
@@ -218,12 +392,26 @@
     justify-content: flex-start;
   }
 
+  /* Same pill as the user chip, one row lower: `.user-menu-wrap` owns order 1,
+     so this must outrank it while staying under the user chip. */
+  .panel-shell .departments-chip {
+    order: 2;
+    display: inline-flex;
+  }
+
   .panel-shell .user-dropdown {
     inset-inline-start: 0;
     inset-inline-end: auto;
     width: 100%;
     min-width: 0;
     max-width: none;
+  }
+
+  /* Icon-only rail is narrower than its own menu rows («ویرایش اطلاعات کاربری»
+     needs 77px), so the account menu escapes the rail instead of clipping. */
+  .panel-shell .topbar.panel-nav--compact .user-dropdown {
+    width: 15rem;
+    max-width: min(100vw - 24px, 100dvw - 24px);
   }
 
   .panel-content {
@@ -239,9 +427,13 @@
 /* --- brand --------------------------------------------------------------- */
 .logo {
   flex: 0 0 auto;
+  /* Column since the tagline arrived: the mark + wordmark stay on one optical
+     line inside `.logo-lockup`, the tagline sits under them. Horizontal
+     alignment moved from `justify-content` to `align-items` with the axis. */
   display: flex;
-  align-items: center;
-  gap: var(--space-2);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
   padding: var(--space-1) var(--space-2);
   border: none;
   border-radius: var(--radius-pill);
@@ -269,7 +461,8 @@
   width: auto;
   aspect-ratio: 497.37 / 512;
   flex: 0 0 auto;
-  color: var(--brand-500);
+  /* Kia Group's own emblem: the reserved parent gold. */
+  color: var(--group-gold);
   overflow: visible;
 }
 
@@ -277,8 +470,67 @@
   color: inherit;
 }
 
+.logo-lockup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .logo-text {
   white-space: nowrap;
+}
+
+/* «آموزش · اشتغال · نوآوری · ارتباط · توسعه» — the group's five pillars. It is
+   a supporting line, not a second heading: small, dim, and never wider than the
+   wordmark row above it. */
+.brand-tagline {
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  line-height: 1;
+  color: var(--text-faint);
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+/* --- per-department rail (UX-27) ------------------------------------------ */
+/* Inside a department the rail keeps Kia Group's own emblem and repaints it in
+   that department's colour — the same mark the department page header shows, so
+   the rail and the page are the same logo. Qualified by `.logo--dept` because
+   `.logo-mark` above it claims the reserved gold at equal specificity. */
+.logo--dept .logo-mark {
+  color: var(--dept);
+}
+
+/* The parent's name, kept under the department's — in the reserved parent gold,
+   so a department rail still reads as part of Kia Group. */
+.logo--dept .brand-tagline {
+  color: var(--group-gold);
+}
+
+/* The department's colour as a short rule under the lockup. Desktop rail only
+   (see the 901px block): below it the bar is a horizontal strip, and three
+   more pixels of height buy nothing there. */
+.logo-dept-bar {
+  display: none;
+  width: 100%;
+  height: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--dept);
+  opacity: 0.75;
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+
+/* Hover: the rule goes solid instead of the wordmark turning brand-blue —
+   `--dept-*` values are tile fills, and several are too light to read as small
+   text (labs' green on white). `.logo:hover` would otherwise recolour the
+   department name through inheritance. The emblem is unaffected: it has its own
+   declaration above, which wins over an inherited colour. */
+.logo--dept:hover {
+  color: var(--text);
+}
+
+.logo--dept:hover .logo-dept-bar {
+  opacity: 1;
 }
 
 /* --- nav ----------------------------------------------------------------- */
@@ -496,6 +748,18 @@ a.theme-toggle {
 .user-chip:hover {
   border-color: var(--brand-hairline);
   box-shadow: var(--shadow-xs);
+}
+
+/* Departments chip: the user chip's twin, one row lower in the sidebar account
+   cluster. Declared after `.user-chip` so this `display` wins, and hidden by
+   default because the mobile bar keeps just the avatar + burger. Anchors
+   reusing a button class must not inherit the underline. */
+.departments-chip {
+  display: none;
+}
+
+a.user-chip {
+  text-decoration: none;
 }
 
 .user-chip-name {

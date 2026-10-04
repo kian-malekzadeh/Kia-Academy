@@ -28,7 +28,7 @@ test.describe('Learner journey', () => {
 
   test('login page loads for staff', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.getByRole('heading', { name: /Sign in to Kia Academy/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Sign in to Kia Group/i })).toBeVisible();
     await expect(page.getByLabel('Email')).toBeVisible();
     await expect(page.getByLabel(/Password/)).toBeVisible();
     await expect(page.getByRole('button', { name: /Sign in/i })).toBeVisible();

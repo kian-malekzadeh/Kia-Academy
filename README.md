@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="apps/web/public/brand/logo.svg" alt="Kia Academy — کیا آکادمی" width="140" />
+<img src="apps/web/public/brand/logo.svg" alt="Kia Group — کیا گروه" width="140" />
 
-# Kia Academy · کیا آکادمی
+# Kia Group · کیا گروه
 
-**Adaptive learning platform for Iranian developers — Persian-first, RTL-native**
+**Learn · Work · Create · Connect · Grow — Persian-first, RTL-native**
 
 [![CI](https://github.com/kian-malekzadeh/Kia-Academy/actions/workflows/ci.yml/badge.svg)](https://github.com/kian-malekzadeh/Kia-Academy/actions/workflows/ci.yml)
 [![Node](https://img.shields.io/badge/node-%E2%89%A522.13-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org)
@@ -25,7 +25,10 @@
 
 ---
 
-Kia Academy is a production-grade adaptive learning platform targeting learners in Iran.
+Kia Group is a production-grade platform for Iranian talent, built around six
+departments: KIA Academy (learning), KIA Work (freelancing and hiring), KIA Material
+(design assets), KIA Events (contests, bootcamps, webinars), KIA Community (people)
+and KIA Labs (research and product).
 Guests land on a minimal Persian hero, explore **Material Studio**, then follow a guided
 journey: phone OTP → profile → free goal assessment → free readiness test → personalized
 roadmap → paid bundle checkout → lesson player. The learner experience is entirely

@@ -60,7 +60,7 @@ export function FinancialCard() {
           <div className="dash-bank-card">
             <div className="dash-bank-card__glow" aria-hidden="true" />
             <div className="dash-bank-card__top">
-              <span>Kia Academy</span>
+              <span>Kia Group</span>
               <span>{t('dashboard.financial.cardLabel')}</span>
             </div>
             <div className="dash-bank-card__balance mono ltr-isolate">

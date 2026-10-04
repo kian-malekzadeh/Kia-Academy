@@ -45,13 +45,13 @@ async function main() {
   const admin = await prisma.user.upsert({
     where: { email: 'admin@kia.academy' },
     update: {
-      name: 'Kia Academy Super Admin',
+      name: 'Kia Group Super Admin',
       passwordHash,
       role: 'SUPER_ADMIN',
       profileComplete: true,
     },
     create: {
-      name: 'Kia Academy Super Admin',
+      name: 'Kia Group Super Admin',
       email: 'admin@kia.academy',
       passwordHash,
       role: 'SUPER_ADMIN',

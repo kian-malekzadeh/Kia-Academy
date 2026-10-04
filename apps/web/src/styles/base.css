@@ -1,11 +1,39 @@
 /* =============================================================================
-   Kia Academy — design tokens & primitives
+   Kia Group — design tokens & primitives
    Source of truth: docs/design-system/MASTER.md
    Layer 1 primitives -> Layer 2 semantic -> Layer 3 component.
    No other stylesheet may hard-code a hex value.
    ========================================================================== */
 
 :root {
+  /* --- Kia Group palette ---------------------------------------------------
+     Two tiers that must never be mixed:
+
+     1. `--group-gold` is the parent company, Kia Group. RESERVED: no
+        department may use #ffc864 for its tile or its mark, so the mother
+        brand is never mistaken for one of its own departments. Note that
+        `--amber-400` (below) happens to share this hex — it is a UI accent,
+        not a department colour, and nothing department-scoped reads it.
+     2. `--dept-*` is one hue per department, and a department's tile *and* its
+        logo both read from the same token, so the card and the page it opens
+        can never drift apart. Every value is distinct from every other. */
+  --group-gold: #ffc864;
+
+  /* The six official logo colours, verbatim. These are the brand's values,
+     not a palette tuned for this UI, so the earlier "spread the hues" rule is
+     gone: it forbade colours the brand actually ships. Measured on this set —
+     material and labs sit 16.4° apart (both read as green), academy and work
+     are both blues 29° apart, and events lands 14.9° from the parent gold.
+     What still holds, and is still enforced in the tests: every value is
+     distinct, none of them is the reserved parent gold, and a department's
+     tile and its logo read the same token. */
+  --dept-academy: #6464ff;   /* indigo    — learning                  */
+  --dept-work: #1687ff;      /* blue      — jobs, money, momentum     */
+  --dept-material: #20bfa9;  /* sea green — design and craft          */
+  --dept-events: #ff8a3d;    /* orange    — contests, live events    */
+  --dept-community: #d946ef; /* fuchsia   — people talking            */
+  --dept-labs: #19c37d;      /* green     — research and experiments */
+
   /* --- Layer 1: primitive ramps ------------------------------------------ */
   --brand-50: #f0f0ff;
   --brand-100: #e5e5ff;
@@ -769,6 +797,90 @@ input[type='tel'],
 
 /* --- accents ------------------------------------------------------------ */
 
+/* Department identity. A department's tile and its logo both read
+   `--dept-<slug>`, so the card in the hub and the header of the page it opens
+   are provably the same colour. `--tile-on-fill` picks ink or white for the
+   contrast each hue needs, and the tint/hairline are mixes of the same hue, so
+   the whole tile shifts with the token. The ink is not a matter of taste here:
+   the official colours are light, and white ink on labs' green measures 2.3:1
+   where the dark ink measures 7.9:1. Only academy keeps white — 4.37:1 against
+   the ink's 4.14:1 — because its indigo is the one fill dark enough that white
+   still wins. */
+.dept--academy {
+  --dept: var(--dept-academy);
+  --tile-on-fill: #ffffff;
+}
+.dept--work {
+  --dept: var(--dept-work);
+  --tile-on-fill: var(--ink-950);
+}
+.dept--material {
+  --dept: var(--dept-material);
+  --tile-on-fill: var(--ink-950);
+}
+.dept--events {
+  --dept: var(--dept-events);
+  --tile-on-fill: var(--ink-950);
+}
+.dept--community {
+  --dept: var(--dept-community);
+  --tile-on-fill: var(--ink-950);
+}
+.dept--labs {
+  --dept: var(--dept-labs);
+  --tile-on-fill: var(--ink-950);
+}
+
+.dept--academy,
+.dept--work,
+.dept--material,
+.dept--events,
+.dept--community,
+.dept--labs {
+  --tile-hairline: color-mix(in srgb, var(--dept) 38%, transparent);
+  --tile-tint: color-mix(in srgb, var(--dept) 11%, transparent);
+  --tile-fill: var(--dept);
+  --tile-glow: 0 14px 34px -14px color-mix(in srgb, var(--dept) 50%, transparent);
+  --tile-border-hover: var(--dept);
+}
+
+/* The department's logo: the KIA emblem wearing that department's colour. */
+.dept-mark {
+  display: block;
+  flex: 0 0 auto;
+  height: 1.75rem;
+  width: auto;
+  aspect-ratio: 497.37 / 512;
+  color: var(--dept, var(--group-gold));
+}
+.dept-mark--academy { color: var(--dept-academy); }
+.dept-mark--work { color: var(--dept-work); }
+.dept-mark--material { color: var(--dept-material); }
+.dept-mark--events { color: var(--dept-events); }
+.dept-mark--community { color: var(--dept-community); }
+.dept-mark--labs { color: var(--dept-labs); }
+
+/* A department header puts the mark on its own row above the title.
+   `.page-head` is `display: flex` with `space-between`, so a mark that is a
+   direct child would sit beside the h1; the *title* claims the full width and
+   wraps below instead. Giving the mark `flex-basis: 100%` looked simpler but
+   stretched the SVG element across the whole row, and since the emblem centres
+   itself inside that box it floated to the middle of the page instead of the
+   inline-start edge. A mark inside the heading's wrapper is already in block
+   flow and only needs the gap. */
+.page-head > .dept-mark,
+.page-head > div > .dept-mark,
+.material-head > .dept-mark {
+  margin-bottom: var(--space-2);
+}
+.page-head > .dept-mark {
+  flex: 0 0 auto;
+  align-self: flex-start;
+}
+.page-head > .dept-mark + h1 {
+  flex: 1 0 100%;
+}
+
 .tint--brand {
   --tile-hairline: var(--brand-hairline);
   --tile-tint: var(--brand-tint);
@@ -797,12 +909,16 @@ input[type='tel'],
 }
 
 .tint--amber {
-  --tile-hairline: color-mix(in srgb, var(--amber-400) 38%, transparent);
-  --tile-tint: var(--value-tint);
-  --tile-fill: var(--amber-400);
+  /* The tile fill is `--amber-500`, not `--amber-400`: #ffc864 is Kia Group's
+     own gold, and these tiles sit *inside* department pages (the language track
+     under KIA Academy, the leaderboard under KIA Events). A sub-tile wearing the
+     parent colour would break the rule that gold means Kia Group alone. */
+  --tile-hairline: color-mix(in srgb, var(--amber-500) 38%, transparent);
+  --tile-tint: color-mix(in srgb, var(--amber-500) 11%, transparent);
+  --tile-fill: var(--amber-500);
   --tile-on-fill: var(--value-on-fill);
   --tile-glow: var(--glow-amber);
-  --tile-border-hover: var(--amber-500);
+  --tile-border-hover: var(--amber-600);
 }
 
 .tint--rose {

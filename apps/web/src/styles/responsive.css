@@ -89,9 +89,11 @@
     line-height: 1;
   }
 
-  /* Mobile keeps the mark only — the wordmark crowds the burger + chip row.
-     The button stays named via its aria-label. */
-  .topbar .logo-text {
+  /* Mobile keeps the mark only — the wordmark crowds the burger + chip row, and
+     the tagline has no room under it either. The button stays named via its
+     aria-label. */
+  .topbar .logo-text,
+  .topbar .brand-tagline {
     display: none;
   }
 

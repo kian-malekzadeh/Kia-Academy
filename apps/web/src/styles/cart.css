@@ -33,6 +33,9 @@
 .mini-cart {
   position: absolute;
   top: calc(100% + var(--space-2));
+  /* Mobile default: the pill sits left of centre in the bar, so the panel opens
+     toward the viewport's inline-end. The desktop rail overrides this — it hugs
+     the viewport edge, so there the panel must open inward instead. */
   inset-inline-end: 0;
   width: min(270px, calc(100dvw - 24px));
   background: var(--bg-card);

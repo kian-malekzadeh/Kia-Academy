@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { BrandMark } from "@/components/brand/BrandMark";
 import { MaterialController } from "./MaterialController";
 import "./material-studio.css";
 
@@ -22,9 +23,10 @@ export function MaterialStudio() {
         aria-label="استودیوی متریال"
       >
         <div className="material-head">
+          <BrandMark className="dept-mark dept-mark--material" size={28} title="" />
           <h2>استودیوی متریال</h2>
           <p>
-            ابزارهای حرفه‌ای برای پالت رنگ، آیکون، انیمیشن و بررسی استایل — بخشی از کیا آکادمی.
+            ابزارهای حرفه‌ای برای پالت رنگ، آیکون، انیمیشن و بررسی استایل — بخشی از کیا گروه.
           </p>
         </div>
 

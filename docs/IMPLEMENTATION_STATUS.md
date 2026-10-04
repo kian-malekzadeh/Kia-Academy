@@ -21,8 +21,8 @@ now lives in [`AUDIT.md`](./AUDIT.md) and the go-live gates in
 | Seed data present (6 users · 4 courses · 266 lessons) | ✅ |
 | `pnpm typecheck` (shared + api + web) | ✅ |
 | `pnpm lint` (all workspaces) | ✅ |
-| `pnpm test` — 245/245 (shared 46, web 46, api 153) | ✅ |
-| `pnpm build` (production, 344 static pages) | ✅ |
+| `pnpm test` — 317/317 (shared 46, web 118, api 153) | ✅ |
+| `pnpm build` (production, 355 static pages) | ✅ |
 | `pnpm audit --prod` — 0 vulnerabilities (17 resolved via workspace overrides, 2026-09-29) | ✅ |
 | Runtime smoke (`scripts/smoke.sh`, 29 probes incl. phone-only registration + OTP + password + 2FA flows) | ✅ |
 
@@ -535,6 +535,563 @@ bottom of the screen.
 - The footer only ever rendered for registered users (`SiteChrome` gates it on
   `profileComplete`), so the guest landing page is unchanged.
 - Gates: typecheck, lint, 261 tests (shared 46 · web 62 · api 153), build (353
+  static pages) all green.
+
+### UX-15 — the sidebar width control moved under «جوایز» (implemented this session)
+
+Feedback on `/home`: the sidebar-width toggle («معمولی») sat directly under the
+brand wordmark, above the account cluster and the whole navigation list, so a
+**layout preference** read as if it were the first item of the menu.
+
+- **Moved into the nav, last row.** `TopBar` renders it inside
+  `<nav id="site-top-nav">` as the nav's last child, instead of as a standalone
+  button in `.topbar-primary`. Measured in the preview at 1280px the nav's
+  children are `learner-nav` · `button.panel-nav-size-toggle`, the toggle being
+  the last element, with `.learner-nav`'s flex growth pinning it near the bottom
+  of the rail. *(It sat under the «جوایز» link when this landed; that link moved
+  into the account menu in UX-18, and the control kept the last-row slot.)*
+- **Geometry follows the links, not the old standalone block.** The
+  `layout.css` rule lost its `order: 1` (it ordered the bar's flex children,
+  meaningless inside the nav column) and now matches `.panel-shell
+  .top-nav-link`: `padding: var(--space-3)`, `border-radius: var(--radius-md)`,
+  `flex: 0 0 auto`, `text-align: start`. Both rows measure 263×48px at 1280px.
+- **Compact rail still icon-only:** the existing
+  `.panel-nav--compact .panel-nav-size-toggle-label { display: none }` rule
+  applies unchanged — verified at 76px rail width, the toggle is a 59px centred
+  icon button sitting under the rewards trophy, same 59px width as the link
+  above it.
+- **Mobile untouched:** the control is desktop-only (base
+  `.panel-nav-size-toggle { display: none }`, shown only inside
+  `@media (min-width: 901px)`); at 390px the burger sheet still lists exactly
+  the navigation links with the toggle at `display: none`.
+- **Guard:** `apps/web/src/components/layout/TopBar.test.ts` (4 tests) pins the
+  placement — the toggle renders once, inside the nav, after `/rewards`, with
+  no element following it, and it keeps its `nav.resizeMenu` accessible name.
+- Gates: typecheck, lint, 265 tests (shared 46 · web 66 · api 153), build (353
+  static pages) all green.
+
+### UX-16 — the sidebar has two widths, not three (implemented this session)
+
+Feedback on the same control as UX-15: the «بزرگ» (wide) step only pushed the
+content column to the right — it bought no extra room for the Persian nav labels
+(which already fit) — so the toggle now cycles between **معمولی** (296px) and
+**کوچک** (76px icon rail) only.
+
+- **Code:** `PanelNavSize` is `'compact' | 'default'` and `PANEL_NAV_SIZES` is
+  `['default', 'compact']` in [TopBar.tsx](apps/web/src/components/layout/TopBar.tsx);
+  `isPanelNavSize`, `navSizeClass` and `navSizeLabel` lost their third branch.
+- **CSS:** the `.panel-shell .topbar.panel-nav--wide { flex-basis: 23rem }` rule
+  is deleted from [layout.css](apps/web/src/styles/layout.css), and the
+  transition comment now reads *compact / default*. No other rule referenced the
+  class (the compact-mode selectors were already separate).
+- **i18n:** `nav.menuSizeWide` removed from **both** dictionaries (parity still
+  asserted by `i18n.test.ts`); the two surviving labels are `nav.menuSizeDefault`
+  («معمولی») and `nav.menuSizeCompact` («کوچک»).
+- **Existing users are safe without a migration:** a stale
+  `localStorage['kia-panel-nav-size'] === 'wide'` simply fails
+  `isPanelNavSize()`, so the rail opens at «معمولی». Verified live: seeded `'wide'`
+  → reload renders 296px, class `topbar` (no `--wide`), no horizontal overflow.
+- **Verified live:** the button cycles کوچک → معمولی → کوچک (labels, rail width
+  76/296px, class list) and never reaches a third state.
+- **Guard:** three more tests in
+  [TopBar.test.ts](apps/web/src/components/layout/TopBar.test.ts) — the preset
+  array holds exactly the two sizes, and no `menuSizeWide` / `panel-nav--wide`
+  string survives in the component, the stylesheet or either dictionary.
+- Gates: typecheck, lint, 268 tests (shared 46 · web 69 · api 153), build (353
+  static pages) all green.
+
+### UX-17 — a «دپارتمان‌ها» chip under the user chip (implemented this session)
+
+Feedback on the sidebar: the departments hub (`/home`, four doors) was reachable
+only through the brand wordmark or the «آموزش» door chain. A chip **exactly like
+the user chip, directly under it**, makes it one click from every page.
+
+- **Markup** ([TopBar.tsx](apps/web/src/components/layout/TopBar.tsx)): inside
+  `.topbar-secondary`, after `.user-menu-wrap` —
+  `<Link href={HOME_PATH} className="user-chip departments-chip">` with a lucide
+  `LayoutGrid` mark and the label in a `.learner-nav-text` span. Reusing the chip
+  class is what makes it identical: measured **263×36px**, same
+  `background-color`, 1px border, 999px radius, 4px/12px padding and 13px/700
+  type as the «Alex» chip, 8px below it (`--space-2`).
+- **One visual gotcha, fixed:** `.user-menu-wrap` carries `order: 1`, so the
+  chip needs `order: 2` in the column cluster or it renders *above* the user
+  chip (DOM order alone is not enough).
+- **CSS-order bug caught in the preview** ([layout.css](apps/web/src/styles/layout.css)):
+  the base `.departments-chip { display: none }` was written above `.user-chip`,
+  whose later `display: flex` (same specificity) beat it — the chip leaked into
+  the 390px mobile bar. The rule now sits directly after `.user-chip` in the
+  account-chip section, and `a.user-chip { text-decoration: none }` stops the
+  anchor underline (same pattern as `a.theme-toggle`).
+- **Scope:** desktop sidebar only (like the width control), so the mobile bar
+  keeps just avatar + burger. Hidden for `SUPER_ADMIN`, who land on `/admin`.
+- **Compact rail:** reusing `.user-chip` + `.learner-nav-text` means the existing
+  compact rules apply untouched — 59px centred icon button, label hidden.
+- **i18n:** one new key, `nav.departments` («دپارتمان‌ها» / "Departments") in both
+  dictionaries (parity asserted).
+- Verified live: chip present at y=186 under the chip at y=142; click from
+  `/dashboard/tickets` → `/home` with 4 doors; `display: none` at 390px with no
+  horizontal overflow.
+- **Guard:** three more tests in [TopBar.test.ts](apps/web/src/components/layout/TopBar.test.ts)
+  — placement after `.user-menu-wrap` plus the `order: 2` rule, `HOME_PATH`
+  target, and the source-order assertion that keeps the hide rule below
+  `.user-chip` (verified: the guard fails when the rule is hoisted back).
+- Gates: typecheck, lint, 271 tests (shared 46 · web 72 · api 153), build (353
+  static pages) all green.
+
+### UX-18 — «جوایز» moves into the account menu (implemented this session)
+
+Feedback on the «Alex» chip: «جوایز» is a destination, not an account action, but
+it was the one row of the sidebar list that duplicated what the account menu
+already does. It now lives in the dropdown opened by the chip (clarified with the
+user: inside the account menu, not as a second shortcut chip).
+
+- **Markup** ([TopBar.tsx](apps/web/src/components/layout/TopBar.tsx)): the
+  `a.top-nav-link` to `/rewards` (with the `Trophy` mark) is gone from the nav;
+  an identical `a.user-dropdown-item` row sits directly under
+  «ویرایش اطلاعات کاربری» and above the first separator, closing the menu on
+  click (`onClick={() => setMenuOpen(false)}`), same as the profile row. The
+  sidebar list is now پنل · دوره‌های من · تیکت‌ها · پیام‌ها, then the width
+  control as its last row.
+- **No i18n churn:** `nav.rewards` moved with the row, so both dictionaries keep
+  the key («جوایز» / "Rewards").
+- **Compact-rail overflow fixed** ([layout.css](apps/web/src/styles/layout.css)):
+  the dropdown inherited `width: 100%` of the 76px rail while its own rows need
+  64–109px, so every row was clipped (already true for «ویرایش اطلاعات کاربری»
+  before this change, one row worse after). `.panel-nav--compact
+  .user-dropdown` now sets `width: 15rem` with
+  `max-width: min(100vw - 24px, 100dvw - 24px)` — measured 240px at
+  1032–1272px, fully inside the viewport, zero clipped rows.
+- Verified live: nav has no `/rewards` link; dropdown rows read
+  «ویرایش اطلاعات کاربری» · «جوایز» · حالت · زبان · «خروج»; clicking «جوایز»
+  from `/home` reaches `/rewards` (h1 «جوایز و بازشدن‌ها») and closes the menu.
+- **Guard:** the old placement test is replaced by two: the toggle is the nav's
+  last row, and `/rewards` appears in the dropdown but not in the nav
+  (11 tests in the file).
+- Gates: typecheck, lint, 272 tests (shared 46 · web 73 · api 153), build (353
+  static pages) all green.
+
+### UX-20 — one shared parent for the three preferences (implemented this session)
+
+Color mode, language and sidebar width were in two unrelated places: theme and
+language only inside the account menu, width at the end of the nav. They now
+share one parent, `.rail-controls`, pinned to the foot of the rail.
+
+- `.panel-shell .rail-controls` is a flex column with `order: 4` (clearing the
+  logo `1`, account cluster `2`, nav `3`) and `margin-top: auto`, so the three
+  rows hold their place at the bottom however the nav grows. The width control
+  left the nav for it; the nav is navigation only now.
+- **Three defects found while measuring the new group**, all fixed:
+  - `.topbar button.lang-toggle` pins `min-width: 86px` so the pill matches the
+    mobile bar; inside the 59px compact row it overhung the rail and pushed the
+    icon **13px off the icon column**. `min-width: 0` in the scoped rule.
+  - Left to their own content the rows disagreed — **48.19 / 46 / 48.19** —
+    because `.lang-code` is an 11px span while `.rail-control-label` is 12px. All
+    three now take `min-height: var(--control-h-lg)` and measure **52 × 263**
+    (default) and **52 × 59** with glyphs at 0.5px off-centre (compact).
+  - The language list anchored with `top`, so from a row at the rail's foot it ran
+    **46px past the viewport bottom** and hid «فارسی». It now opens upward
+    (`top: auto; bottom: calc(100% + var(--space-2))`).
+- **Split by breakpoint** (decided this session): below 901px there is no rail, so
+  `.rail-controls` is `display: none` and the account menu keeps theme +
+  language in a `.user-dropdown-platform` group. That group and *both* of its
+  separators hide together above 901px — hiding only the group would leave two
+  dividers back to back in the desktop menu. The width control has no mobile
+  equivalent because the mobile bar has no width to resize.
+- Verified live at 1280px (both themes), compact 76px and 390px: rows equal and
+  aligned, size toggle cycles + persists, theme flips and relabels, language list
+  opens upward fully inside the viewport, mobile menu keeps theme + language
+  with no doubled separators, desktop menu keeps neither.
+- **Guard:** the parent, its three-row order, the per-breakpoint homes, the
+  upward list, its inward anchoring (UX-21), the `min-width` reset and the
+  shared row height are pinned in
+  [TopBar.test.ts](apps/web/src/components/layout/TopBar.test.ts) (28 tests);
+  each fix was reverted in turn to confirm its guard fails.
+- Gates: typecheck, lint, 289 tests (shared 46 · web 90 · api 153), build (353
+  static pages) all green.
+
+### UX-21 — language list opens inward out of the rail (implemented this session)
+
+The language list was the last rail popover still anchored *outward*. The
+global `.lang-menu { inset-inline-end: 0 }` pins the menu's **left** edge in
+RTL, and the rail hugs the viewport's right edge — so in the 59px compact rail
+the 190px list hung 131px off-screen (measured `right: 1403` against a 1280px
+viewport) and `.panel-shell`'s `overflow-x: clip` left a **67px strip**: the
+options «EN» / «FA» were cut off, which is what made the box "look wrong" on
+click. The wide rail happened to survive the same rule (its 296px of room
+swallowed the 190px list), so the bug read as compact-only.
+
+- Fix: the existing desktop-block rule for the rail list also flips the
+  anchor — `inset-inline-start: 0; inset-inline-end: auto` — exactly as
+  `.mini-cart` and `.user-dropdown` already do, so all three rail popovers now
+  open inward. The *global* rule keeps its outward default: the mobile bar's
+  pill sits left of centre, where the opposite direction is the only one that
+  fits, so this stays an override inside `@media (min-width: 901px)`.
+- Measured at 1280×860 after the fix: compact `left: 1082 → right: 1272`
+  (flush with the rail's inline-start edge, `w: 190`, both options fully
+  inside), default `left: 1074 → right: 1264` (was `1001 → 1191`, i.e. it is
+  now aligned to the rail edge instead of floating 73px inside it), still
+  opening upward with `bottom == toggle-top`. At 390px `.rail-controls` stays
+  `display: none` and the account-menu copy keeps `position: static`, so the
+  mobile list is untouched (`36 → 248`, inside the viewport).
+- **Guard:** pinned in [TopBar.test.ts](apps/web/src/components/layout/TopBar.test.ts)
+  — the override's two declarations, the global rule keeping `inset-inline-end: 0`
+  with no `inset-inline-start`, and the override's position *inside* the 901px
+  media block (brace-matched, so a rule moved after the block fails too).
+- Gates: typecheck, lint, 289 tests (shared 46 · web 90 · api 153), build (353
+  static pages) all green.
+
+### UX-22 — the wordmark sits exactly mid-height in the rail (implemented this session)
+
+`.logo` already centred the brand row with `align-items: center`, and the
+measurements agreed — line-box centre, button centre and the mark's box centre
+all landed on **39.72px**. But the *wordmark ink* rode **1.99px above** it, so
+«KIA ACADEMY» looked lifted off the mark.
+
+- **Why.** `[dir='rtl'] .logo { font-family: var(--font-fa) }` renders the
+  Latin caps in yekanBakh, whose font box is 17px ascent + 9px descent at
+  17px — the descent is reserved for Persian descenders (ی، ج، …) that
+  "KIA ACADEMY" never draws. Centred half-leading therefore leaves the cap
+  band high: measured cap ink 11px tall, entirely above the baseline. The
+  offset is **line-height-independent** (half-leading cancels out), so no
+  line-height or `align-items` change can fix it — it needs a real nudge.
+- **Fix:** `.panel-shell .logo .logo-text { transform: translateY(2px) }` in
+  the desktop block. `transform` rather than padding/margin so the row keeps
+  its measured 39.44px height and stays flex-centred. Verified by rasterising
+  the string with the exact font (canvas `measureText` advance 104.16px +
+  −0.34px letter-spacing × 10 = 100.76px against the DOM's 100.83px, so the
+  measurement font is the real one) and scanning ink pixels:
+  ink bbox centre **37.73 → 39.73** against a parent centre of 39.72 — from
+  1.99px high to **0.01px**, and equal to the mark's centre. Confirmed on a 3×
+  magnified screenshot before and after.
+- Scoped to the rail: the compact rail and the mobile bar both hide the
+  wordmark (`display: none`), and the mark stays centred in the 34px compact
+  row to 0px.
+- **Known, not fixed:** the footer wordmark (`.footer-logo-text`, 16px/28px) has
+  the same defect — ink 1.5px above its parent centre. Left alone to keep this
+  change to the annotated element.
+- **Guard:** pinned in [TopBar.test.ts](apps/web/src/components/layout/TopBar.test.ts)
+  — the `translateY(2px)` value, the ban on padding/margin/line-height in that
+  rule, its position inside the 901px block (brace-matched), and the global
+  `.logo-text` staying transform-free. Removing the rule and swapping the nudge
+  for `padding-top` both fail it.
+- Gates: typecheck, lint, 290 tests (shared 46 · web 91 · api 153), build (353
+  static pages) all green.
+
+### UX-25 — every department gets its own colour, and the parent gets the gold (implemented this session)
+
+Six departments, six unmistakable colours — and one colour that belongs to none
+of them.
+
+- **Palette.** `--dept-*` tokens in `base.css` are the single source: a
+  department's **tile and its logo both read from the same token**, so the card
+  in the hub and the page it opens can never drift apart.
+
+  | Department | Token | Hex | Read |
+  | --- | --- | --- | --- |
+  | KIA Academy | `--dept-academy` | `#6464ff` | indigo (as specified) |
+  | KIA Work | `--dept-work` | `#e8590c` | orange |
+  | KIA Material | `--dept-material` | `#9646dc` | violet |
+  | KIA Events | `--dept-events` | `#e0495a` | rose |
+  | KIA Community | `--dept-community` | `#0e8fa8` | teal |
+  | KIA Labs | `--dept-labs` | `#46b385` | mint |
+
+  `.dept--<slug>` sets `--dept` and derives the tile fill, hairline, tint, glow
+  and hover from it; `.dept-mark--<slug>` paints the KIA emblem in it. Measured
+  live: all six resolve to those exact hexes, distinct, in both themes.
+- **The reserved colour.** `--group-gold: #ffc864` belongs to Kia Group alone,
+  and every parent emblem now wears it: rail, footer, guest landing, auth pages
+  and the admin control room (`.logo-mark`, `.footer-logo-mark`,
+  `.landing-brand-mark`, `.education-brand-mark`, `.admin-brand-mark`).
+  Verified computed: `#ffc864`.
+- **A real collision, found and fixed.** `--amber-400` **is** `#ffc864`, and
+  `tint--amber` painted its tile with it — on the language track inside KIA
+  Academy and the leaderboard inside KIA Events, i.e. gold was showing up
+  *inside departments*. `tint--amber`'s fill moved to `--amber-500` (`#f5ae33`),
+  which also freed Work's amber from being a near-twin of the parent gold.
+- **Department logos.** Each department page now carries the KIA emblem in its
+  own colour on its own row above the title: `/tracks`, `/freelance`, `/events`,
+  `/community`, `/labs`, plus `/material` (inside the Material Studio header,
+  which is a feature component rather than a page shell).
+- **Guard:** new [departmentColors.test.ts](apps/web/src/components/brand/departmentColors.test.ts)
+  (10 tests) — the gold token, all five parent emblems, six distinct department
+  hexes, none equal to `#ffc864`, Academy actually blue (channel arithmetic, not
+  a name), tile and logo reading the same token, `tint--amber` off the gold, and
+  the markup (`dept--<slug>` on all six cards, `dept-mark--<slug>` on all six
+  departments). Three mutations were reverted one at a time: a department taking
+  `#ffc864`, two departments sharing a hue, and the rail emblem reverting to
+  brand blue — each failed the exact test that names the rule.
+- Gates: typecheck, lint, 317 tests (shared 46 · web 118 · api 153), build (355
+  static pages) all green.
+
+### UX-28 — the six official logo colours replace the tuned palette (implemented this session)
+
+Kia Group's published logo colours, applied verbatim. They are the brand's
+values, not a palette tuned for this UI, and they overrule UX-26.
+
+| Brand | Official | Replaced |
+| --- | --- | --- |
+| KIA GROUP | `#ffc864` | unchanged (already the reserved parent gold) |
+| KIA Academy | `#6464ff` | unchanged |
+| KIA Work | `#1687ff` | `#e8590c` orange |
+| KIA Material | `#20bfa9` | `#9646dc` violet |
+| KIA Events | `#ff8a3d` | `#e0495a` rose |
+| KIA Community | `#d946ef` | `#0e8fa8` teal |
+| KIA Labs | `#19c37d` | `#46b385` mint |
+
+- **The "spread the hues" rule is gone, deliberately.** UX-26 added an angular
+  rule (≥25° between departments, ≥15° from the gold, at most one department in
+  the blue band). Measured, the official set would have failed all three:
+  material and labs are **16.4°** apart, academy and work are **both** blues
+  (240° / 211°), and events sits **14.9°** from the gold. A spread rule cannot
+  coexist with the brand's own colours, so the rule was replaced by a stronger
+  one — the six hexes are pinned exactly, and that is now the specification.
+  The two rules that still hold are unchanged: six distinct values, and none of
+  them the reserved parent gold.
+- **Tile ink is now measured, not assumed.** The official fills are light, so
+  white ink fails: labs' green gives **2.30:1**. Five departments moved to
+  `--ink-950` (labs 7.87:1, material 7.82:1, events 7.71:1, work 5.12:1,
+  community 5.23:1). Academy keeps white — 4.37:1 against the ink's 4.14:1 —
+  because its indigo is the one fill dark enough for white to win. A test now
+  asserts each tile wears whichever ink actually measures higher, so a future
+  recolour cannot leave white ink on a pale fill.
+- Both new tests were proven to fail: reverting Work to `#e8590c` fails the
+  exact-hex lock, and putting white ink on Labs fails with
+  `labs: #ffffff measures 2.30:1 on #19c37d, the better of the two is 7.87:1`.
+  The stylesheet was restored byte-identical (`cmp`) after each.
+- Verified live on `/home` and `/labs`: the six tiles compute to `rgb(100,100,255)`,
+  `rgb(22,135,255)`, `rgb(32,191,169)`, `rgb(255,138,61)`, `rgb(217,70,239)`,
+  `rgb(25,195,125)`, and the rail chip, rail rule, page mark and coming-soon
+  tile all read the same token on the department page.
+- Known limit of the official values: on the light page background the Material
+  mark (`#20bfa9`) and the Labs mark (`#19c37d`) sit at ~2.3:1, under the 3:1
+  WCAG minimum for a non-text graphic. Changing them is not an option — they are
+  the brand's colours — so a light-on-dark or tinted plate behind those marks is
+  the way to lift them if legibility is ever reported.
+
+### UX-27 — the rail becomes the department you are standing in (implemented this session)
+
+The sidebar rail was the one piece of chrome that stayed generic: inside KIA Labs
+it still announced KIA GROUP in gold, while the page below wore the department's
+colour. The rail now takes the department's identity — its mark, its colour and
+its name — with the parent left visible underneath.
+
+- **One registry, [departments.ts](apps/web/src/components/brand/departments.ts)** —
+  slug, route root, icon and name for all six, and
+  `departmentForPathname()`. It is the only place a department is written down:
+  the rail asks it who owns the current route, and a test compares every entry
+  against the hub cards, so a route, a colour class or a name cannot drift
+  between the grid and the rail.
+- **The rail**, in [TopBar.tsx](apps/web/src/components/layout/TopBar.tsx): the
+  emblem keeps Kia Group's own mark and is repainted in the department's colour
+  — the same logo the department page header shows, so only the colour changes,
+  never the shape. The wordmark becomes the department's name, and the
+  supporting line swaps from the group's five pillars to the parent name
+  **KIA GROUP** in the reserved gold — so a department still says who it
+  belongs to. Outside the six routes nothing changes: gold mark, wordmark,
+  pillars.
+- **The root element carries `dept--<slug>`**, putting that department's token in
+  scope for the whole rail, plus a 3px rule in the department colour under the
+  lockup. The rule is desktop-only and hidden in the compact icon rail, where
+  the recoloured emblem alone carries the identity — as the gold mark alone
+  carries the group.
+- **Two details found by measuring, not by looking.** `.logo:hover` paints the
+  button brand-blue, and inheritance handed that to both the department name and
+  the chip's icon; `--dept-*` values are tile fills and several are too light to
+  read as small text (labs' mint on white), so hover now lights the rule instead.
+  And the enabling rule for the underline needed `.logo--dept` to out-specify the
+  global `display: none` — a media query adds no specificity of its own.
+- **Route matching is on a slash boundary.** `/materiality`, `/labsx` and
+  `/events-archive` are not departments; sub-routes such as
+  `/tracks/technology` and `/material/pdf` are. Pinning this is the point of
+  [departmentRail.test.ts](apps/web/src/components/brand/departmentRail.test.ts)
+  (15 tests): a bare `startsWith` would have shipped exactly that bug.
+- Verified live in the browser on `/labs`, `/community`, `/events`,
+  `/tracks/technology` and `/home`: computed chip colours `#46b385`, `#0e8fa8`,
+  `#e0495a`, `#6464ff` match the department tokens, and `/home` keeps the gold
+  mark (`rgb(255, 200, 100)`) with the pillars line.
+- Gates: typecheck, lint, 333 tests (shared 46 · web 134 · api 153), build green.
+
+### UX-26 — Work and Community moved off confusable hues (implemented this session)
+
+Two of the six read as near-copies, and measuring hue proved why:
+
+- **KIA Work `#f5ae33` sat 0.7° from the parent gold `#ffc864`** — the same hue,
+  so the amber department could be mistaken for Kia Group itself.
+- **KIA Community `#2e9bea` sat 34.8° from KIA Academy `#6464ff`** — two blues in
+  one six-card grid, which reads as one colour family.
+
+Both moved rather than nudged: Work → **orange `#e8590c`** (21°, now 17.7° from
+the gold) and Community → **teal `#0e8fa8`** (190°, now 52° from academy and the
+only department outside the blue band). The rest of the palette is untouched.
+
+- **The rule is now angular, not textual.** Six different hexes can still be six
+  near-identical colours, so [departmentColors.test.ts](apps/web/src/components/brand/departmentColors.test.ts)
+  converts each token to HSL and asserts a circular hue gap: ≥25° between any
+  two departments, ≥15° between any department and the parent gold, and **at
+  most one department in the cool-blue band (200–265°)** — that last rule is what
+  catches the sky blue, since 34.8° is clear of the angular floor.
+- **A stale colour found while verifying:** the KIA Community page's coming-soon
+  tile still wore `tint--violet`, which is *Material's* violet, sitting beside
+  Community's own logo. Both new department pages now paint their own tile
+  (`dept--community`, `dept--labs`), and a guard pins it.
+- Reverting either old colour now fails with a precise message — `work is only
+  0.7° from the parent gold` and `at most one department may read as blue` — and
+  both files were restored byte-identical.
+- Gates: typecheck, lint, 317 tests (shared 46 · web 118 · api 153), build (355
+  static pages) all green.
+
+### UX-24 — Kia Academy becomes Kia Group, with six departments (implemented this session)
+
+The company name changed end to end, and the group got a department structure it
+did not have: four doors became six.
+
+- **Brand.** `common.brand` is now `کیا گروه` / `Kia Group` and the Latin
+  wordmark `BRAND_WORDMARK` is `KIA GROUP`. 49 replacements across 29 files:
+  both dictionaries (21 fa / 19 en mentions), page metadata, the 404 page,
+  Material Studio, the financial card, demo data, the e-mail templates
+  (welcome, receipt, password reset, readiness), payment invoice titles, cart
+  receipts, the 2FA **TOTP issuer** (it is what an authenticator app shows
+  beside the account), the API name/log line, the Prisma seed's admin name,
+  `default-site-settings`, the English course catalog, the SVG `<title>`s, and
+  README + AGENTS.md. The admin control room reads `مرکز کنترل گروه` /
+  `Group control center`.
+- **Tagline.** New `common.tagline` key renders under the brand: mark + wordmark
+  stay on one line inside a new `.logo-lockup`, the tagline sits below. The logo
+  became a flex column, so its horizontal alignment moved from `justify-content`
+  to `align-items`, and the compact rail's centring rule was rewritten for it.
+  Measured at 1280px: 205.92px wide inside the 296px rail, no overflow, 12px
+  `--fs-micro`, and the UX-22 optical nudge still lands the wordmark ink
+  **0.01px** off the mark's centre. Hidden where the row is one icon tall: the
+  compact rail and the mobile bar.
+- **Departments.** Four doors became six, named as one family — Persian
+  transliterates the Latin names rather than inventing a second vocabulary:
+  کیا آکادمی · کیا ورک · کیا متریال · کیا ایونتس · کیا کامیونیتی · کیا لبز
+  (`dashboard.doors.*`: `educationTitle` → `academyTitle`, plus `communityTitle`
+  and `labsTitle`). Each keeps its existing route; the two new ones link to new
+  pages. Cards stay title-only — the activity scope of each department lives on
+  its own page, matching the two description removals earlier in the session.
+- **New departments.** `/community` and `/labs` are coming-soon pages built on
+  the events-page shell: title, activity scope, a `door--soon` tile and a link to
+  the contact form, so neither card is a dead end. Build output went 353 → **355**
+  pages.
+- **Guard:** new [brand.test.ts](apps/web/src/components/brand/brand.test.ts)
+  (11 tests) — the wordmark and both brand strings, the tagline in both
+  languages, the six hrefs and titles in both dictionaries, every card title
+  routed through the dictionary, the two new pages, the tagline's placement and
+  its two hide rules, and a **source sweep** that fails on any surviving
+  `Kia Academy` / `KIA ACADEMY` / `کیا آکادمی`. The one allowed `کیا آکادمی` is
+  the KIA Academy department title. Reintroducing the old name in `Footer.tsx`
+  was caught at `Footer.tsx:25` and reverted byte-identical.
+- **Also updated:** `two-factor.service.spec.ts` pinned the TOTP issuer as
+  `Kia Academy`; the assertion follows the rename (`issuer=Kia+Group`) rather
+  than being relaxed. The e2e spec's login heading selector follows too.
+- Gates: typecheck, lint, 305 tests (shared 46 · web 106 · api 153), build (355
+  static pages) all green.
+
+### UX-23 — course tiles lost their description paragraph (implemented this session)
+
+Every `.catalog-card` repeated the course description under the title: a 2–3 line
+wall of text (measured 103.56px on the HTML and CSS tiles, 51.78px on the other
+two at 1280px) that also stretched the two grid rows to different heights —
+365.34px against 313.56px. Removed from **both** course-card grids, since they
+share the `.catalog-card` tile and a description in one but not the other would
+read as an accident:
+
+- `apps/web/src/app/courses/public-page.tsx` (the public catalog) and
+  `apps/web/src/app/dashboard/my-courses/page.tsx` (the learner grid) — one
+  deleted line each; the diff is exactly that.
+- No CSS compensation needed: the tiles shrank on their own from 365.34/313.56px
+  to a uniform **249.78px** at 1280px (still 41.78px above the shared 13rem
+  floor, void below the CTA unchanged at 21px), and 245.08px in the 390px
+  single column. Each tile now reads icon → title → meta → CTA.
+- `.catalog-card p` was **kept**: the dashboard card still renders a
+  `<p className="panel-muted">` for «هنوز فایلی برای این دوره نیست» inside its
+  attachments block, and that rule is what gives it its size and colour. Deleting
+  it as "dead" CSS would have restyled that line.
+- **Guard:** new [courseCards.test.ts](apps/web/src/app/courses/courseCards.test.ts)
+  (4 tests) — no `course.description` inside either card, the card children still
+  in icon → title → meta → actions order, `.catalog-card p` still present, and
+  no `min-height: 0` / `margin-top: auto` creeping onto the shared tile.
+  Restoring the paragraph in the public grid and in the dashboard grid each fail
+  it; both files came back byte-identical (`cmp`).
+- Gates: typecheck, lint, 294 tests (shared 46 · web 95 · api 153), build (353
+  static pages) all green.
+
+### UX-19 — rail rhythm and icon-column audit (implemented this session)
+
+Every row of the desktop rail measured with `getBoundingClientRect` at 1280px
+(rail 296px), then in compact (76px), both themes and at 390px. Five
+inconsistencies found and fixed in one pass.
+
+- **A 386px void below the nav.** `.panel-shell .learner-nav` had
+  `flex: 1 1 auto` (a leftover from the expandable groups removed in UX-8), so
+  it stretched and pushed the width control to the bottom of a 76px-wide rail
+  that only had four rows. It is now `flex: 0 0 auto`: the toggle follows
+  «پیام‌ها» directly. Verified gap chain:
+  logo →(37, hairline group) cart →8 user chip →8 departments →20 nav-0
+  →4×4 nav-1..3 →**0** toggle.
+- **Three different icon insets.** The chips inherited `.user-chip`'s
+  `padding-inline: 4px 12px` (icons 4–5px from the inline-start edge), the brand
+  mark used 8px and the nav links 12px, so the icons never formed a column.
+  `.panel-shell .logo` and `.panel-shell .user-chip` now both use
+  `padding-inline: var(--space-3)`; measured insets are 12/13px everywhere
+  (the 13 is sub-pixel rounding of the icon box), and every icon is vertically
+  centred in its row.
+- **Empty pill in the compact rail (bug from UX-17).** The compact hide list had
+  `.panel-nav--compact .user-chip svg`, which was meant for the chevron but also
+  matched the departments chip's `LayoutGrid` mark — in the icon-only rail the
+  chip rendered as a 36px blank pill (`display: none` on its only child). The
+  chevron now carries `className="user-chip-caret"` and the rule targets that
+  class, so the chip keeps its grid icon.
+- **Accessibility follow-up:** in compact mode the chip's label is
+  `display: none`, so the link now carries `aria-label={t('nav.departments')}` —
+  named in both widths, like the brand button already was. The account button had
+  the same hole (`aria-label` was `null`, its only text hidden, `.avatar`
+  `aria-hidden`), so it got `aria-label={t('nav.userMenu')}` too.
+- **Popovers unreadable in the compact rail.** Both rail popovers open *outside*
+  the 76px sidebar, and the rail's own `overflow: hidden` clipped them: the
+  240px account menu rendered as a 68px strip («۹ رویدا», «۳ دوره» cut
+  mid-word). The rail is now `overflow: visible` — safe because `.learner-nav`
+  keeps its own `overflow-x/y: hidden`, which is where the scroll actually lived.
+  Separately, `.mini-cart` anchored with `inset-inline-end: 0`, which in RTL pins
+  the panel's *left* edge to the cart pill and pushed **203px of its 270px panel
+  past the right of the viewport** (only 67px visible). It now matches
+  `.user-dropdown` with `inset-inline-start: 0`, scoped to the desktop rail in
+  [layout.css](apps/web/src/styles/layout.css): the mobile bar's pill sits left of
+  centre, where the opposite direction is the only one that fits, so the global
+  rule in [cart.css](apps/web/src/styles/cart.css) keeps its original anchoring.
+- **Flush seat for the width control.** With the void gone the toggle still sat
+  4px under «پیام‌ها», because `.top-nav`'s own flex `gap` applies to it as a
+  direct child of the nav — a ribbon of dead space above a dashed control. The
+  toggle carried `margin-top: calc(-1 * var(--space-1))`, cancelling exactly
+  that gap and nothing more (link-to-link rows stay 4px apart), and measured
+  last-link-bottom == toggle-top in both widths. **Superseded by UX-20**: the
+  toggle left the nav for the shared `.rail-controls` parent at the rail's foot,
+  so that negative margin is gone and the nav list now ends flush at «پیام‌ها».
+  The gap chain above is the one measured while the toggle was still the nav's
+  last row.
+- **Cart icon 20px off the compact column.** `.cart-badge-btn` is `inline-flex`,
+  so it shrink-wrapped to its 18px icon inside the 59px row and hugged the start
+  edge; the shared `justify-content: center` had nothing to center inside. Every
+  other row measured 0.5px off-centre, the basket measured 20px. The fix centers
+  the *wrap* rather than widening the button: `.cart-badge-count` is positioned
+  against `.cart-badge-btn`, so a full-width button stranded the count badge
+  mid-row, 34px from the basket icon (measured, then reverted). With the wrap
+  centered the button stays 20px, the icon remeasures at 0.5px off-centre and the
+  badge lands on the icon's inline-end corner.
+- Unchanged by design: row heights stay 36px (chips) vs 48px (nav links) — a
+  pill control is meant to read lighter than a destination row — and the mobile
+  bar keeps its 58px layout (`user-chip` 62px, cart 44px, burger 40px; the two
+  desktop-only controls hidden, no overflow).
+- Verified live: 1280px light + dark (same surfaces, `rgb(30, 39, 57)` chips,
+  active row tinted), compact 76px (every row centred within 0.5px, nothing
+  clipped), 390px (bar intact), on `/home` and `/dashboard`.
+- **Guard:** the caret rule, the chips' `aria-label`s, the four rail
+  measurements (shared icon column, non-stretching nav list, flush width
+  control, centred cart) and the popover anchoring are pinned in
+  [TopBar.test.ts](apps/web/src/components/layout/TopBar.test.ts) (21 tests);
+  reverting each fix in turn makes the matching test fail (verified).
+- Gates: typecheck, lint, 282 tests (shared 46 · web 83 · api 153), build (353
   static pages) all green.
 
 ### AUTH-6 — phone-only public registration (implemented this session)

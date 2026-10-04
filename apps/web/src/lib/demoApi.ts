@@ -141,7 +141,7 @@ const DEMO_LEARNER: AuthUser = {
 
 const DEMO_ADMIN: AuthUser = {
   id: 'demo-admin',
-  name: 'Kia Academy Super Admin',
+  name: 'Kia Group Super Admin',
   email: 'admin@kia.academy',
   phone: null,
   role: 'SUPER_ADMIN',
@@ -332,7 +332,7 @@ let demoAdminMessages: AdminLearnerMessage[] = [
     userId: DEMO_LEARNER.id,
     userName: DEMO_LEARNER.name,
     userEmail: DEMO_LEARNER.email,
-    subject: 'Welcome to Kia Academy',
+    subject: 'Welcome to Kia Group',
     body: 'We are glad to have you on board. Reach out any time you need help.',
     readAt: null,
     createdBy: DEMO_ADMIN.email,
@@ -701,7 +701,7 @@ function delay<T>(value: T, ms = 80): Promise<T> {
 function buildDemoCart(state: DemoPersistedState): CartResponse {
   const settings = readDemoSettings();
   const unitPrice = settings.pricing.courseCents;
-  const siteName = settings.general.siteName || 'Kia Academy';
+  const siteName = settings.general.siteName || 'Kia Group';
   const trackMap = new Map(settings.tracks.map((t) => [t.key, t.name]));
   const items: CartItemResponse[] = [];
   for (const slug of state.cartCourseSlugs) {

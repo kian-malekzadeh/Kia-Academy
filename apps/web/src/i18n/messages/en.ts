@@ -1,11 +1,12 @@
 export const en = {
   meta: {
-    title: 'Kia Academy — Adaptive Learning Platform',
+    title: 'Kia Group — Adaptive Learning Platform',
     description:
       'Persian-first learning academy for Iran: design materials studio, phone signup, personalized assessment, and guided courses.',
   },
   common: {
-    brand: 'Kia Academy',
+    brand: 'Kia Group',
+    tagline: 'Learn · Work · Create · Connect · Grow',
     continue: 'Continue',
     loading: 'Loading…',
     back: 'Back',
@@ -46,6 +47,8 @@ export const en = {
     courses: 'Courses',
     admin: 'Admin',
     dashboard: 'Dashboard',
+    departments: 'Departments',
+    userMenu: 'User menu',
     mode: 'Mode',
     modeLight: 'Light',
     modeDark: 'Dark',
@@ -53,7 +56,6 @@ export const en = {
     resizeMenu: 'Resize menu',
     menuSizeCompact: 'Compact',
     menuSizeDefault: 'Default',
-    menuSizeWide: 'Wide',
     toggleColorMode: 'Toggle color mode',
     signIn: 'Sign in',
     signOut: 'Sign out',
@@ -62,10 +64,10 @@ export const en = {
     profile: 'Profile',
     tickets: 'Tickets',
     messages: 'Messages',
-    homeAria: 'Kia Academy home',
+    homeAria: 'Kia Group home',
     cart: 'Cart',
     footer: {
-      copyright: '© {year} Kia Academy. All rights reserved.',
+      copyright: '© {year} Kia Group. All rights reserved.',
       status: 'Adaptive learning platform',
       enamad: 'E-Namad trust seal',
     },
@@ -82,10 +84,10 @@ export const en = {
     nativeFa: 'فارسی',
   },
   landing: {
-    eyebrow: 'Kia Academy',
+    eyebrow: 'Kia Group',
     heroTitle: 'Learn, design, and grow — in one place.',
     heroBody:
-      'Kia Academy helps you explore design materials and start a guided learning journey tailored to your goals.',
+      'Kia Group helps you explore design materials and start a guided learning journey tailored to your goals.',
     ctaMaterial: 'Material Studio',
     ctaEducation: 'Start learning path',
     ctaContact: 'Contact us',
@@ -102,7 +104,7 @@ export const en = {
       stages: 'assessment stages',
       savings: 'bundle savings',
     },
-    howHeading: 'How Kia Academy works',
+    howHeading: 'How Kia Group works',
     howSub:
       'Choose Material Studio for design tools, or Education to register and begin your assessment.',
     feature: {
@@ -172,7 +174,7 @@ export const en = {
   },
   freelance: {
     title: 'Employers & Freelancers',
-    sub: 'The bridge between businesses and Kia Academy-trained talent.',
+    sub: 'The bridge between businesses and Kia Group-trained talent.',
     employer: {
       title: 'Hiring?',
       body: 'Access talent whose skills are proven through real assessments and challenges, and share your project or hiring need with us.',
@@ -183,11 +185,11 @@ export const en = {
       body: 'Complete your learning path, readiness test and bootcamp challenges to build a credible portfolio and get ready for real projects.',
       cta: 'Start your path →',
     },
-    note: 'To get started, send your request through the contact page — the Kia Academy team replies as soon as possible.',
+    note: 'To get started, send your request through the contact page — the Kia Group team replies as soon as possible.',
   },
   tracks: {
     title: 'Which path?',
-    sub: 'Kia Academy education splits into two directions. Pick one.',
+    sub: 'Kia Group education splits into two directions. Pick one.',
     technology: {
       title: 'Technology',
       desc: 'An adaptive path through programming, web, AI and data — foundations to shipped projects.',
@@ -248,6 +250,18 @@ export const en = {
       alternative: 'Try the weekly challenges',
     },
     tellUs: 'Tell us which event you want',
+  },
+  community: {
+    title: 'KIA Community',
+    sub: 'A community of users, specialists, students, mentors and employers.',
+    soon: 'Coming soon.',
+    tellUs: 'Tell us what you want from the community',
+  },
+  labs: {
+    title: 'KIA Labs',
+    sub: 'Technology, innovation, research, product development and published articles.',
+    soon: 'Coming soon.',
+    tellUs: 'Tell us what you want to see in labs',
   },
   education: {
     phone: {
@@ -371,7 +385,7 @@ export const en = {
   auth: {
     login: {
       eyebrow: 'Welcome back',
-      title: 'Sign in to Kia Academy',
+      title: 'Sign in to Kia Group',
       sub: 'Continue your roadmap, courses, and bootcamp progress.',
       email: 'Email',
       password: 'Password',
@@ -639,15 +653,13 @@ export const en = {
       sub: 'Pick up where you left off.',
     },
     doors: {
-      heading: 'Kia Academy departments',
-      workTitle: 'Employers & Freelancers',
-      workDesc: 'Collaboration and hiring for trained talent',
-      educationTitle: 'Education',
-      educationDesc: 'Courses, roadmap and bootcamp',
-      materialTitle: 'Material',
-      materialDesc: 'Free palette, icon and motion studio',
-      eventsTitle: 'Events',
-      eventsDesc: 'Contests, bootcamp, webinars and meetups',
+      heading: 'Kia Group departments',
+      academyTitle: 'KIA Academy',
+      workTitle: 'KIA Work',
+      materialTitle: 'KIA Material',
+      eventsTitle: 'KIA Events',
+      communityTitle: 'KIA Community',
+      labsTitle: 'KIA Labs',
     },
     tile: {
       roadmap: {
@@ -786,7 +798,7 @@ export const en = {
       title: 'Admin messages',
       viewAll: 'View all messages',
       unread: '{count} unread messages',
-      fromAdmin: 'Kia Academy team',
+      fromAdmin: 'Kia Group team',
     },
     profile: {
       title: 'My profile',
@@ -1565,7 +1577,7 @@ export const en = {
     checking: 'Checking admin access…',
     sidebar: 'Admin',
     brand: 'Kia Admin',
-    brandSub: 'Academy control center',
+    brandSub: 'Group control center',
     menu: 'Open menu',
     backToSite: 'Back to site',
     breadcrumb: 'Breadcrumb',
@@ -2466,11 +2478,11 @@ export const en = {
       updated: 'Last updated: July 14, 2026',
       agreement: {
         h: 'Agreement',
-        p: 'By accessing Kia Academy, you agree to these Terms of Service. If you do not agree, please do not use the platform.',
+        p: 'By accessing Kia Group, you agree to these Terms of Service. If you do not agree, please do not use the platform.',
       },
       services: {
         h: 'Services',
-        p: 'Kia Academy provides goal discovery, personalized roadmaps, readiness assessments, course content, and bootcamp challenges. Features may change as we improve the product.',
+        p: 'Kia Group provides goal discovery, personalized roadmaps, readiness assessments, course content, and bootcamp challenges. Features may change as we improve the product.',
       },
       accounts: {
         h: 'Accounts',
@@ -2493,11 +2505,11 @@ export const en = {
       },
       ip: {
         h: 'Intellectual property',
-        p: 'Kia Academy content, branding, and software are owned by Kia Academy or its licensors. Your submissions (e.g., challenge code) remain yours, but you grant us a license to use them for scoring and platform operation.',
+        p: 'Kia Group content, branding, and software are owned by Kia Group or its licensors. Your submissions (e.g., challenge code) remain yours, but you grant us a license to use them for scoring and platform operation.',
       },
       disclaimer: {
         h: 'Disclaimer',
-        p: 'Kia Academy is an educational tool. We do not guarantee employment outcomes. Content is provided "as is" without warranties of any kind.',
+        p: 'Kia Group is an educational tool. We do not guarantee employment outcomes. Content is provided "as is" without warranties of any kind.',
       },
       contact: {
         h: 'Contact',
@@ -2509,7 +2521,7 @@ export const en = {
       updated: 'Last updated: July 14, 2026',
       overview: {
         h: 'Overview',
-        p: 'Kia Academy ("we", "us") respects your privacy. This policy explains what information we collect, how we use it, and your choices when using our adaptive learning platform.',
+        p: 'Kia Group ("we", "us") respects your privacy. This policy explains what information we collect, how we use it, and your choices when using our adaptive learning platform.',
       },
       collect: {
         h: 'Information we collect',

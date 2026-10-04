@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { BrandMark } from '@/components/brand/BrandMark';
 import { MessageSquare, Radio, Trophy, Video } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageProvider';
 
@@ -18,6 +19,7 @@ export default function EventsPage() {
     <div className="page-content events-page">
       <div className="container hub">
         <header className="page-head events-page__head">
+          <BrandMark className="dept-mark dept-mark--events" size={28} title="" />
           <h1>{t('events.title')}</h1>
         </header>
 

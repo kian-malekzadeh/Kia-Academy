@@ -55,7 +55,6 @@ export function PublicCoursesPage() {
                   <span className="catalog-soon">{t('common.comingSoon')}</span>
                 ) : null}
               </h3>
-              <p>{course.description}</p>
               <div className="catalog-meta">
                 <span>{t('common.lessonsCount', { count: course.lessonCount })}</span>
                 <span>{course.enrolled ? t('courses.status.unlocked') : t('publicCourses.available')}</span>
