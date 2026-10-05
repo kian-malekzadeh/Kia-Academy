@@ -64,9 +64,11 @@ describe('department registry', () => {
   it('agrees with the hub cards on every route, colour class and name', () => {
     // The hub cards predate the registry and spell their own markup out; this
     // comparison is what keeps the two descriptions of a department in step.
+    // A card may also carry a row modifier (UX-30), so the class is matched
+    // wherever it sits in the list.
     for (const dept of DEPARTMENTS) {
       expect(hub, dept.slug).toContain(`href="${dept.href}"`);
-      expect(hub, dept.slug).toContain(`door dept--${dept.slug}`);
+      expect(hub, dept.slug).toMatch(new RegExp(`className="door[^"]*\\bdept--${dept.slug}\\b`));
       expect(hub, dept.slug).toContain(`t('${dept.titleKey}')`);
     }
   });

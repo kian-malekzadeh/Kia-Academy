@@ -844,6 +844,39 @@ input[type='tel'],
   --tile-border-hover: var(--dept);
 }
 
+/* --- hub rows (UX-30) ----------------------------------------------------- */
+/* The departments grid is two rows of three, and the rows carry different
+   weights. The top row is the department's official colour at full strength
+   with a white glyph; the bottom row echoes the row above it — each card wears
+   a light mix of the department directly over it, named once in the markup as
+   `data-tone`, with a dark glyph so the pale fill stays readable.
+
+   This is a hub-only treatment. It overrides `--tile-*`, never `--dept`, so the
+   card's own department class keeps driving its page header, its rail chip and
+   its coming-soon tile: a soft KIA Work tile is not a rebrand of KIA Work. */
+.door--strong {
+  --tile-on-fill: #ffffff;
+}
+
+.door--soft {
+  --tile-fill: color-mix(in srgb, var(--tone) 32%, #ffffff);
+  --tile-on-fill: var(--ink-950);
+  --tile-tint: color-mix(in srgb, var(--tone) 14%, transparent);
+  --tile-hairline: color-mix(in srgb, var(--tone) 40%, transparent);
+  --tile-border-hover: var(--tone);
+  --tile-glow: 0 14px 34px -16px color-mix(in srgb, var(--tone) 45%, transparent);
+}
+
+/* The borrowed hue, per column: Work sits under Academy, Community under
+   Events, Labs under Material. Declared by slug so a card cannot borrow a hue
+   that is not a department colour. */
+.door--soft[data-tone='academy'] { --tone: var(--dept-academy); }
+.door--soft[data-tone='work'] { --tone: var(--dept-work); }
+.door--soft[data-tone='material'] { --tone: var(--dept-material); }
+.door--soft[data-tone='events'] { --tone: var(--dept-events); }
+.door--soft[data-tone='community'] { --tone: var(--dept-community); }
+.door--soft[data-tone='labs'] { --tone: var(--dept-labs); }
+
 /* The department's logo: the KIA emblem wearing that department's colour. */
 .dept-mark {
   display: block;

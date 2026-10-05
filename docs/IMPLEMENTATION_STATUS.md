@@ -823,6 +823,44 @@ of them.
 - Gates: typecheck, lint, 317 tests (shared 46 · web 118 · api 153), build (355
   static pages) all green.
 
+### UX-30 — the hub's two rows carry different weights (implemented this session)
+
+Six departments, three columns, two rows — and the rows no longer weigh the
+same. The top row is the department's official colour at full strength with a
+white glyph; the bottom row **echoes the row above it**: each card wears a light
+mix of the department directly over it, with a dark glyph.
+
+| Column (RTL, right → left) | Top row | Bottom row |
+| --- | --- | --- |
+| 1 | KIA Academy `#6464ff` | KIA Work — light academy, `#cdcdff` |
+| 2 | KIA Events `#ff8a3d` | KIA Community — light events, `#ffd9c1` |
+| 3 | KIA Material `#20bfa9` | KIA Labs — light material, `#b8ebe4` |
+
+- **Hub-only.** `.door--soft` overrides `--tile-*`, never `--dept`, so a soft
+  KIA Work tile is not a rebrand of KIA Work: the department's page header, its
+  rail chip and its coming-soon tile still read `--dept-work`. The borrowed hue
+  is named once per card as `data-tone="academy|events|material"`, and
+  `.door--soft[data-tone='<slug>']` is what maps it to `--dept-<slug>` — a card
+  therefore cannot tint itself with a colour that is not one of the six. Mix is
+  `color-mix(in srgb, var(--tone) 32%, #ffffff)`.
+- **The glyph rule was requested, and it costs contrast on two fills.** White on
+  academy is 4.37:1 (fine), but white on **events is 2.35:1** and on **material
+  2.31:1** — under the 3:1 WCAG minimum for a non-text graphic, where the dark
+  ink would measure 7.71:1 and 7.82:1. The bottom row is excellent either way
+  (11.9:1, 13.7:1, 13.8:1). If legibility on the top row is ever reported,
+  changing `.door--strong` to the department's measured ink is a one-line fix;
+  `.dept--*` already holds that value per department.
+- **Two source-text assertions had to change, not weaken.** Both pinned the
+  literal `className="door dept--<slug>"`, which the new row modifier breaks;
+  they now match the department class anywhere in the list
+  (`className="door[^"]*\bdept--<slug>\b`), which is what they were actually
+  guarding. Two new tests pin the row split and the borrowed-hue rule.
+- Verified live with computed styles: top row `rgb(100,100,255)` /
+  `rgb(255,138,61)` / `rgb(32,191,169)` with `rgb(255,255,255)` glyphs, bottom
+  row `rgb(205,205,255)` / `rgb(255,217,193)` / `rgb(184,235,228)` with
+  `rgb(14,22,38)` glyphs.
+- Gates: typecheck, lint, 336 tests (shared 46 · web 137 · api 153), build green.
+
 ### UX-28 — the six official logo colours replace the tuned palette (implemented this session)
 
 Kia Group's published logo colours, applied verbatim. They are the brand's

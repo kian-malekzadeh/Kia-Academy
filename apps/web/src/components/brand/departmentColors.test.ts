@@ -175,10 +175,59 @@ describe('department marks in the markup', () => {
   const appDir = path.join(HERE, '..', '..', 'app');
 
   it('wears dept--<slug> on all six hub cards, never a generic tint', () => {
+    // The card may carry a row modifier as well (UX-30 adds `door--strong` /
+    // `door--soft`), so this looks for its own department class anywhere in the
+    // list rather than pinning the class order.
     for (const slug of SLUGS) {
-      expect(hub, slug).toContain(`className="door dept--${slug}"`);
+      expect(hub, slug).toMatch(new RegExp(`className="door[^"]*\\bdept--${slug}\\b`));
     }
-    expect(hub).not.toMatch(/className="door tint--/);
+    expect(hub).not.toMatch(/className="door[^"]*\btint--/);
+  });
+
+  it('splits the hub into a strong top row and a soft row that echoes it', () => {
+    // UX-30: the top row is the department's official colour with a white
+    // glyph; the bottom row borrows the hue of the card directly above it —
+    // one per column — lightened, with a dark glyph.
+    const links = [...hub.matchAll(/<Link[^>]*>/g)].map((m) => m[0]);
+    expect(links).toHaveLength(6);
+    const card = (href: string) => links.find((l) => l.includes(`href="${href}"`)) ?? '';
+
+    for (const href of ['/tracks', '/events', '/material']) {
+      expect(card(href), href).toContain('door--strong');
+      expect(card(href), href).not.toMatch(/data-tone=/);
+    }
+    expect(card('/freelance')).toMatch(/data-tone="academy"/);
+    expect(card('/community')).toMatch(/data-tone="events"/);
+    expect(card('/labs')).toMatch(/data-tone="material"/);
+    for (const href of ['/freelance', '/community', '/labs']) {
+      expect(card(href), href).toContain('door--soft');
+      // A soft card still carries its own department class.
+      expect(card(href), href).toMatch(/\bdept--/);
+    }
+  });
+
+  it('paints the soft row from a borrowed hue without re-declaring one', () => {
+    // The treatment is hub-only: `.door--soft` must not touch `--dept`, or a
+    // soft KIA Work tile would become KIA Work's identity everywhere.
+    const soft = base.match(/^\.door--soft \{[^}]*\}/m);
+    expect(soft?.[0]).toMatch(/--tile-fill: color-mix\(in srgb, var\(--tone\) 32%, #ffffff\);/);
+    expect(soft?.[0]).toMatch(/--tile-on-fill: var\(--ink-950\);/);
+    expect(soft?.[0]).not.toContain('--dept:');
+    // The top row's glyph is white, whatever the fill's best ink would be.
+    expect(base.match(/^\.door--strong \{[^}]*\}/m)?.[0]).toMatch(
+      /--tile-on-fill: #ffffff;/,
+    );
+
+    // Every borrowed hue in the markup resolves to a department colour, so a
+    // card can never tint itself with something that is not one of the six.
+    const tones = [...hub.matchAll(/data-tone="(\w+)"/g)].map((m) => m[1]);
+    expect(new Set(tones).size, 'one borrowed hue per column').toBe(3);
+    for (const tone of tones) {
+      expect(tone).toBeTypeOf('string');
+      expect(base, tone).toContain(
+        `.door--soft[data-tone='${tone}'] { --tone: var(--dept-${tone}); }`,
+      );
+    }
   });
 
   it('gives every department page a mark in its own colour', () => {

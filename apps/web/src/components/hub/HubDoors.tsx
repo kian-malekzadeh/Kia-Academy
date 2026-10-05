@@ -32,6 +32,14 @@ import { useLanguage } from '@/context/LanguageProvider';
  *
  * The cards are ordered by hand (UX-29), not by the registry: three columns,
  * academy · events · material on top and work · community · labs beneath.
+ *
+ * UX-30 gives the two rows different weights. The top row is the full-strength
+ * official colour with a white glyph; the bottom row echoes the row above it,
+ * each card wearing a light mix of the department directly over it — Work under
+ * Academy, Community under Events, Labs under Material — with a dark glyph. The
+ * borrowed hue is declared once per card as `data-tone`, which is what
+ * `.door--soft[data-tone]` reads; a card's own `dept--<slug>` class stays put,
+ * so its page header, its rail and its coming-soon tile are untouched.
  */
 export function HubDoors({ showHeading = true }: { showHeading?: boolean }) {
   const { t } = useLanguage();
@@ -61,47 +69,49 @@ export function HubDoors({ showHeading = true }: { showHeading?: boolean }) {
       ) : null}
 
       <div className="landing-doors landing-doors--depts">
-        {/* Three columns, and the row order is deliberate (UX-29):
-            academy · events · material on the first row, work · community ·
-            labs on the second. The grid runs RTL, so the first card in the
-            markup is the right-hand one — this sequence is also the reading
-            order, and therefore the tab order. */}
-        <Link href="/tracks" className="door dept--academy">
+        {/* Three columns, and the row order is deliberate (UX-29/30): the top
+            row is academy · events · material in full strength, the soft row
+            beneath is work · community · labs, each borrowing the hue of the
+            card above it. The grid runs RTL, so the first card in the markup is
+            the right-hand one — this sequence is also the reading order, and
+            therefore the tab order. */}
+        <Link href="/tracks" className="door door--strong dept--academy">
           <span className="door-icon" aria-hidden="true">
             <GraduationCap size={20} />
           </span>
           <h3 className="door-title">{t('dashboard.doors.academyTitle')}</h3>
         </Link>
 
-        <Link href="/events" className="door dept--events">
+        <Link href="/events" className="door door--strong dept--events">
           <span className="door-icon" aria-hidden="true">
             <CalendarDays size={20} />
           </span>
           <h3 className="door-title">{t('dashboard.doors.eventsTitle')}</h3>
         </Link>
 
-        <Link href="/material" className="door dept--material">
+        <Link href="/material" className="door door--strong dept--material">
           <span className="door-icon" aria-hidden="true">
             <Palette size={20} />
           </span>
           <h3 className="door-title">{t('dashboard.doors.materialTitle')}</h3>
         </Link>
 
-        <Link href="/freelance" className="door dept--work">
+        {/* Soft row — one card per column, tone borrowed from the card above. */}
+        <Link href="/freelance" className="door door--soft dept--work" data-tone="academy">
           <span className="door-icon" aria-hidden="true">
             <Briefcase size={20} />
           </span>
           <h3 className="door-title">{t('dashboard.doors.workTitle')}</h3>
         </Link>
 
-        <Link href="/community" className="door dept--community">
+        <Link href="/community" className="door door--soft dept--community" data-tone="events">
           <span className="door-icon" aria-hidden="true">
             <UsersRound size={20} />
           </span>
           <h3 className="door-title">{t('dashboard.doors.communityTitle')}</h3>
         </Link>
 
-        <Link href="/labs" className="door dept--labs">
+        <Link href="/labs" className="door door--soft dept--labs" data-tone="material">
           <span className="door-icon" aria-hidden="true">
             <FlaskConical size={20} />
           </span>
