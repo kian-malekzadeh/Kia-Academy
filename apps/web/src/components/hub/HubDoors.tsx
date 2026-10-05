@@ -29,6 +29,9 @@ import { useLanguage } from '@/context/LanguageProvider';
  * languages — the catalog itself is one click further down that branch.
  * Community and Labs are new departments with a coming-soon page each, so their
  * cards are real links rather than dead ends.
+ *
+ * The cards are ordered by hand (UX-29), not by the registry: three columns,
+ * academy · events · material on top and work · community · labs beneath.
  */
 export function HubDoors({ showHeading = true }: { showHeading?: boolean }) {
   const { t } = useLanguage();
@@ -58,6 +61,11 @@ export function HubDoors({ showHeading = true }: { showHeading?: boolean }) {
       ) : null}
 
       <div className="landing-doors landing-doors--depts">
+        {/* Three columns, and the row order is deliberate (UX-29):
+            academy · events · material on the first row, work · community ·
+            labs on the second. The grid runs RTL, so the first card in the
+            markup is the right-hand one — this sequence is also the reading
+            order, and therefore the tab order. */}
         <Link href="/tracks" className="door dept--academy">
           <span className="door-icon" aria-hidden="true">
             <GraduationCap size={20} />
@@ -65,11 +73,11 @@ export function HubDoors({ showHeading = true }: { showHeading?: boolean }) {
           <h3 className="door-title">{t('dashboard.doors.academyTitle')}</h3>
         </Link>
 
-        <Link href="/freelance" className="door dept--work">
+        <Link href="/events" className="door dept--events">
           <span className="door-icon" aria-hidden="true">
-            <Briefcase size={20} />
+            <CalendarDays size={20} />
           </span>
-          <h3 className="door-title">{t('dashboard.doors.workTitle')}</h3>
+          <h3 className="door-title">{t('dashboard.doors.eventsTitle')}</h3>
         </Link>
 
         <Link href="/material" className="door dept--material">
@@ -79,11 +87,11 @@ export function HubDoors({ showHeading = true }: { showHeading?: boolean }) {
           <h3 className="door-title">{t('dashboard.doors.materialTitle')}</h3>
         </Link>
 
-        <Link href="/events" className="door dept--events">
+        <Link href="/freelance" className="door dept--work">
           <span className="door-icon" aria-hidden="true">
-            <CalendarDays size={20} />
+            <Briefcase size={20} />
           </span>
-          <h3 className="door-title">{t('dashboard.doors.eventsTitle')}</h3>
+          <h3 className="door-title">{t('dashboard.doors.workTitle')}</h3>
         </Link>
 
         <Link href="/community" className="door dept--community">

@@ -512,19 +512,23 @@
   color: var(--brand);
 }
 
-/* --- four-department variant (post-auth landing) ------------------------- */
-/* Two columns × two rows — 3-col overflowed the panel rail, 4-col crushed
-   the door copy. */
+/* --- six-department variant (post-auth landing) ------------------------- */
+/* Three columns × two rows. The old 2×2 said 3-col overflowed the panel rail,
+   but that was when each card carried a one-line summary and a 13rem floor;
+   the summaries are gone and `.landing-doors--depts .door` hugs its content,
+   so a card is now an icon and a title — it fits three abreast. `max-width`
+   is unchanged, which is what actually bounds the rail: three 1fr tracks share
+   48rem minus two gaps, so each card is ~15rem wide. */
 .landing-doors--depts {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   max-width: 48rem;
 }
 
-/* The one-line summaries are gone from these four cards, and the shared tile's
+/* The one-line summaries are gone from these cards, and the shared tile's
    13rem floor — sized when they carried a title plus a sentence — left an ~80px
    empty band under each title. These doors never sit beside a course tile (they
    stand alone on /home and /dashboard), so they hug their content here; every
-   other tile keeps the shared floor. */
+   other tile keeps the shared floor. It is also what lets three columns fit. */
 .landing-doors--depts .door {
   min-height: 0;
 }

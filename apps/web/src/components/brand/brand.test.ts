@@ -101,16 +101,32 @@ describe('Kia Group brand', () => {
 describe('Kia Group departments', () => {
   const hub = readFileSync(path.join(WEB, 'src', 'components', 'hub', 'HubDoors.tsx'), 'utf8');
 
-  it('offers six departments, each a real link', () => {
+  it('offers six departments, each a real link, in the grid order', () => {
+    // The sequence is the requested layout (UX-29): three columns, academy ·
+    // events · material on the first row, work · community · labs on the
+    // second. The grid is RTL, so the first entry is the right-hand card —
+    // which is also why this doubles as the reading and tab order.
     const hrefs = [...hub.matchAll(/<Link href="([^"]+)" className="door/g)].map((m) => m[1]);
     expect(hrefs).toEqual([
       '/tracks',
-      '/freelance',
-      '/material',
       '/events',
+      '/material',
+      '/freelance',
       '/community',
       '/labs',
     ]);
+  });
+
+  it('lays the departments out in three columns', () => {
+    // Two columns could not carry six cards without a third row, and the tiles
+    // no longer hold a summary, so nothing squeezes at this width.
+    const css = readFileSync(path.join(WEB, 'src', 'styles', 'landing.css'), 'utf8');
+    const grid = css.match(/^\.landing-doors--depts \{[^}]*\}/m);
+    expect(grid?.[0]).toMatch(/grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/);
+    // One column still wins on a phone.
+    expect(css).toMatch(
+      /@media \(max-width: 720px\) \{\s*\n\s*\.landing-doors--depts \{\s*\n\s*grid-template-columns: 1fr;/,
+    );
   });
 
   it('titles them as one family in both languages', () => {
